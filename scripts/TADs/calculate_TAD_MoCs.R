@@ -1,6 +1,6 @@
-###################################################
+################################################################################
 # Dependencies
-###################################################
+################################################################################
 library(here)
 here::i_am('scripts/TADs/calculate_TAD_MoCs.R')
 BASE_DIR <- here()
@@ -8,22 +8,15 @@ source(file.path(BASE_DIR,   'scripts/constants.R'))
 source(file.path(SCRIPT_DIR, 'locations.R'))
 source(file.path(SCRIPT_DIR, 'utils.data.R'))
 source(file.path(SCRIPT_DIR, 'TADs/utils.TADs.R'))
-# source(file.path(SCRIPT_DIR, 'TADs/utils.TADCompare.R'))
 library(tidyverse)
 library(magrittr)
-# plan(sequential)
-# plan(multicore, workers=N_WORKERS_FOR_PARLLELIZATION)
 
-###################################################
+################################################################################
 # Load TADs
-###################################################
+################################################################################
 nested.TADs.df <- 
-    check_cached_results(
-        results_file=ALL_TAD_RESULTS_FILE,
-        # force_redo=TRUE,
-        # force_redo_sub=TRUE,
-        results_fnc=load_all_TAD_results
-    ) %>% 
+    ALL_TAD_RESULTS_FILE %>%
+    read_tsv() %>% 
     select(
         resolution,
         TAD.method, TAD.params, TAD.metric,
@@ -39,22 +32,26 @@ nested.TADs.df <-
             )
     )
 
-###################################################
+################################################################################
 # Calculate MoC for all pairs of TADs
-###################################################
+################################################################################
 check_cached_results(
     results_file=ALL_MOC_FILE,
     force_redo=TRUE,
     results_fnc=calculate_all_MoCs,
     nested.TADs.df=nested.TADs.df,
     sample.group.comparisons=
-            ALL_SAMPLE_GROUP_COMPARISONS %>% 
-            dplyr::rename(
-                'Sample.Group.P1'=Sample.Group.Numerator,
-                'Sample.Group.P2'=Sample.Group.Denominator
-            ),
+        ALL_SAMPLE_GROUP_COMPARISONS %>% 
+        dplyr::rename(
+            'Sample.Group.P1'=Sample.Group.Numerator,
+            'Sample.Group.P2'=Sample.Group.Denominator
+        ),
     sampleID_col='Sample.Group',
-    suffixes=c('Numerator', 'Denominator'),
+    suffixes=
+        c(
+            'Numerator',
+            'Denominator'
+        ),
     pair_grouping_cols=
         c(
             'TAD.method',

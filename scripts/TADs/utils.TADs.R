@@ -1,15 +1,15 @@
-###################################################
+################################################################################
 # Dependencies
-###################################################
+################################################################################
 # library(tidyverse)
 library(stringi)
 library(glue)
 library(furrr)
 library(TADCompare)
 
-###################################################
+################################################################################
 # Utilities
-###################################################
+################################################################################
 convert_boundaries_to_TADs <- function(
     bins.df,
     include.tails=FALSE,
@@ -85,39 +85,317 @@ compute_TAD_stats <- function(
     ungroup()
 }
 
-calculate_MoC <- function(
-    TADs.P1,
-    TADs.P2,
-###################################################
-# Cooltools 
-###################################################
-load_cooltools_file <- function(
-    filepath,
-    boundaries_only=FALSE,
+################################################################################
+# Standardize results across methods
+################################################################################
     ...){
-    # TADs.P1, TADs.P2 are both tibbles with 
-    # the following 3 columns: start, end, length
-    # add indices to track all pairs of TADs
-    # MoC normalization constant
-    nTADs.P1 <- nrow(TADs.P1)
-    nTADs.P2 <- nrow(TADs.P2)
-    norm_const <- 1 / (sqrt(nTADs.P1 * nTADs.P2) - 1)
-    # nTADs.P1; nTADs.P2; norm_const;
-    # Now find all overlapping pairs of TADs
-    inner_join(
-        TADs.P1 %>% mutate(idx=row_number()),
-        TADs.P2 %>% mutate(idx=row_number()),
-        suffix=c('.P1', '.P2'),
-        by=join_by(overlaps(x$start, x$end, y$start, y$end))
+}
+
+    ...){
+        )
+    mutate(
+                .l=.,
+                .progress=TRUE
+            )
+    ) %>%
+    {
+load_all_TAD_score_results <- function(
+    resolutions=NULL,
+    force_redo_sub=FALSE){
+    # Load hiTAD results
+    hiTAD.scores.df <- 
+        check_cached_results(
+            results_file=HITAD_SCORE_RESULTS_FILE,
+            force_redo=force_redo_sub,
+            # force_redo=TRUE,
+            results_fnc=load_all_hiTAD_DIs
+        ) %>% 
+        select(-c(TAD.start, TAD.end, boundary.type)) %>% 
+        post_process_hiTAD_TAD_results() %>%
+        add_column(TAD.params=NULL)
+    # Load cooltools TAD results
+    cooltools.scores.df <- 
+        check_cached_results(
+            results_file=COOLTOOLS_SCORE_RESULTS_FILE,
+            force_redo=force_redo_sub,
+            # force_redo=TRUE,
+            results_fnc=load_all_cooltools_Insulation
+        ) %>% 
+        post_process_cooltools_TAD_results()
+    # Load ConsensusTAD results
+    # consensusTAD.scores.df <- 
+    #     check_cached_results(
+    #         results_file=,
+    #         force_redo=force_redo_sub,
+    #         # force_redo=TRUE,
+    #         results_fnc=
+    #     ) %>% 
+    #     post_process_ConsensusTAD_TAD_results()
+    # Bind evertything together
+    bind_rows(
+        hiTAD.scores.df,
+        cooltools.scores.df
+        # consensusTAD.scores.df
     ) %>% 
-    # https://link.springer.com/article/10.1186/s13059-018-1596-9#Sec9
-    # "Assessment of TAD calller performance"
-    rowwise() %>% 
-    mutate( 
-        # F_ij^2 / (P_i * Q_j), 1 pair of TADs per row
-        intersection=min(end.P1, end.P2) - max(start.P1, start.P2),
-        moc.inner=((intersection**2) / (TAD.length.P1 * TAD.length.P2))
-    # filepath=tmp$filepath[[1]]; boundaries_only=TRUE
+    {
+        if (!is.null(resolutions)) {
+            filter(., resolution %in% resolutions)
+        } else {
+            .
+        }
+    }
+}
+
+load_all_TAD_results <- function(
+    resolutions=NULL,
+    force_redo_sub=FALSE){
+    # Load hiTAD results
+    hiTAD.TADs.df <- 
+        check_cached_results(
+            results_file=HITAD_TAD_RESULTS_FILE,
+            force_redo=force_redo_sub,
+            # force_redo=TRUE,
+            results_fnc=load_all_hiTAD_TADs
+        ) %>% 
+        post_process_hiTAD_TAD_results() %>%
+        add_column(TAD.params=NULL)
+    # Load cooltools TAD results
+    cooltools.TADs.df <- 
+        check_cached_results(
+            results_file=COOLTOOLS_TAD_RESULTS_FILE,
+            force_redo=force_redo_sub,
+            # force_redo=TRUE,
+            results_fnc=load_all_cooltools_TADs
+        ) %>% 
+        post_process_cooltools_TAD_results()
+    # Load ConsensusTAD results
+    # consensusTAD.TADs.df <- 
+    #     check_cached_results(
+    #         results_file=CONSENSUSTAD_TAD_RESULTS_FILE,
+    #         force_redo=force_redo_sub,
+    #         # force_redo=TRUE,
+    #         results_fnc=load_all_ConsensusTAD_TADs
+    #     ) %>% 
+    #     post_process_ConsensusTAD_TAD_results()
+    # Bind evertything together
+    bind_rows(
+        hiTAD.TADs.df,
+        cooltools.TADs.df
+        # consensusTAD.TADs.df
+    ) %>% 
+    {
+        if (!is.null(resolutions)) {
+            filter(., resolution %in% resolutions)
+        } else {
+            .
+        }
+    }
+}
+
+post_process_all_TAD_results <- function(results.df){
+    results.df %>% 
+    filter(TAD.length < 10 * 1e6) %>% 
+    mutate(
+        TAD.size.band=
+            case_when(
+                length > 5e6 ~ '>  5Mb',
+                length > 2e6 ~ '>  2Mb',
+                length > 1e6 ~ '>  1Mb',
+                length > 5e5 ~ '>  500Kb',
+                TRUE         ~ '<= 500Kb'
+            ) %>%
+            factor(levels=c('<= 500Kb', '>  500Kb', '>  1Mb', '>  2Mb', '>  5Mb'))
+    )
+}
+
+pivot_TADs_to_boundaries <- function(results.df){
+    # Pivot so the bins that start and end at the boundary position are both included
+    results.df %>% 
+    dplyr::select(-starts_with('TAD.inner.')) %>% 
+    mutate(TAD.index=row_number()) %>% 
+    dplyr::rename(
+        "start.boundary"=start,
+        "end.boundary"=end,
+        "start.score"=TAD.start.score,
+        "end.score"=TAD.end.score
+    ) %>% 
+    pivot_longer(
+        c(start.boundary, end.boundary, start.score, end.score),
+        names_to='stat',
+        values_to='value'
+    ) %>%
+    separate_wider_delim(
+        stat,
+        delim='.',
+        names=c('boundary.side', 'value.type')
+    ) %>% 
+    pivot_wider(
+        names_from=value.type,
+        values_from=value
+    ) %>% 
+    dplyr::rename(
+        "boundary.start"=boundary,
+        "boundary.score"=score
+    )
+}
+
+################################################################################
+# Process cooltools TADs + Boundaries
+################################################################################
+list_all_cooltools_results <- function(){
+    COOLTOOLS_TAD_RESULTS_DIR %>% 
+    parse_results_filelist(suffix='-TAD.tsv') %>%
+    add_column(TAD.method='cooltools') %>% 
+    convert_MatrixID_to_SampleID_and_SampleGroup()
+}
+
+load_cooltools_TADs <- function(
+    filepath,
+    resolution,
+    ...){
+    # paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', sep='', collapse='; ')
+    # row.index=5; filepath=tmp$filepath[[row.index]]; resolution=tmp$resolution[[row.index]]; weight=tmp$weight[[row.index]]; threshold=tmp$threshold[[row.index]]; mfvp=tmp$mfvp[[row.index]]; TAD.method=tmp$TAD.method[[row.index]]; Sample.Group=tmp$Sample.Group[[row.index]]
+    Insulation <- 
+        filepath %>% 
+        read_tsv(
+            progress=FALSE,
+            show_col_types=FALSE
+        ) %>%
+        pivot_longer(
+            ends_with('000'),
+            names_to='TAD.stat',
+            values_to='value'
+        ) %>%
+        # Need to reverse for separate_wider_delim to work since some stat names have _ in them
+        mutate(TAD.stat=stri_reverse(TAD.stat)) %>% 
+        separate_wider_delim(
+            TAD.stat,
+            delim='_',
+            names=c(
+                'window.size',
+                'stat'
+            ),
+            too_many='merge'
+        ) %>%
+        mutate(
+            across(
+                c(stat, window.size),
+                stri_reverse
+            )
+        ) %>% 
+        pivot_wider(
+            names_from=stat,
+            values_from=value
+        ) %>%
+        mutate(is.boundary=as.logical(is_boundary)) %>% 
+        filter(!is_bad_bin) %>% 
+        select(-c(is_bad_bin, region, is_boundary)) %>% 
+        rename(
+            'chr'=chrom,
+            'bin.start'=start,
+            'bin.end'=end
+        )
+    # Get chr boundaries to map first/last TADs
+    TADs <- 
+        Insulation %>%
+        # select(chr, window.size, bin.start, is.boundary) %>% 
+        nest(bins.df=-c(chr, window.size)) %>% 
+        mutate(
+            TADs=
+                pmap(
+                    .l=.,
+                    .f=convert_boundaries_to_TADs,
+                    boundary.indicator.col='is.boundary',
+                    .progress=FALSE
+                )
+        ) %>% 
+        unnest(TADs) %>%
+        select(window.size, chr, start, end)
+    # Join bin-wise scores to TAD intervals, compute metric summary stats over all bins per TAD 
+    Insulation %>% 
+    select(-c(is.boundary)) %>% 
+    # pivot bin-wise stats to tidy format for computing summary stats
+    pivot_longer(
+        c(
+            log2_insulation_score,
+            n_valid_pixels,
+            sum_counts,
+            sum_balanced,
+            boundary_strength
+        ),
+        names_to='TAD.metric',
+        values_to='bin.score',
+    ) %>% 
+    filter(
+        TAD.metric %in% c(
+            # 'sum_balanced',
+            # 'boundary_strength',
+            'log2_insulation_score'
+        )
+    ) %>% 
+    # Map all bins to which TAD they are inside of
+    right_join(
+        TADs,
+        suffix=c('.Insulation','.TAD'),
+        by=
+            join_by(
+                chr,
+                window.size,
+                within(x$bin.start, x$bin.end, y$start, y$end)
+            )
+    ) %>% 
+    filter(!is.na(start), !is.na(end)) %>% 
+    # for each TAD compute summary stats over the bin-wise scores
+    group_by(
+        window.size, TAD.metric,
+        chr, start, end
+    ) %>% 
+    relocate(window.size, TAD.metric, chr, start, end, bin.start, bin.end, bin.score) %>% 
+    compute_TAD_stats(resolution=resolution)
+}
+
+load_all_cooltools_TADs <- function(){
+    list_all_cooltools_results() %>% 
+        # {.} -> tmp
+    mutate(
+        insulation=
+            # pmap(
+            future_pmap(
+                .,
+                load_cooltools_TADs,
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(insulation) %>% 
+    select(-c(filepath))
+}
+
+post_process_cooltools_TAD_results <- function(results.df){
+    results.df %>% 
+    filter(weight == 'balanced') %>% 
+    mutate(
+        window.size.bins=window.size / resolution,
+        window.size=scale_numbers(window.size, force_numeric=TRUE),
+    ) %>% 
+    unite(
+        'TAD.params',
+        window.size.bins, mfvp, threshold, 
+        sep='#',
+        remove=TRUE
+    ) %>% 
+    select(
+        -c(
+            weight,
+            window.size
+        )
+    )
+}
+
+load_cooltools_Insulation <- function(
+    filepath,
+    ...){
+    # paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', sep='', collapse='; ')
+    # row.index=5; filepath=tmp$filepath[[row.index]]; resolution=tmp$resolution[[row.index]]; weight=tmp$weight[[row.index]]; threshold=tmp$threshold[[row.index]]; mfvp=tmp$mfvp[[row.index]]; TAD.method=tmp$TAD.method[[row.index]]; Sample.Group=tmp$Sample.Group[[row.index]]
     filepath %>% 
     read_tsv(
         progress=FALSE,
@@ -128,34 +406,7 @@ load_cooltools_file <- function(
         names_to='TAD.stat',
         values_to='value'
     ) %>%
-    # group_by(idx.P1) %>% slice_max(moc.inner) %>%  ungroup() %>% 
-    # group_by(idx.P2) %>% slice_max(moc.inner) %>% 
-    # When multiple TADs overlap, count only the most overlapping match
-    # group_by(idx.P1) %>%
-    # slice_max(moc.inner)
-    ungroup() %>% 
-    summarize(
-        n.Overlaps=n(),
-        n.TADs.P1=length(unique(idx.P1)),
-        n.TADs.P2=length(unique(idx.P2)),
-        MoC=(sum(moc.inner) - 1) / (sqrt(n.TADs.P1 * n.TADs.P2) - 1)
-        # MoC=(sum(moc.inner) - 1) * norm_const
-    )
-}
-
-calculate_all_MoCs <- function(
-    nested.TADs.df,
-    suffixes=NULL,
-    delim='.',
-    ...){
-    # paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', sep='', collapse='; ')
-    # suffixes=c('Numerator', 'Denominator'); delim='.'
-    nested.TADs.df %>% 
-    enumerate_pairwise_comparisons(
-        delim=delim,
-        suffixes=c('P1', 'P2'),
-        ...
-    # Need to reverse since some stat names have _ in them
+    # Need to reverse for separate_wider_delim to work since some stat names have _ in them
     mutate(TAD.stat=stri_reverse(TAD.stat)) %>% 
     separate_wider_delim(
         TAD.stat,
@@ -172,129 +423,85 @@ calculate_all_MoCs <- function(
             stri_reverse
         )
     ) %>% 
-    # Finally compute all MoCs for all listed pairs of annotations
-    mutate(
-        MoCs=
-            # pmap(
-            future_pmap(
-                .l=.,
-                .f=calculate_MoC,
-                .progress=TRUE
-            )
     pivot_wider(
         names_from=stat,
         values_from=value
     ) %>%
-    select(-c(TADs.P1, TADs.P2)) %>%
-    unnest(MoCs) %>%
-    rename('is.boundary'=is_boundary) %>% 
-    mutate(is.boundary=as.logical(is.boundary)) %>% 
-    {
-        if (!is.null(suffixes) & length(suffixes) == 2) {
-            rename_with(
-                ., 
-                .cols=ends_with('P1'),
-                ~str_replace(.x, 'P1$', suffixes[[1]])
-            ) %>% 
-            rename_with(
-                .cols=ends_with('P2'),
-                ~str_replace(.x, 'P2$', suffixes[[2]])
-            )
-        if (boundaries_only){
-            filter(., is.boundary)
-        } else {
-            .
-        }
-    }
-}
-
-load_all_cooltools_results <- function(boundaries_only=FALSE){
-    file.path(TAD_RESULTS_DIR, 'method_cooltools')  %>% 
-    parse_results_filelist(suffix='-TAD.tsv') %>%
-    add_column(method == 'cooltools') %>% 
-    # filter(method == 'cooltools') %>% 
-    # get_info_from_MatrixIDs(keep_id=FALSE) %>% 
-    # {.} -> tmp
-    mutate(
-        DIs=
-            # pmap(
-            future_pmap(
-                .,
-                load_cooltools_file,
-                boundaries_only=boundaries_only,
-                .progress=TRUE
-            )
-    ) %>%
-    unnest(DIs) %>% 
-    select(-c(filepath))
-}
-
-post_process_cooltools_results <- function(results.df){
-    results.df %>% 
+    mutate(is.boundary=as.logical(is_boundary)) %>% 
     filter(!is_bad_bin) %>% 
+    select(-c(is_bad_bin, region, is_boundary)) %>% 
     rename(
         'chr'=chrom,
-        'bin.start'=start
+        'bin.start'=start,
+        'bin.end'=end
     ) %>% 
-    mutate(
-        window.size.bins=window.size / resolution,
-        window.size=scale_numbers(window.size, force_numeric=TRUE),
-    ) %>% 
-    unite(
-        'cooltools.params',
-        weight, window.size.bins, mfvp, threshold, 
-        sep='#',
-        remove=TRUE
-    ) %>% 
-    select(
-        -c(
-            # method,
-            end,
-            is_bad_bin,
-            sum_counts,           
-            sum_balanced,         
-            n_valid_pixels,
-            ReadFilter,
-            region,               
-            # Edit                 
-            # Celltype             
-            # Genotype             
-            # CloneID              
-            # TechRepID            
-            # isMerged             
-            # SampleID             
-            # resolution           
-            # weight               
-            # threshold            
-            # mfvp                 
-            # window.size          
-            # chr                
-            # bin.start                
-        )
-    ) %>% 
-    dplyr::rename_with(
-        ~ str_replace_all(.x, '_', '.'),
+    # pivot bin-wise stats to tidy format for computing summary stats
+    pivot_longer(
         c(
-            # is_bad_bin,
-            # n_valid_pixels,
-            # sum_counts,           
-            # sum_balanced,         
             log2_insulation_score,
+            n_valid_pixels,
+            sum_counts,
+            sum_balanced,
             boundary_strength
+        ),
+        names_to='TAD.metric',
+        values_to='bin.score',
+    ) %>% 
+    filter(
+        TAD.metric %in% c(
+            'sum_balanced',
+            'boundary_strength',
+            'log2_insulation_score'
         )
     )
 }
 
-###################################################
-# hiTAD 
-###################################################
+load_all_cooltools_Insulation <- function(){
+    list_all_cooltools_results() %>% 
+        head(5) %>% 
+        # {.} -> tmp
+    mutate(
+        insulation=
+            # pmap(
+            future_pmap(
+                .,
+                load_cooltools_Insulation,
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(insulation) %>% 
+    select(-c(filepath))
+}
+
+################################################################################
+# Generate + Process hiTAD TADs + Boundaries
+################################################################################
+list_all_hiTAD_TADs <- function(){
+    HITAD_TAD_RESULTS_DIR %>% 
+    parse_results_filelist(suffix='.tsv') %>%
+    # hiTAD only expects balanced matrices as input 
+    filter(weight == 'balanced') %>% 
+    add_column(TAD.method='hiTAD') %>% 
+    separate_wider_delim(
+        MatrixID,
+        delim='-',
+        names=c('MatrixID', 'feature.type')
+    ) %>% 
+    pivot_wider(
+        names_from=feature.type,
+        names_glue="{feature.type}.filepath",
+        values_from=filepath
+    ) %>% 
+    convert_MatrixID_to_SampleID_and_SampleGroup()
+}
+
 load_hiTAD_TADs <- function(
     TAD.filepath,
     DI.filepath,
     resolution,
     ...){
     # paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', sep='', collapse='; '); row.index=1
-    # method=tmp$method[[row.index]]; resolution=tmp$resolution[[row.index]]; Edit=tmp$Edit[[row.index]]; Celltype=tmp$Celltype[[row.index]]; Genotype=tmp$Genotype[[row.index]]; CloneID=tmp$CloneID[[row.index]]; TechRepID=tmp$TechRepID[[row.index]]; weight=tmp$weight[[row.index]]; DI.filepath=tmp$DI.filepath[[row.index]]; TAD.filepath=tmp$TAD.filepath[[row.index]]; SampleID=tmp$SampleID[[row.index]]
+    # resolution=tmp$resolution[[row.index]]; weight=tmp$weight[[row.index]]; TAD.method=tmp$TAD.method[[row.index]]; DI.filepath=tmp$DI.filepath[[row.index]]; TAD.filepath=tmp$TAD.filepath[[row.index]]; Sample.Group=tmp$Sample.Group[[row.index]]
     # Load bin-wise Adaptibe Directinality scores
     DIs <- 
         read_tsv(
@@ -340,26 +547,6 @@ load_hiTAD_TADs <- function(
     compute_TAD_stats(resolution=resolution)
 }
 
-list_all_hiTAD_TADs <- function(){
-    HITAD_TAD_RESULTS_DIR %>% 
-    parse_results_filelist(suffix='.tsv') %>%
-    # hiTAD only expects balanced matrices as input 
-    filter(weight == 'balanced') %>% 
-    add_column(TAD.method='hiTAD') %>% 
-    separate_wider_delim(
-        MatrixID,
-        delim='-',
-        names=c('MatrixID', 'feature.type')
-    ) %>% 
-    pivot_wider(
-        names_from=feature.type,
-        names_glue="{feature.type}.filepath",
-        values_from=filepath
-    ) %>% 
-    get_info_from_MatrixIDs(include_fields=FALSE) %>%
-    select(-c(SampleID))
-}
-
 load_all_hiTAD_TADs <- function(){
     list_all_hiTAD_TADs() %>% 
     mutate(
@@ -382,9 +569,78 @@ post_process_hiTAD_TAD_results <- function(results.df){
     dplyr::select(-c(weight))
 }
 
-###################################################
-# Generate ConsensusTADs
-###################################################
+load_hiTAD_DIs <- function(
+    TAD.filepath,
+    DI.filepath,
+    resolution,
+    ...) {
+    DIs <- 
+        read_tsv(
+            DI.filepath,
+            show_col_types=FALSE,
+            progress=FALSE,
+            col_names=
+                c(
+                    'chr',
+                    'bin.start',
+                    'bin.end',
+                    'bin.score'
+                )
+        )
+    TADs <- 
+        read_tsv(
+            TAD.filepath,
+            show_col_types=FALSE,
+            progress=FALSE,
+            col_names=
+                c(
+                    'chr',
+                    'TAD.start',
+                    'TAD.end'
+                )
+        )
+    # Annotatte ADI summary stats for each TAD
+    # Map scores to TADs
+    DIs %>% 
+    left_join(
+        TADs,
+        by=
+            join_by(
+                chr,
+                within(x$bin.start, x$bin.end, y$TAD.start, y$TAD.end)
+            )
+    ) %>% 
+    mutate(
+        boundary.type=
+            case_when(
+                TAD.start == bin.start              ~ 'TAD Start',
+                TAD.end == bin.end                  ~ 'TAD End',
+                !is.na(TAD.start) & !is.na(TAD.end) ~ 'TAD Interior',
+                TRUE                                ~ 'Not inside TAD'
+            ),
+        is.boundary=boundary.type %in% c('TAD Start', 'TAD End'),
+    ) %>% 
+    add_column(TAD.metric='ADI')
+}
+
+load_all_hiTAD_DIs <- function(){
+    list_all_hiTAD_TADs() %>% 
+    mutate(
+        scores=
+            # pmap(
+            future_pmap(
+                .,
+                load_hiTAD_DIs,
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(scores) %>% 
+    select(-c(ends_with('.filepath')))
+}
+
+################################################################################
+# Generate + Process ConsensusTAD TADs
+################################################################################
 run_ConsensusTAD <- function(
     samples.df,
     resolution,
@@ -521,7 +777,7 @@ load_ConsensusTAD_TADs <- function(
     resolution,
     ...){
     # row_index=1; paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row_index]]', sep='', collapse='; ')
-    # filepath=tmp$filepath[[row_index]]; z.thresh=tmp$z.thresh[[row_index]]; window.size=tmp$window.size[[row_index]]; gap.thresh=tmp$gap.thresh[[row_index]]; resolution=tmp$resolution[[row_index]]; region=tmp$region[[row_index]]; Edit=tmp$Edit[[row_index]]; Celltype=tmp$Celltype[[row_index]]; Genotype=tmp$Genotype[[row_index]]; Sample.Group=tmp$Sample.Group[[row_index]]; method=tmp$method[[row_index]]
+    # row.index=51; filepath=tmp$filepath[[row_index]]; z.thresh=tmp$z.thresh[[row_index]]; window.size=tmp$window.size[[row_index]]; gap.thresh=tmp$gap.thresh[[row_index]]; resolution=tmp$resolution[[row_index]]; region=tmp$region[[row_index]]; Sample.Group=tmp$Sample.Group[[row_index]]; method=tmp$method[[row_index]]
     # Load all the bin-wise + sample-wise scores TAD scores
     scores.df <- 
         filepath %>% 
@@ -553,12 +809,18 @@ load_ConsensusTAD_TADs <- function(
     # Now get list of boundaries and transform to TAD start:end pairs
     TADs.df <- 
         scores.df %>% 
-        mutate(isConsensusBoundary=as.logical(isConsensusBoundary)) %>% 
-        filter(isConsensusBoundary) %>% 
-        # this is a list of boundaries, transform so each row is a "TAD" i.e. 
-        # all contiguous bins between a boundary and the next boundary are the TAD
-        mutate(convert_boundaries_to_TADs(boundaries=select(., bin.start))) %>%
-        filter(!(is.na(start) & is.na(end))) %>% 
+        dplyr::rename('is.boundary'=isConsensusBoundary) %>% 
+        select(bin.start, is.boundary) %>% 
+        nest(bins.df=c(bin.start, is.boundary)) %>% 
+        mutate(
+            TADs=
+                pmap(
+                    .l=.,
+                    .f=convert_boundaries_to_TADs,
+                    .progress=FALSE
+                )
+        ) %>% 
+        unnest(TADs) %>%
         select(start, end)
     # scores.df %>% nrow()
     # TADs.df %>% nrow()
@@ -574,6 +836,7 @@ load_ConsensusTAD_TADs <- function(
             )
     ) %>% 
     # for each TAD compute summary stats over the bin-wise scores
+    add_column(TAD.metric='Consensus.Score') %>% 
     group_by(start, end) %>% 
     compute_TAD_stats(resolution=resolution)
 }
@@ -584,16 +847,7 @@ list_all_ConsensusTAD_TADs <- function(){
         filename.column='Sample.Group',
         suffix='-ConsensusTADs.tsv'
     ) %>%
-    add_column(method='ConsensusTAD') # %>% 
-    # get_info_from_SampleIDs(
-    #     SampleID.col='Sample.Group',
-    #     SampleID.fields=
-    #         c(
-    #             'Edit',
-    #             'Celltype',
-    #             'Genotype'
-    #         )
-    # )
+    add_column(method='ConsensusTAD')
 }
 
 load_all_ConsensusTAD_TADs <- function(){
@@ -608,6 +862,7 @@ load_all_ConsensusTAD_TADs <- function(){
             )
     ) %>%
     unnest(TADs) %>% 
+    dplyr::rename('chr'=region) %>% 
     select(-c(filepath))
 }
 
@@ -619,600 +874,8 @@ post_process_ConsensusTAD_TAD_results <- function(results.df){
         z.thresh,
         window.size,
         gap.thresh
-    ) %>% 
+    )
     # dplyr::select(-c(z.thresh, window.size, gap.thresh)) %>% 
     # Only keep boundaries
-    dplyr::rename('chr'=region)
-}
-
-###################################################
-# Standardize results across methods
-###################################################
-load_cooltools_results_for_TADCompare <- function(force.redo=FALSE){
-    # Load boundary annotations
-    check_cached_results(
-        results_file=COOLTOOLS_TAD_RESULTS_FILE,
-        force_redo=force.redo,
-        results_fnc=load_all_cooltools_results,
-        boundaries_only=TRUE
-    ) %>% 
-    # clean up 
-    post_process_cooltools_results() %>% 
-    mutate(resolution=scale_numbers(resolution, force_numeric=TRUE)) %>% 
-    rename('TAD.params'=cooltools.params) %>% 
-    select(resolution, TAD.params, SampleID, chr, bin.start) %>% 
-    # remove entries with < 2 boundaries
-    nest(boundaries=c(bin.start)) %>% 
-    rowwise() %>% filter(nrow(boundaries) > 1) %>% 
-    # convert boundaries to start/end format
-    mutate(TADs=list(convert_boundaries_to_TADs(boundaries=boundaries))) %>% 
-    ungroup() %>% select(-c(boundaries)) %>% unnest(TADs) %>% 
-    # Nest for downstream analysis
-    mutate(region=chr) %>% 
-    group_by(resolution, TAD.params, SampleID, region) %>% 
-    nest(TADs=c(chr, start, end)) %>% 
-    ungroup() %>% 
-    dplyr::rename('chr'=region) %>% 
-    select(resolution, TAD.params, SampleID, chr, TADs)
-}
-
-load_all_TAD_results <- function(force_redo_sub=FALSE){
-    # Load hiTAD results
-    hiTAD.TADs.df <- 
-        check_cached_results(
-            results_file=HITAD_TAD_RESULTS_FILE,
-            force_redo=force_redo_sub,
-            # force_redo=TRUE,
-            results_fnc=load_all_hiTAD_TADs
-        ) %>% 
-        post_process_hiTAD_TAD_results() %>%
-        add_column(TAD.params=NULL)
-    # Load cooltools TAD results
-    cooltools.TADs.df <- 
-        check_cached_results(
-            results_file=COOLTOOLS_TAD_RESULTS_FILE,
-            force_redo=force_redo_sub,
-            # force_redo=TRUE,
-            results_fnc=load_all_cooltools_TADs
-        ) %>% 
-        post_process_cooltools_TAD_results()
-    # Load ConsensusTAD results
-    # consensusTAD.TADs.df <- 
-    #     check_cached_results(
-    #         results_file=CONSENSUSTAD_TAD_RESULTS_FILE,
-    #         force_redo=force_redo_sub,
-    #         # force_redo=TRUE,
-    #         results_fnc=load_all_ConsensusTAD_TADs
-    #     ) %>% 
-    #     post_process_ConsensusTAD_TAD_results()
-    # Bind evertything together
-    bind_rows(
-        hiTAD.TADs.df,
-        cooltools.TADs.df
-        # consensusTAD.TADs.df
-    )
-}
-
-post_process_all_TAD_results <- function(results.df){
-    results.df %>% 
-    filter(TAD.length < 10 * 1e6) %>% 
-    mutate(
-        TAD.size.band=
-            case_when(
-                length > 5e6 ~ '>  5Mb',
-                length > 2e6 ~ '>  2Mb',
-                length > 1e6 ~ '>  1Mb',
-                length > 5e5 ~ '>  500Kb',
-                TRUE         ~ '<= 500Kb'
-            ) %>%
-            factor(levels=c('<= 500Kb', '>  500Kb', '>  1Mb', '>  2Mb', '>  5Mb'))
-    )
-}
-
-load_all_TAD_results_for_TADCompare <- function(
-    force.redo=FALSE,
-    force_redo_sub=FALSE){
-    # hiTAD TAD results
-    all.TADs.df <- 
-        check_cached_results(
-            results_file=ALL_TAD_RESULTS_FILE,
-            force_redo=force.redo, force_redo_sub=force_redo_sub,
-            results_fnc=load_all_TAD_results
-        ) %>% 
-        select(
-            resolution,
-            Sample.Group,
-            method, TAD.params,
-            chr, start, end, TAD.length
-        ) %>% 
-        mutate(chr.copy=chr) %>% 
-        # mutate(length=end - start) %>% 
-        nest(TADs=c(chr, start, end, TAD.length)) %>% 
-        dplyr::rename(
-            'chr'=chr.copy,
-            'TAD.method'=method
-        )
-    # default TADCompare method estimates TADs itself, include nothing
-    spectralTAD.TADs.df <- 
-        expand_grid(
-            Sample.Group=unique(all.TADs.df$Sample.Group),
-            chr=CHROMOSOMES,
-            resolution=unique(all.TADs.df$resolution)
-        ) %>% 
-        add_column(
-            TADs=NULL, # will be estimated by TADCompare
-            TAD.params=NULL,
-            TAD.method='spectralTAD'
-        )
-    # Bind everything together
-    bind_rows(
-        all.TADs.df,
-        spectralTAD.TADs.df
-    ) %>%
-    unite(
-        'TAD.set.index',
-        sep='~',
-        remove=FALSE,
-        c(
-          TAD.method,
-          TAD.params,
-          resolution
-        )
-    ) %>% 
-    dplyr::select(-c(TAD.set.index)) %>% 
-    dplyr::rename('pre_tads'=TADs)
-}
-
-pivot_TADs_to_boundaries <- function(results.df){
-    # Pivot so the bins that start and end at the boundary position are both included
-    results.df %>% 
-    dplyr::select(-starts_with('TAD.inner.')) %>% 
-    mutate(TAD.index=row_number()) %>% 
-    dplyr::rename(
-        "start.boundary"=start,
-        "end.boundary"=end,
-        "start.score"=TAD.start.score,
-        "end.score"=TAD.end.score
-    ) %>% 
-    pivot_longer(
-        c(start.boundary, end.boundary, start.score, end.score),
-        names_to='stat',
-        values_to='value'
-    ) %>%
-    separate_wider_delim(
-        stat,
-        delim='.',
-        names=c('boundary.side', 'value.type')
-    ) %>% 
-    pivot_wider(
-        names_from=value.type,
-        values_from=value
-    ) %>% 
-    dplyr::rename(
-        "boundary.start"=boundary,
-        "boundary.score"=score
-    )
-}
-
-###################################################
-# Generate TADCompare results
-###################################################
-TADCompare_load_matrix <- function(
-    filepath,
-    ...){
-    load_mcool_file(
-        filepath,
-        type='df',
-        cis=TRUE,
-        ...
-    ) %>% 
-    select(c(range1, range2, IF))
-}
-
-run_TADCompare <- function(
-    filepath.Numerator,
-    Sample.Group.Numerator,
-    pre_tads.Numerator,
-    filepath.Denominator,
-    Sample.Group.Denominator,
-    pre_tads.Denominator,
-    resolution,
-    normalization,
-    range1,
-    range2,
-    z_thresh,
-    window_size,
-    gap_thresh,
-    ...){
-    # paste0(colnames(tmp), '=tmp$', colnames(tmp), '[[row_index]]', collapse='; ')
-    # chr1 @ 10Kb -> 24896x24896 matrix -> 40Gb is enough
-    # Run TADCompare on the 2 matrices being compared
-    matrix.numerator <-
-        TADCompare_load_matrix(
-            filepath.Numerator,
-            resolution=resolution,
-            normalization=normalization,
-            range1=range1,
-            range2=range2
-        )
-    matrix.denominator <-
-        TADCompare_load_matrix(
-            filepath.Denominator,
-            resolution=resolution,
-            normalization=normalization,
-            range1=range1,
-            range2=range2
-        )
-    pre_tads <- 
-        if (is.null(pre_tads.Numerator)) {
-            NULL
-        } else {
-            list(pre_tads.Numerator, pre_tads.Denominator)
-        }
-    tad.compare.results <- 
-        TADCompare(
-            matrix.numerator,
-            matrix.denominator,
-            resolution=resolution,
-            z_thresh=z_thresh,
-            window_size=window_size,
-            gap_thresh=gap_thresh,
-            pre_tads=pre_tads
-        )
-    # Format results to include boundary+gap scores for all bins + differential annotations
-    # tad.compare.results$Boundary_Scores %>% as_tibble()
-    # tad.compare.results$TAD_Frame %>% as_tibble()
-    tad.compare.results$Boundary_Scores %>% 
-    as_tibble() %>%
-    full_join(
-        tad.compare.results$TAD_Frame %>%
-        as_tibble() %>% 
-        add_column(isTADBoundary=TRUE),
-        suffix=c('.All', '.TADs'),
-        by=join_by(Boundary)
-    ) %>% 
-        # {.} -> tcr; tcr
-        # tcr %>% count(isTADBoundary, Differential.All, Differential.TADs, Type.All, Type.TADs)
-        # tcr %>% 
-    mutate(
-        isTADBoundary=ifelse(is.na(isTADBoundary), FALSE, isTADBoundary),
-        Differential=
-            case_when(
-                is.na(Differential.TADs) ~ Differential.All,
-                TRUE                     ~ Differential.TADs
-            ),
-        is.Differential=!grepl('Non-Differential', Differential),
-        Type=
-            case_when(
-                is.na(Type.TADs) ~ Type.All,
-                TRUE             ~ Type.TADs
-            ),
-        Enriched.Condition=
-            case_when(
-                Enriched_In.TADs == 'Matrix 1' ~ Sample.Group.Numerator,
-                Enriched_In.TADs == 'Matrix 2' ~ Sample.Group.Denominator,
-                Enriched_In.All  == 'Matrix 1' ~ Sample.Group.Numerator,
-                Enriched_In.All  == 'Matrix 2' ~ Sample.Group.Denominator,
-                TRUE                      ~ NA
-            ),
-        TAD_Score1=
-            case_when(
-                is.na(TAD_Score1.TADs) ~ TAD_Score1.All,
-                TRUE                   ~ TAD_Score1.TADs
-            ),
-        TAD_Score2=
-            case_when(
-                is.na(TAD_Score2.TADs) ~ TAD_Score2.All,
-                TRUE                   ~ TAD_Score2.TADs
-            ),
-        Gap_Score=
-            case_when(
-                is.na(Gap_Score.TADs) ~ Gap_Score.All,
-                TRUE                  ~ Gap_Score.TADs
-            )
-    ) %>%
-    dplyr::rename(
-        'TAD.Score.Numerator'=TAD_Score1,
-        'TAD.Score.Denominator'=TAD_Score2,
-        'TAD.isDifferential'=Differential,
-        'TAD.Difference.Type'=Type
-    ) %>% 
-    rename_with(~ str_replace_all(.x, '_', '.')) %>% 
-    dplyr::select(-c(ends_with('.All'), ends_with('.TADs')))
-}
-
-run_all_TADCompare <- function(
-    comparisons.df,
-    hyper.params.df,
-    force_redo=FALSE,
-    ...){
-    # force_redo=TRUE;
-    comparisons.df %>% 
-    # for each comparison list all paramter combinations
-    cross_join(hyper.params.df) %>% 
-    # Create nested directory structure listing all relevant analysis parameters
-    # Name output file as {numerator}_vs_{denominator}-*.tsv
-    mutate(
-        range1=chr, range2=chr,
-        output_dir=
-            file.path(
-                TADCOMPARE_DIR,
-                glue('z.thresh_{z_thresh}'),
-                glue('window.size_{window_size}'),
-                glue('gap.thresh_{gap_thresh}'),
-                glue('TAD.method_{TAD.method}'),
-                glue('TAD.params_{TAD.params}'),
-                glue('resolution_{scale_numbers(resolution, force_numeric=TRUE)}'),
-                # glue('resolution.type_{resolution.type}'),
-                glue('region_{chr}')
-            ),
-        results_file=
-            file.path(
-                output_dir,
-                glue('{Sample.Group.Numerator}_vs_{Sample.Group.Denominator}-TADCompare.tsv')
-            )
-    ) %>% 
-    # filter(chr != 'chrY') %>% 
-    arrange(desc(resolution), desc(chr)) %>% 
-    {
-        if (!force_redo) {
-            filter(., !(file.exists(results_file)))
-        } else{
-            .
-        }
-    } %T>% 
-    {
-        message('Generating the following results files')
-        print(
-            dplyr::count(
-                .,
-                # z_thresh,
-                # window_size,
-                # gap_thresh,
-                # TAD.params,
-                TAD.method, 
-                resolution,
-                Sample.Group.Numerator,
-                Sample.Group.Denominator
-            )
-        )
-    } %>%
-        # {.} -> tmp; tmp
-        # tmp %>% 
-    # pmap(
-    future_pmap(
-        .l=.,
-        .f= # Need this wrapper to pass ... arguments to run_multiHiCCompare
-            function(results_file, ...){ 
-                check_cached_results(
-                    results_file=results_file,
-                    force_redo=force_redo,
-                    return_data=FALSE,
-                    results_fnc=run_TADCompare,
-                    # all args also passed as input arguments to run_all*() by pmap
-                    ...  # passed from the call to this wrapper()
-                )
-            },
-        ...,  # passed from the call to from run_all_TADCompare
-        .progress=TRUE
-    )
-}
-
-###################################################
-# Load TADCompare results
-###################################################
-load_TADCompare_results <- function(
-    filepath,
-    boundaries_only=TRUE,
-    ...){
-    # row_index=1; filepath=tmp$filepaths[[row_index]][[1]];
-    filepath %>% 
-    read_tsv(
-        show_col_types=FALSE,
-        progress=FALSE
-    ) %>% 
-        # {.} -> ltr.tmp; ltr.tmp
-        # ltr.tmp %>% count(isTADBoundary, is.Differential, TAD.Difference.Type)
-    {
-        if (boundaries_only) {
-            filter(., isTADBoundary)
-        } else {
-            .
-        }
-    } %>% 
-    filter(!is.na(TAD.Difference.Type))
-}
-
-load_and_correct_TADCompare_results <- function(
-    filepaths,
-    nom.threshold,
-    # fdr.threshold,
-    gw.fdr.threshold,
-    ...){
-    # filepaths=tmp$filepaths[[1]]
-    filepaths %>% 
-    mutate(
-        results=
-            pmap(
-                .l=list(filepath),
-                .f=read_tsv,
-                id='tmpID',
-                show_col_types=FALSE,
-                progress=FALSE
-            )
-    ) %>% 
-    unnest(results) %>% 
-    # The score provided by TADCompare is functionallt a z-score distributed at N(0,1)
-    # so we can compute a regular p-value to decide if a TAD's boundary score is significantly different
-    # between conditions
-    # See Section 2.7 here
-    # https://www.frontiersin.org/journals/genetics/articles/10.3389/fgene.2020.00158/full 
-    # calculate pvalue from Gap Score (a z-score) calcualted by TADCompare
-    mutate(p.value=2 * pnorm(abs(Gap.Score), lower.tail=FALSE)) %>% 
-    mutate(p.adj.gw=p.adjust(p.value, method='BH')) %>% 
-    ungroup() %>% 
-    # only keep sufficiently sifnificant siginicant differences
-    filter(
-        p.adj.gw < gw.fdr.threshold,
-        # p.adj    < fdr.threshold,
-        p.value  < nom.threshold
-    ) %>%
-    select(-c(tmpID))
-}
-
-list_all_TADCompare_results <- function(){
-    # Get a list of all results files
-    TADCOMPARE_DIR %>% 
-    parse_results_filelist(
-        suffix='-TADCompare.tsv',
-        filename.column.name='pair.name'
-    ) %>% 
-    # Split title into pair of groups ordered by numerator/denominator
-    separate_wider_delim(
-        pair.name,
-        delim='_vs_',
-        names=c('SampleID.Numerator', 'SampleID.Denominator')
-    ) %>% 
-        # {.} -> tmp; tmp
-        # tmp %>% 
-    extract_all_sample_pair_metadata(
-        SampleID.cols=c('SampleID.Numerator', 'SampleID.Denominator'),
-        SampleID.fields=c('Edit', 'Celltype', 'Genotype'),
-        suffixes=c('Numerator', 'Denominator')
-    )
-}
-
-load_all_TADCompare_results <- function(
-    nom.threshold,
-    # fdr.threshold,
-    gw.fdr.threshold,
-    ...){
-    # gw.fdr.threshold=1; fdr.threshold=0.1; nom.threshold=0.05
-    list_all_TADCompare_results() %>% 
-    # Load all results + correct pvalues genome wide per Sample.Group
-    nest(filepaths=c(filepath, region)) %>% 
-    mutate(
-        results=
-            # pmap(
-            future_pmap(
-                .l=.,
-                # load_TADCompare_results,
-                .f=load_and_correct_TADCompare_results,
-                nom.threshold=nom.threshold,
-                # fdr.threshold=fdr.threshold,
-                gw.fdr.threshold=gw.fdr.threshold,
-                boundaries_only=TRUE,
-                .progress=TRUE
-            )
-    ) %>%
-    unnest(results) %>% 
-    dplyr::rename(
-        'chr'=region,
-        'isBoundary'=isTADBoundary, 
-        'isDifferential'=is.Differential,
-        'DifferenceType'=TAD.Difference.Type
-    ) %>% 
-    select(-c(filepaths))
-}
-
-load_correct_count_TADCompare_results <- function(
-    filepaths,
-    sig.colname='p.adj.gw',
-    ...){
-    filepaths %>% 
-    load_and_correct_TADCompare_results(
-        nom.threshold=1,
-        # fdr.threshold=1,
-        gw.fdr.threshold=1
-    ) %>% 
-    # for each thresh, make binary col if TAD difference meets threshold
-    mutate(
-        "sig.lvl.{sig.colname} < 1e-15" := .data[[sig.colname]] <  1e-15,
-        "sig.lvl.{sig.colname} < 1e-10" := .data[[sig.colname]] <  1e-10,
-        "sig.lvl.{sig.colname} < 1e-05" := .data[[sig.colname]] <  1e-5,
-        "sig.lvl.{sig.colname} < 0.001" := .data[[sig.colname]] <  1e-3,
-        "sig.lvl.{sig.colname} < 0.05 " := .data[[sig.colname]] <  0.05,
-        "sig.lvl.{sig.colname} < 0.1  " := .data[[sig.colname]] <  0.10,
-        "sig.lvl.N.S."                  := .data[[sig.colname]] >= 0.10
-        # "sig.lvl.NA"                    := is.na(.data[[sig.colname]])
-    ) %>% 
-    pivot_longer(
-        starts_with('sig.lvl.'),
-        names_to='sig.lvl',
-        names_prefix='sig.lvl.',
-        values_to='meet.sig.lvl'
-    ) %>% 
-    # Inclusively count how many TAD differences meet each thrshold across categories
-    # This produces inclusive counts  for each significance threshold i.e. 
-    # the number of TAD differences < 0.1 also includes all differences <= 0.01
-    filter(meet.sig.lvl) %>% 
-    count(
-        isTADBoundary,
-        is.Differential,
-        TAD.Difference.Type,
-        Enriched.Condition,
-        region,
-        sig.lvl
-    )
-}
-
-load_correct_count_all_TADCompare_results <- function(){
-    list_all_TADCompare_results() %>% 
-    # Load all results + correct pvalues genome wide per Sample.Group
-    nest(filepaths=c(filepath, region)) %>% 
-    mutate(
-        results=
-            future_pmap(
-                .l=.,
-                .f=load_correct_count_TADCompare_results,
-                .progress=TRUE
-            )
-    ) %>%
-    unnest(results) %>% 
-    dplyr::rename(
-        'chr'=region,
-        'isBoundary'=isTADBoundary, 
-        'isDifferential'=is.Differential,
-        'DifferenceType'=TAD.Difference.Type
-    ) %>% 
-    select(-c(filepaths))
-}
-
-post_process_TADCompare_results <- function(results.df){
-    results.df %>%
-    # filter(TAD.method != 'cooltools') %>% 
-    filter(isBoundary) %>% 
-    mutate(
-        # isBoundary=ifelse(isBoundary, 'TAD', 'Not TAD'),
-        across(
-            c(
-                SampleID.Numerator,
-                SampleID.Denominator,
-                Enriched.Condition
-            ),
-            ~ str_remove(.x, '.Merged.Merged')
-        ),
-    ) %>% 
-    # mutate(log.p.adj.gw=-log10(p.adj.gw)) %>% 
-    select(
-        -c(
-            isDifferential,
-            isBoundary,
-            z.thresh,
-            window.size,
-            gap.thresh
-        )
-    ) %>% 
-    relocate(
-        c(
-            resolution,
-            TAD.method,
-            TAD.params,
-            SampleID.Numerator, SampleID.Denominator, 
-            chr,
-            DifferenceType,
-            Enriched.Condition
-        )
-    )
 }
 

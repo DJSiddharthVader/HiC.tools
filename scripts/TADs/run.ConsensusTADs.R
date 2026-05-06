@@ -1,10 +1,9 @@
-###################################################
+################################################################################
 # Depdendencies
-###################################################
+################################################################################
 library(here)
 here::i_am('scripts/TADs/run.ConsensusTADs.R')
 BASE_DIR <- here()
-# BASE_DIR <- '/data/talkowski/Samples/WAPL_NIPBL/HiC'
 suppressPackageStartupMessages({
     library(hictkR)
     source(file.path(BASE_DIR,   'scripts/constants.R'))
@@ -17,16 +16,26 @@ suppressPackageStartupMessages({
     library(magrittr)
 })
 
-###################################################
+################################################################################
 # Handle arguments/parameters
-###################################################
-options(scipen=999)
+################################################################################
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force', 'resolutions'),
         has.positional=FALSE
     )
-# TADCompare parameters
+# used by calls to future_pmap() in functions below
+if (parsed.args$threads > 1) {
+    message(glue('using {parsed.args$threads} core to parallelize'))
+    plan(multisession, workers=parsed.args$threads)
+} else {
+    plan(sequential)
+}
+
+################################################################################
+# Generate ConsensusTAD results
+################################################################################
+# TADCompare parameters (all defaults)
 hyper.params.df <- 
     expand_grid(
         resolution=parsed.args$resolutions,
@@ -35,20 +44,8 @@ hyper.params.df <-
         window_size=c(15),
         gap_thresh=c(0.2)
     )
-
-###################################################
-# Generate ConsensusTAD results
-###################################################
-# used by calls to future_pmap() in functions below
-if (parsed.args$threads > 1) {
-    message(glue('using {parsed.args$threads} core to parallelize'))
-    plan(multisession, workers=parsed.args$threads)
-} else {
-    plan(sequential)
-}
 # list all individual HiC replicates per condition
-ALL_SAMPLE_GROUPS %>% 
-    set_up_sample_groups(use_merged=FALSE) %>% 
+set_up_sample_groups(use_merged=FALSE) %>% 
     # Generate TADCompare results for each condition
     # {.} -> sample.groups.df
     run_all_ConsensusTADs(

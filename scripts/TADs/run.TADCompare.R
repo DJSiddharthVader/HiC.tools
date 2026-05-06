@@ -1,6 +1,6 @@
-###################################################
+################################################################################
 # Depdendencies
-###################################################
+################################################################################
 library(here)
 here::i_am('scripts/TADs/run.TADCompare.R')
 BASE_DIR <- here()
@@ -12,15 +12,14 @@ suppressPackageStartupMessages({
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
     source(file.path(SCRIPT_DIR, 'utils.annotations.R'))
     source(file.path(SCRIPT_DIR, 'TADs/utils.TADs.R'))
-    source(file.path(SCRIPT_DIR, 'TADs/utils.TADCompare.R'))
     library(tidyverse)
     library(magrittr)
     library(purrr)
 })
 
-###################################################
+################################################################################
 # Handle arguments/parameters
-###################################################
+################################################################################
 options(scipen=999)
 parsed.args <- 
     handle_CLI_args(
@@ -41,9 +40,9 @@ TADs.df <-
     load_all_TAD_results_for_TADCompare() %>%
     filter(resolution %in% parsed.args$resolutions)
 
-###################################################
+################################################################################
 # Generate TADCompare results from merged matrices
-###################################################
+################################################################################
 # List of pairs of merged matrices to compare
 comparisons.df <- 
     # List merged matrices
