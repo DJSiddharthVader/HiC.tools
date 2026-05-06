@@ -10,6 +10,19 @@ library(future)
 # library(HiCExperiment)
 # library(plyranges)
 # library(hictkR)
+# for parsing from .cool/.mcool file names
+ALL.METADATA.FIELDS <- 
+    c(
+        'Edit',
+        'Celltype',
+        'Genotype',
+        'CloneID',
+        'TechRepID',
+        'RefGenome',
+        'ReadFilter',
+        'MinResolution'
+        
+    )
 
 ###############################################################################################################
 # Pairsing and Caching
@@ -255,159 +268,6 @@ handle_CLI_args <- function(
 ###############################################################################################################
 # Format stuff
 ###############################################################################################################
-glue_sample_ID <- function(
-    Edit,
-    Celltype,
-    Genotype,
-    CloneID,
-    TechRepID,
-    prefix='',
-    ...) {
-    glue('{prefix}{Edit}.{prefix}{Celltype}.{prefix}{Genotype}.{prefix}{CloneID}.{prefix}{TechRepID}')
-}
-
-get_info_from_SampleIDs <- function(
-    df,
-    SampleID.col='SampleID',
-    SampleID.delim='.',
-    SampleID.fields=
-        c(
-            'Edit',
-            'Celltype',
-            'Genotype',
-            'CloneID',
-            'TechRepID'
-        ),
-    field.suffix='',
-    include_merged_col=FALSE,
-    keep_id=TRUE,
-    ...){
-    SampleID.fields <- 
-        if (field.suffix == ''){ 
-            ifelse(
-                is.na(SampleID.fields),
-                NA,
-                SampleID.fields
-            )
-        } else {
-            ifelse(
-                is.na(SampleID.fields),
-                NA,
-                glue('{SampleID.fields}{SampleID.delim}{field.suffix}')
-            )
-        }
-    df %>%
-    {
-        if (include_merged_col){
-            mutate(
-                .,
-                isMerged=
-                    ifelse(
-                        grepl('Merged', !!sym(SampleID.col)),
-                        'Merged',
-                        'Individual'
-                    ) %>% 
-                    factor()
-            )
-        } else {
-            .
-        }
-    } %>% 
-    # Split SampleID into separate metadata columns specified as input
-    separate_wider_delim(
-        all_of(SampleID.col),
-        delim=fixed(SampleID.delim),
-        names=SampleID.fields,
-        cols_remove=!keep_id
-    )
-}
-
-get_info_from_MatrixIDs <- function(
-    df,
-    MatrixID.col='MatrixID',
-    MatrixID.fields=
-        c(
-            'Edit',
-            'Celltype',
-            'Genotype',
-            'CloneID',
-            'TechRepID',
-            NA,
-            'ReadFilter',
-            NA
-        ),
-    MatrixID.delim=fixed('.'),
-    SampleID.col='SampleID',
-    SampleID.fields=
-        c(
-            'Edit',
-            'Celltype',
-            'Genotype',
-            'CloneID',
-            'TechRepID'
-        ),
-    SampleID.delim=fixed('.'),
-    field.suffix='',
-    include_merged_col=FALSE,
-    keep_id=FALSE,
-    ...){
-    # MatrixID.col='MatrixID'; MatrixID.fields=c('Edit', 'Celltype', 'Genotype', 'CloneID', 'TechRepID', NA, 'ReadFilter', NA); MatrixID.delim=fixed('.'); SampleID.col='SampleID'; SampleID.fields=c('Edit', 'Celltype', 'Genotype'); SampleID.delim=fixed('.'); field.suffix=''; include_merged_col=FALSE; keep_id=FALSE;
-    MatrixID.fields <- 
-        if (field.suffix == ''){ 
-            ifelse(
-                is.na(MatrixID.fields),
-                NA,
-                MatrixID.fields
-            )
-        } else {
-            ifelse(
-                is.na(MatrixID.fields),
-                NA,
-                glue('{MatrixID.fields}{MatrixID.delim}{field.suffix}')
-            )
-        }
-    SampleID_glue_pattern <- 
-        paste0(
-            '{', SampleID.fields, '}', 
-            collapse=SampleID.delim
-        )
-    # Set up some column names/variables
-    col_names <- c(MatrixID.fields[!is.na(MatrixID.fields)], 'isMerged')
-    # extract + format metadata
-    df %>%
-    {
-        if (include_merged_col){
-            mutate(
-                .,
-                isMerged=
-                    ifelse(
-                        grepl('Merged', !!sym(MatrixID.col)),
-                        'Merged',
-                        'Individual'
-                    ) %>% 
-                    factor()
-            )
-        } else {
-            .
-        }
-    } %>% 
-    separate_wider_delim(
-        all_of(MatrixID.col),
-        delim=MatrixID.delim,
-        names=MatrixID.fields,
-        too_many='merge',
-        cols_remove=!keep_id
-    ) %>% 
-    # create SampleID
-    {
-        if (SampleID.col != '') {
-            mutate(., !!SampleID.col := glue(SampleID_glue_pattern))
-        } else {
-            .
-        }
-    }
-}
-
 scale_numbers <- function(
     numbers,
     accuracy=2,
@@ -580,6 +440,163 @@ standardize_data_cols <- function(
 ###############################################################################################################
 # Parsing Sample Identifiers <-> Sample Metadata
 ###############################################################################################################
+parse_metadata_from_names <- function(
+    df,
+    info.format,
+    info.colname=NULL,
+    include_merged_col=FALSE,
+    keep_id=TRUE,
+    prefix=NULL,
+    suffix=NULL,
+    delim='.',
+    ...) {
+    info.colname <- 
+        ifelse(
+            is.null(info.colname),
+            info.format,
+            info.colname
+        )
+    field.names <- 
+        case_when(
+            info.format  == 'Sample.Group' ~ list(ALL.METADATA.FIELDS[1:3]),
+            info.format  == 'SampleID'     ~ list(ALL.METADATA.FIELDS[1:5]), 
+            # info.format  == 'MatrixID'     ~ list(ALL.METADATA.FIELDS[c(1:5, 7)])
+            info.format  == 'MatrixID'     ~ list(ALL.METADATA.FIELDS)
+        ) %>% 
+        unlist() %>% 
+        {
+            if (!is.null(prefix)) {
+                paste(prefix, ., sep=delim)
+            } else {
+                .
+            }
+        } %>% 
+        {
+            if (!is.null(suffix)) {
+                paste(., suffix, sep=delim)
+            } else {
+                .
+            }
+        }
+    # Split SampleID into separate metadata columns specified as input
+    df %>% 
+    {
+        if (include_merged_col & info.format != 'Sample.Group') {
+            mutate(
+                .,
+                isMerged=
+                    ifelse(
+                        grepl('Merged', !!sym(info.colname)),
+                        'Merged',
+                        'Individual'
+                    ) %>% 
+                    factor()
+            )
+        } else {
+            .
+        }
+    } %>% 
+    separate_wider_delim(
+        all_of(info.colname),
+        delim=fixed(delim),
+        names=field.names,
+        cols_remove=!keep_id
+    )
+}
+
+build_name_from_metadata <- function(
+    df,
+    info.format,
+    info.colname=NULL,
+    delim='.',
+    sep='',
+    in.prefix=NULL,
+    in.suffix=NULL,
+    out.prefix='',
+    out.suffix='',
+    ...) {
+    # name.col='SampleID'; delim='.'; sep=''; prefix=''; suffix='';
+    info.colname <- 
+        ifelse(is.null(info.colname), info.format, info.colname)
+    name.str <- 
+        paste0(out.prefix, info.colname, out.suffix, collapse=delim)
+    value.glue.str <- 
+        case_when(
+            info.format  == 'Sample.Group' ~ list(ALL.METADATA.FIELDS[1:3]),
+            info.format  == 'SampleID'     ~ list(ALL.METADATA.FIELDS[1:5]), 
+            info.format  == 'MatrixID'     ~ list(ALL.METADATA.FIELDS[c(1:5, 7)])
+        ) %>%
+        unlist() %>% 
+        {
+            if (!is.null(in.prefix)) {
+                paste(in.prefix, ., sep=delim)
+            } else {
+                .
+            }
+        } %>% 
+        {
+            if (!is.null(in.suffix)) {
+                paste(., in.suffix, sep=delim)
+            } else {
+                .
+            }
+        } %>% 
+        paste0( 
+            '{', ., '}', 
+            collapse=delim
+        )
+    df %>%
+    mutate( "{name.str}" := glue(value.glue.str))
+}
+
+convert_MatrixID_to_SampleID_and_SampleGroup <- function(
+    df,
+    info.colname=NULL,
+    include.metadata=FALSE,
+    keep_id=FALSE,
+    delim='.',
+    sep='',
+    prefix='',
+    suffix='',
+    ...) {
+    # info.colname=NULL; include.metadata=FALSE; include_merged_col=FALSE; keep_id=FALSE; delim='.'; sep=''; prefix=''; suffix=''
+    df %>% 
+    parse_metadata_from_names(
+        info.format='MatrixID',
+        info.colname=info.colname,
+        include_merged_col=TRUE,
+        keep_id=keep_id,
+        delim=delim,
+        prefix='SampleMetadata',
+        suffix=NULL
+    ) %>% 
+    build_name_from_metadata(
+        info.format='SampleID',
+        delim=delim,
+        sep=sep,
+        in.prefix='SampleMetadata',
+        in.suffix=NULL,
+        out.prefix=prefix,
+        out.suffix=suffix
+    ) %>% 
+    build_name_from_metadata(
+        info.format='Sample.Group',
+        delim=delim,
+        sep=sep,
+        in.prefix='SampleMetadata',
+        in.suffix=NULL,
+        out.prefix=prefix,
+        out.suffix=suffix
+    ) %>%
+    {
+        if (!include.metadata) {
+            select(., -starts_with('SampleMetadata.'))
+        } else {
+            dplyr::rename_with(., ~str_remove(.x, '^SampleMetadata.', ''))
+        }
+    }
+}
+
 ###############################################################################################################
 # Load Specific Data
 ###############################################################################################################
@@ -611,6 +628,14 @@ list_included_samples <- function(){
     load_sample_metadata() %>%
     filter(Included) %>%
     pull(SampleID)
+    parse_metadata_from_names(
+        info.format='MatrixID',
+        include_merged_col=TRUE,
+        keep_id=FALSE
+    ) %>% 
+    build_name_from_metadata(name.col='SampleID') %>% 
+    build_name_from_metadata(name.col='Sample.Group') %>% 
+    # build_name_from_metadata(name.col='MatrixID') %>% 
 }
 
 load_mcool_file <- function(
