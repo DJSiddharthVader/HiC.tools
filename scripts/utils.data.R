@@ -14,7 +14,7 @@ library(future)
 ###############################################################################################################
 # Pairsing and Caching
 ###############################################################################################################
-install_packages <- function(){
+install_all_project_dependencies <- function(){
     install.packages(
         c(
             'ggplot2',
@@ -25,30 +25,39 @@ install_packages <- function(){
             'scales',
             'ggpointdensity',
             'viridis',
-            'ggstatsplot',
-            'tidyverse',
-            'stringi',
-            'glue',
+            # 'ggstatsplot',
             'here',
-            'magrittr',
-            'dplyr',
+            # 'stringi',
+            'glue',
             'optparse',
+            'tictoc',
+            'devtools',
+            'tidyverse',
+            'dplyr',
+            'magrittr',
             'cluster',
             'furrr',
             'future',
-            'tictoc',
-            'devtools',
             'PRIMME',
             'Matrix',
-            'HiCcompare',
+            # 'HiCcompare',
+            # 'stringr',
+            # 'RMTstat',
+            # 'strawr'
             'BiocManager'
         )
     )
-    BiocManager::install(c('TADCompare'))
-    BiocManager::install("multiHiCcompare")
+    # install.packages('diffdomain_0.1.0.tar.gz', repos=NULL,type='source')
+    BiocManager::install(
+        c(
+            'TADCompare',
+            'multiHiCcompare'
+        )
+    )
     pak::pak("jasonwong-lab/gghic")
-    pak::pak("paulsengroup/hictkR")
-    }
+    devtools::install_github("paulsengroup/hictkR")
+    # pak::pak("paulsengroup/hictkR")
+}
 
 check_cached_results <- function(
     results_file,
