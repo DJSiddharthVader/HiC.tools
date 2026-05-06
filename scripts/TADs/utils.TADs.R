@@ -423,15 +423,6 @@ load_cooltools_Insulation <- function(
             stri_reverse
         )
     ) %>% 
-    # Finally compute all MoCs for all listed pairs of annotations
-    mutate(
-        MoCs=
-            # pmap(
-            future_pmap(
-                .l=.,
-                .f=calculate_MoC,
-                .progress=TRUE
-            )
     pivot_wider(
         names_from=stat,
         values_from=value

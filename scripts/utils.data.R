@@ -27,7 +27,7 @@ ALL.METADATA.FIELDS <-
 ###############################################################################################################
 # Pairsing and Caching
 ###############################################################################################################
-install_all_project_dependencies <- function(){
+install_packages <- function(){
     install.packages(
         c(
             'ggplot2',
