@@ -1,17 +1,15 @@
 ###################################################
 # Dependencies
 ###################################################
-# library(tidyverse)
-# library(magrittr)
 library(ggplot2)
 library(ggpubr)
 library(ggh4x)
 library(ggridges)
 library(GGally)
 library(scales)
-library(furrr)
 library(ggpointdensity)
 library(viridis)
+library(furrr)
 
 ###################################################
 # Transform data for plotting
@@ -684,8 +682,7 @@ plot_barplot <- function(
             geom_col(position=position)
         }
     } %>% 
-    # Handle faceting + scaling + theme options
-    post_process_plot(...) %>% 
+    # add text lables to bars (usually pcts)
     {
         if (!(is.null(label.var))) {
             . +
@@ -704,7 +701,9 @@ plot_barplot <- function(
         } else {
             .
         }
-    }
+    } %>% 
+    # Handle faceting + scaling + theme options
+    post_process_plot(...)
 }
 
 plot_boxplot <- function(
