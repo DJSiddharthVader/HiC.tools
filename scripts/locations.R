@@ -1,10 +1,15 @@
 ################################################################################
-# Roots
+# Global Stuff
 ################################################################################
-REF_DIR              <- file.path(BASE_DIR, 'reference.files')
-SCRIPT_DIR           <- file.path(BASE_DIR, 'scripts')
-RESULTS_DIR          <- file.path(BASE_DIR, 'results')
-SAMPLE_METADATA_FILE <- file.path(BASE_DIR, SAMPLE_METADATA_FILENAME) 
+SCRIPT_DIR            <- file.path(BASE_DIR, 'scripts')
+SAMPLE_METADATA_FILE  <- file.path(BASE_DIR, SAMPLE_METADATA_FILENAME) 
+RESULTS_DIR           <- file.path(BASE_DIR, 'results')
+MCOOL_DIR             <- file.path(RESULTS_DIR, 'coolers_library')
+
+################################################################################
+# Reference files
+################################################################################
+REF_DIR                <- file.path(BASE_DIR, 'reference.files')
 GENOME_BINS_FILES_DIR  <- file.path(REF_DIR, 'genome.bins')
 GENOME_TRACK_FILES_DIR <- file.path(REF_DIR, 'genome.tracks')
 GENOME_NAME            <- 'hg38'
@@ -62,7 +67,7 @@ LOOPS_DIR                                  <- file.path(RESULTS_DIR, 'loops')
 LOOP_RESULTS_DIR                           <- file.path(LOOPS_DIR, 'results_loops')
 ALL_COOLTOOLS_LOOPS_RESULTS_FILE           <- file.path(LOOPS_DIR, 'all.cooltools.loops.tsv')
 FILTERED_COOLTOOLS_LOOPS_RESULTS_FILE      <- file.path(LOOPS_DIR, 'filtered.cooltools.loops.tsv')
-LOOP_BED_FILES_DIR                         <- file.path(BED_FILES_DIR, 'loops')
+LOOP_BED_FILES_DIR                         <- file.path(LOOPS_DIR, 'BED.files')
 # IDR2D Analysis
 LOOPS_IDR2D_DIR                            <- file.path(LOOPS_DIR, 'results_IDR2D')
 ALL_LOOPS_IDR2D_RESULTS_FILE               <- file.path(LOOPS_DIR, 'all.cooltools.IDR2D.results.tsv')
@@ -102,7 +107,8 @@ GENOME_GTF_FILE              <- file.path(FGE_RAW_DIR, 'gencode.v38.annotation.g
 FGE_DIR                      <- file.path(RESULTS_DIR, 'FGE.Association.Testing')
 # pre-computed bin-wise FGE signal results dir
 FGE_SIGNAL_DIR               <- file.path(FGE_DIR, 'binwise.FGE.signals')  
-FGE_RESULTS_DIR              <- file.path(FGE_DIR, 'results')
+# association testng results 
+FGE_TEST_RESULTS_DIR         <- file.path(FGE_DIR, 'testing.results')  
 FGE_FISHER_TEST_RESULTS_FILE <- file.path(FGE_DIR, 'all.fisher.test.results.tsv')
 FGE_TTEST_TEST_RESULTS_FILE  <- file.path(FGE_DIR, 'all.ttest.test.results.tsv')
 FGE_CORR_TEST_RESULTS_FILE   <- file.path(FGE_DIR, 'all.corr.test.results.tsv')

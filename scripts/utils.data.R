@@ -77,18 +77,19 @@ check_cached_results <- function(
     force_redo=FALSE,
     return_data=TRUE,
     show_col_types=FALSE,
+    silence=FALSE,
     results_fnc,
     ...){
     # Now check if the results file exists and load it
     tic()
     if (is.null(results_file)) {
-        message("No results file, will just return data")
+        if (!silence) { message("No results file, will just return data") }
         results <- results_fnc(...)
         return_data <- TRUE
     } else {
         # Set read/write functions based on filetype
         output_filetype <- results_file %>% str_extract('\\.[^\\.]*$') 
-        message(output_filetype)
+        if (!silence) { message(output_filetype) }
         if (output_filetype == '.rds') {
             load_fnc <- readRDS
             save_fnc <- saveRDS
@@ -99,17 +100,17 @@ check_cached_results <- function(
             stop(glue('Invalid file extesion: {output_filetype}'))
         }
         if (file.exists(results_file) & !force_redo) {
-            message(glue('{results_file} exists, not recomputing results'))
+            if (!silence) { message(glue('{results_file} exists, not recomputing results')) }
             if (return_data) {
-                message('Loading cached results...')
+                if (!silence) { message('Loading cached results...') }
                 results <- load_fnc(results_file)
             }
         # or force recompute+cache the data and return it
         } else {
             if (file.exists(results_file) & force_redo) {
-                message(glue('{results_file} exists, recomputing results anyways'))
+                if (!silence) { message(glue('{results_file} exists, recomputing results anyways')) }
             } else {
-                message(glue('No cached results, generating: {results_file}'))
+                if (!silence) { message(glue('No cached results, generating: {results_file}')) }
             }
             dir.create(dirname(results_file), recursive=TRUE, showWarnings=FALSE)
             results <- results_fnc(...) %T>% save_fnc(results_file)
@@ -118,7 +119,7 @@ check_cached_results <- function(
         }
     }
     # Or dont save the results, just return the results
-    toc()
+    if (!silence) { toc() }
     if (return_data) {
         return(results)
     } else { 
@@ -129,7 +130,7 @@ check_cached_results <- function(
 parse_results_filelist <- function(
     input_dir,
     suffix,
-    filename.column.name='MatrixID',
+    filename.column.name='filename',
     pattern=NA,
     param_delim='_',
     parse_filepath_to_columns=TRUE,
@@ -688,8 +689,8 @@ list_all_mcool_files <- function(
 
 load_mcool_file <- function(
     filepath,
-    resolution=100000,
-    normalization="NONE",
+    resolution,
+    normalization,
     range1="",
     range2="",
     cis=TRUE,
@@ -766,64 +767,61 @@ load_mcool_file <- function(
 }
 
 load_mcool_files <- function(
-    pattern='.hg38.mapq_30.1000.mcool',
-    resolutions=NULL,
-    normalizations=NULL,
+    hic.params.df,
+    merge_status='merged',
     regions.df=NULL,
     range1s=NULL,
     range2s=NULL,
     progress=TRUE,
-    return_metadata_only=FALSE,
-    keep_metadata_columns=FALSE,
     ...){
+    # hic.params.df=expand.grid(resolution=c(100) * 1e3, normalization='NONE'); pattern='.mcool'; regions.df=NULL; range1s=NULL; range2s=NULL; progress=TRUE; keep_metadata_columns=FALSE;
     # Define all genomic regions to load contacts 
     regions.df <- 
-        if (is.null(regions.df)) {
-            # Get the whole genome
-            if ((is.null(range1s)) & (is.null(range2s))) {
-                tibble()
-                # tibble(
-                #     range1=CHROMOSOMES,
-                #     range2=CHROMOSOMES
-                # )
-            # get all contacts within all regions in range1s
-            } else if (is.null(range2s)) {
-                tibble(
-                    range1=range1s,
-                    range2=range1s
-                )
-            # get all contacts between all pairs of regions only (not intra-region contacts)
+        {
+            if (is.null(regions.df)) {
+                # Get the whole genome
+                if ((is.null(range1s)) & (is.null(range2s))) {
+                    tibble()
+                    # tibble(
+                    #     range1=CHROMOSOMES,
+                    #     range2=CHROMOSOMES
+                    # )
+                # get all contacts within all regions in range1s
+                } else if (is.null(range2s)) {
+                    tibble(
+                        range1=range1s,
+                        range2=range1s
+                    )
+                # get all contacts between all pairs of regions only (not intra-region contacts)
+                } else {
+                    expand_grid(
+                        range1=range1s,
+                        range2=range2s
+                    )
+                }
+            # Just load the specified regions (1 region per row: chr, start, end)
             } else {
-                expand_grid(
-                    range1=range1s,
-                    range2=range2s
-                )
+                regions.df
             }
-        # Just load the specified regions (1 region per row: chr, start, end)
-        } else {
-            regions.df
         }
     # List all regions for all samples
     list_all_mcool_files(merge_status=merge_status) %>% 
     join_all_rows(regions.df) %>% 
+    # must contain 2 columns: resolution (int) and normalization (passed to load_mcool_file())
+    # all samples will be loaded per each pair of resolution+normalization listed i.e. per row in hic.params.df
+    cross_join(hic.params.df) %>% 
     # Load contacts if specified or just return sample metadata + filepaths + regions
-    {
-        if (return_metadata_only) {
-            .
-        } else {
-            mutate(
-                .,
-                contacts=
-                    purrr::pmap(
-                        .l=.,
-                        .f=load_mcool_file,
-                        .progress=progress
-                    )
-            ) %>% 
-            select(-c(filepath, range1, range2)) %>% 
-            unnest(contacts)
-        }
-    }
+    mutate(
+        .,
+        contacts=
+            purrr::pmap(
+                .l=.,
+                .f=load_mcool_file,
+                .progress=progress
+            )
+    ) %>% 
+    select(-c(filepath, range1, range2)) %>% 
+    unnest(contacts)
 }
 
 ###############################################################################################################
