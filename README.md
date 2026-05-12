@@ -186,15 +186,6 @@ results/
 │   └── results
 ├── weiner.replication
 │   └── plots
-├── TADs
-│   ├── results_TADs
-│   ├── all.ConsensusTAD.TADs.tsv
-│   ├── all.hiTAD.TADs.tsv
-│   ├── all.all.TADs.tsv
-│   ├── all.all.TAD.MoCs.tsv
-│   ├── all.TADCompare.results.tsv
-│   ├── all.TADCompare.n.results.tsv
-│   └── results_TADCompare
 ├── loops
 │   ├── all.cooltools.loops.tsv
 │   ├── filtered.cooltools.loops.tsv
@@ -288,58 +279,6 @@ results
 
 We use HiCRep to calculate the "reproducibility score" for all pairs of sample matrices, under several parameter combinations. The command below actually runs the HiCRep and produces 1 file per sample pair + parameter combination, each file contains scores for each chromosome separately (`chr{1..22,X,Y}`).
 After this there is a `.Rmd` notebook that coallates these files into a single neat dataframe that is used for plotting.
-
-### TAD Analysis
-
-#### TAD Annotation
-
-We generate the TAD annotations we use 3 different programs:
-
-1. [HiTAD](https://xiaotaowang.github.io/TADLib/domaincaller.html)
-2. [TADCompare consensusTAD()](https://pubmed.ncbi.nlm.nih.gov/32211023/)
-
-For `HiTAD` we only generate single-level TADs (not hierarchical) using default parameters. This produces a set of bin-pairs, each pair marking the start and end of the predicted TAD.
-
-Both of these tools also output the Diamond Insulation (DI) score calcualted per genomic bin.
-This can be used to score regions to compare the relative insulation of regions. 
-
-The TADs called from all methods are stored as folows
-Columns are: 
-| Column Name | Example Row 1 | Example Row 2 | Column Description |
-| ----------- | ------------- | ------------- | ------------------ |
-| resolution       |  100000    | 100000    | resolution TADs were called at | 
-| method           |  hiTAD     | hiTAD     | which TAD calling method was used| 
-| TAD.params       |  NA        | NA        | method-specific params for TAD calling |
-| Sample.Group     |  All.iN.WT | All.iN.WT | Samples used as input to call TADs| 
-| chr              |  chr1      | chr1      | chromosome TAD is on |
-| start            |  3800000   | 4500000   | start of TAD in bp |
-| end              |  4500000   | 5500000   | end of TAd in bp |
-| TAD.length       |  700000    | 1000000   | TAD length in bp |
-| TAD.bins         |  7         | 10        | tad length in bins |
-| TAD.start.score  |  1.748     | 2.929     | method specific TAD score for the start bin |
-| TAD.end.score    |  3.175     | 1.835      | method specific TAD score for the end bin |
-| TAD.inner.min    |  -17.04    | -25.13    | stat across all bin scores within TAD |
-| TAD.inner.q25    |  -7.916    | -2.44925  |  |
-| TAD.inner.mean   |  -3.921014 | -2.77422  |  |
-| TAD.inner.median |  -0.4689   | -0.88975  |  |
-| TAD.inner.q75    |  1.3594    | 0.917325  |  |
-| TAD.inner.max    |  3.175     | 2.929     | |
-| TAD.inner.total  |  -27.4471  | -27.7422  |  |
-
-
-#### TAD Comparison
-
-For 2 different TAD annotation sets (start/end pairs) of the same region (e.g. chr16) we can calculate the similarity of the 2 sets by computing the Measure of Concordance as defined in [this paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-018-1596-9#Sec21). 
-
-We also compare TADs called from merged matrices using `TADCompare`, since each merged matrix represents a biological condition (e.g. 16p.iN.WT) it is an expliciit differential analysis 
-
-For 2 different TAD boundary annotation sets (just is/is not a boundary) of the same region we can calculate similarity as follows:
-1. Calculate the distance between all pairs of boundaries between the sets
-2. For each boundary in set 1 pick the boundary in set 2 with the samllest distance
-3. If there are any boundaries are set 2 that are the nearest to 2 different set 1 bounadaries, assign it to the closest set 1 boundary and assign the 2nd closest boundary in set 2 to the remaining set 1 boundary
-4. Using all the boundary-pair distance, summarize in at least 1 of the following ways
-   1. Test if the distribution is > 0 (KS-test vs Gaussian + observed variance) -> need to correct p-values since there are many tests (1 per pair of TAD annotation set)
-   2. Calculate mean distance and just compare that between pairs
 
 ### Loop Analysis
 
@@ -546,21 +485,6 @@ Rscript ./scripts/hicrep/run.hicrep.R && parallel -j $(nproc) --bar --eta :::: .
 Generate Weiner et al. 2022 replication analysis figures
 ```bash
 Rscript ./scripts/weiner.replication/make.replication.figures.R
-```
-Generate TAD and insulation annotations
-```bash
-# Generate TAD annotations with hiTAD 
-./scripts/TADs/run.TAD.Callers.sh -e inplace hiTAD ./results/coolers_library/**/*.Merged.Merged*.mapq_30.1000.mcool
-# Generate TAD boundary annotations with cool
-# ./scripts/TADs/run.TAD.Callers.sh -e inplace cooltools ./results/coolers_library/**/*.Merged.Merged*.mapq_30.1000.mcool
-# Generate Consensus TAD results from set of individual matrices with spectralTAD
-Rscript ./scripts/TADs/run.ConsensusTADs.R
-```
-Generate TADCompare results
-```bash
-# Run TADCompare to generated differential TAD results
-# requires 120Gb for the largest matrix comparison (i.e. chr1 @5Kb)
-Rscript ./scripts/TADs/run.TADCompare.R
 ```
 Generate Loop results
 ```bash

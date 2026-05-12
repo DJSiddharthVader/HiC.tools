@@ -45,11 +45,11 @@ CONSENSUSTAD_TAD_RESULTS_DIR     <- file.path(TAD_RESULTS_DIR, 'method_Consensus
 CONSENSUSTAD_TAD_RESULTS_FILE    <- file.path(TAD_DIR, 'all.ConsensusTAD.TADs.tsv')
 CONSENSUSTAD_SCORE_RESULTS_FILE  <- file.path(TAD_DIR, 'all.ConsensusTAD.Consensus.Scores.tsv')
 # Joint results
-ALL_TAD_RESULTS_FILE             <- file.path(TAD_DIR, 'all.TADs.tsv')
-ALL_TAD_SCORES_FILE              <- file.path(TAD_DIR, 'all.TAD.scores.tsv')
-ALL_TAD_BOUNDARIES_FILE          <- file.path(TAD_DIR, 'all.TAD.Boundaries.tsv')
-ALL_MOC_FILE                     <- file.path(TAD_DIR, 'all.TAD.MoCs.tsv')
-TAD_BED_FILES_DIR                <- file.path(BED_FILES_DIR, 'TADs')
+ALL_TAD_RESULTS_FILE             <- file.path(TAD_DIR, 'all.all.TADs.tsv')
+ALL_TAD_SCORES_FILE              <- file.path(TAD_DIR, 'all.all.TAD.scores.tsv')
+ALL_TAD_BOUNDARIES_FILE          <- file.path(TAD_DIR, 'all.all.TAD.Boundaries.tsv')
+ALL_MOC_FILE                     <- file.path(TAD_DIR, 'all.all.TAD.MoCs.tsv')
+TAD_BED_FILES_DIR                <- file.path(TAD_DIR, 'BED.files')
 # TADCompare results
 TADCOMPARE_DIR                   <- file.path(TAD_DIR, 'results_TADCompare')
 TADCOMPARE_RESULTS_FILE          <- file.path(TAD_DIR, 'all.TADCompare.results.tsv')
