@@ -205,7 +205,112 @@ post_process_cooltools_compartment_results <- function(results.df){
     results.df
 }
 
+###################################################
+# Generate Saddle Plot Data
+###################################################
+generate_saddle_data_calculation_cmds <- function(
+    threads,
+    normalization,
+    resolution,
+    contact.type,
+    MatrixID,
+    mcool.filepath,
+    track.filepath,
+    track.col.name,
+    expected.path,
+    expected.col.name,
+    output_dir,
+    ...){
+    output_dir <- 
+        file.path(
+            output_dir,
+            glue("normalization_{normalization}"),
+            glue("resolution_{resolution}")
+        )
+    # Create filepaths
+    mcool.uri     <- glue("{mcool.filepath}::resolutions/{resolution}")
+    track.uri     <- glue("{track.filepath}::{track.col.name}")
+    expected.uri  <- glue("{expected.path}::{expected.col.name}")
+    output.prefix <- glue("{output_dir}/{MatrixID}-")
+    # Compose command to generate TAD for this set of inputs + params
+    weight_flag <- 
+        case_when(
+            normalization == 'balanced' ~ '--clr-weight-name weight',
+            normalization == 'raw'      ~ '',
+            .unmatched="error"
+        )
+    mkdir.cmd       <- glue("mkdir -p {output_dir}")
+    saddle.cmd <- glue("cooltools saddle --strength {weight_flag} -t {contact.type} -n-bins {n.bins} -o {output.prefix} {mcool.uri} {track.uri} {expected.path}")
+    # Paste  all commands together in one line to run in bash
+    tibble_row(
+        output.filepath=glue("{output.prefix}signals.tsv")
+        cmd=
+            paste(
+                c(
+                    mkdir.cmd,
+                    saddle.cmd
+                ),
+                collapse='; '
             )
     )
+}
+
+generate_all_saddle_data_calculation_cmds <- function(
+    hyper.params.df,
+    merge_status='merged',
+    force_redo=FALSE,
+    ...){
+    # list all binwise eigenvector results files
+    COMPARTMENTS_RESULTS_DIR %>%
+    parse_results_filelist(suffix='.cis.vecs.tsv') %>% 
+    dplyr::rename('track.filepath'=filepath) %>% 
+    # list all distance expected contact files
+    inner_join(
+        DISTANCE_EXPECTED_CONTACTS_DIR %>% 
+        parse_results_filelist(suffix='-expected.tsv') %>% 
+        dplyr::rename('expected.path'=filepath),
+        by=join_by(normalization, resolution)
+    ) %>% 
+    # list contacts matrices for all samples to generate compartments for
+    inner_join(
+        list_all_mcool_files(merge_status=merge_status) %>%
+        dplyr::rename('mcool.filepath'=filepath),
+        by=join_by(resolution)
+    ) %>% 
+    # Map any other hyper-params to sets of related files
+    inner_join(
+        hyper.params.df,
+        by=
+            join_by(
+                normalization,
+                resolution,
+                contact.type
+            )
+    ) %>% 
+    add_column(output_dir=COMPARTMENT_SADDLE_FILES_DIR) %>% 
+    # build commands from relevant params + input files
+    mutate(
+        cmd.data=
+            pmap(
+                .l=.,
+                .f=
+                    function(Comp.method, ...) {
+                        case_when(
+                            Comp.method == 'cooltools' ~ generate_saddle_data_calculation_cmds(...),
+                            .unmatched='error'
+                        )
+                    },
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(cmd.data) %>% 
+    # Only include cmds generating outputfiles that dont exist
+    {
+        if (!force_redo) {
+            filter(., !file.exists(output.filepath))
+        } else {
+            .
+        }
+    }
 }
 
