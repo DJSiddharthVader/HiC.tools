@@ -111,11 +111,7 @@ load_all_TAD_results_for_TADCompare <- function(
     force_redo_sub=FALSE){
     # hiTAD TAD results
     all.TADs.df <- 
-        check_cached_results(
-            results_file=ALL_TAD_RESULTS_FILE,
-            force_redo=force.redo, force_redo_sub=force_redo_sub,
-            results_fnc=load_all_TAD_results
-        ) %>% 
+        ALL_TAD_RESULTS_FILE %>% 
         select(
             resolution,
             Sample.Group,

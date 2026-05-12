@@ -4,14 +4,13 @@
 library(here)
 here::i_am('scripts/TADs/run.TADCompare.R')
 BASE_DIR <- here()
-# BASE_DIR <- '/data/talkowski/Samples/cohesin_project/HiC'
 suppressPackageStartupMessages({
     library(hictkR)
     source(file.path(BASE_DIR,   'scripts/constants.R'))
-    source(file.path(SCRIPT_DIR, 'locations.R'))
+    source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
-    source(file.path(SCRIPT_DIR, 'utils.annotations.R'))
     source(file.path(SCRIPT_DIR, 'TADs/utils.TADs.R'))
+    source(file.path(SCRIPT_DIR, 'TADs/utils.Comparing.TADs.R'))
     library(tidyverse)
     library(magrittr)
     library(purrr)
@@ -20,41 +19,43 @@ suppressPackageStartupMessages({
 ################################################################################
 # Handle arguments/parameters
 ################################################################################
-options(scipen=999)
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force', 'resolutions'),
         has.positional=FALSE
     )
-# TADCompare hypper-parameters
-hyper.params.df <- 
-    expand_grid(
-        resolutions=parsed.args$resolutions,
-        normalization=c('weight', 'NONE'),
-        z_thresh=c(3),
-        window_size=c(15),
-        gap_thresh=c(0.2)
-    )
-# Load TAD annotations to compare 
-TADs.df <- 
-    load_all_TAD_results_for_TADCompare() %>%
-    filter(resolution %in% parsed.args$resolutions)
+# used by calls to future_pmap() in functions below
+if (parsed.args$threads > 1) {
+    message(glue('using {parsed.args$threads} core to parallelize'))
+    plan(multisession, workers=parsed.args$threads)
+} else {
+    plan(sequential)
+}
 
 ################################################################################
 # Generate TADCompare results from merged matrices
 ################################################################################
+# TADCompare hypper-parameters
+hyper.params.df <- 
+    expand_grid(
+        # normalization=c('weight', 'NONE'),
+        normalization=c('balanced', 'raw'),
+        z_thresh=c(3),
+        window_size=c(15),
+        gap_thresh=c(0.2)
+    )
 # List of pairs of merged matrices to compare
-comparisons.df <- 
-    # List merged matrices
-    list_mcool_files() %>%
-    mutate(Sample.Group=glue('{Edit}.{Celltype}.{Genotype}')) %>% 
-    filter(isMerged == 'Merged') %>% 
-    select(Sample.Group, filepath) %>% 
+# comparisons.df <- 
+    # group all replicate matrices by condition
+    list_all_mcool_files(merge_status='merged') %>%
+    # select(isMerged, Sample.Group, filepath) %>% 
+    nest(samples.df=-c(isMerged, Sample.Group)) %>% 
+    # nest all individual replicates, so 1 row per sample group e.g. NIPBL.iN.DEL
     # add the TAD boundaries to compare between matrices
     left_join(
-        TADs.df,
+        load_all_TAD_results_for_TADCompare(),
         relationship='many-to-many',
-        by=join_by(Sample.Group)
+        by=join_by(resolution, Sample.Group)
     ) %>% 
     # Specify which comparisons to evaluate
     enumerate_pairwise_comparisons(
@@ -67,9 +68,6 @@ comparisons.df <-
         SampleID.fields=c('Edit', 'Celltype', 'Genotype')
     )
     # select()
-# used by calls to future_pmap() in functions below
-message(glue('using {parsed.args$threads} core to parallelize'))
-plan(multisession, workers=parsed.args$threads)
 # Run TADCompare on everything
 comparisons.df %>% 
     run_all_TADCompare(    

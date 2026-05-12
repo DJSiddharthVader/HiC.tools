@@ -15,7 +15,8 @@ CHROMSIZES_FILE        <- file.path(GRCH38_DIR, 'GRCh38_no_alt_analysis_set_GCA_
 # Sample QC Results
 ################################################################################
 SAMPLE_QC_DIR                   <- file.path(RESULTS_DIR, 'sample.QC')
-COVERAGE_DIR                    <- file.path(SAMPLE_QC_DIR, 'coverage')
+MARGINAL_COVERAGE_DIR           <- file.path(SAMPLE_QC_DIR, 'coverage')
+DISTANCE_EXPECTED_CONTACTS_DIR  <- file.path(SAMPLE_QC_DIR, 'expected.coverage')
 RESOLTION_COVERAGE_SUMAMRY_FILE <- file.path(SAMPLE_QC_DIR, 'resolution.coverage.summaries.tsv')
 MIN_SAMPLE_RESOLUTION_FILE      <- file.path(SAMPLE_QC_DIR, 'minimum.viable.resolutions.tsv')
 

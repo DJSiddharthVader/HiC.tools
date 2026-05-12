@@ -234,7 +234,7 @@ post_process_all_TAD_results <- function(results.df){
     )
 }
 
-pivot_TADs_to_boundaries <- function(results.df){
+pivot_all_TADs_to_boundaries <- function(results.df){
     # Pivot so the bins that start and end at the boundary position are both included
     results.df %>% 
     dplyr::select(-starts_with('TAD.inner.')) %>% 
