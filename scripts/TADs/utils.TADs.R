@@ -86,19 +86,45 @@ compute_TAD_stats <- function(
 }
 
 ################################################################################
-# Standardize results across methods
+# Standardize + Coallate results across methods
 ################################################################################
+generate_all_TAD_Calling_cmds <- function(
+    hyper.params.df,
+    output_cmd_file,
+    merge_status='merged',
+    force_redo=FALSE,
     ...){
-}
-
-    ...){
-        )
+    # resolutions=parsed.args$resolutions; force_redo=FALSE; merge_status='merged';
+    list_all_mcool_files(merge_status=merge_status) %>%
+    dplyr::rename('mcool.filepath'=filepath) %>% 
+    cross_join(hyper.params.df) %>% 
+    mutate(output_dir=file.path(TAD_RESULTS_DIR, glue("TAD.method_{TAD.method}"))) %>% 
     mutate(
+        cmd.data=
+            pmap(
                 .l=.,
+                .f=
+                    function(TAD.method, ...) {
+                        case_when(
+                            TAD.method == 'cooltools' ~ generate_cooltools_calling_cmd(...),
+                            TAD.method == 'hiTAD'     ~ generate_hiTAD_calling_cmd(...),
+                            .unmatched='error'
+                        )
+                    },
                 .progress=TRUE
             )
     ) %>%
+    unnest(cmd.data) %>% 
+    # Only include cmds generating outputfiles that dont exist
     {
+        if (!force_redo) {
+            filter(., !file.exists(output.file))
+        } else {
+            .
+        }
+    }
+}
+
 load_all_TAD_score_results <- function(
     resolutions=NULL,
     force_redo_sub=FALSE){
@@ -242,6 +268,53 @@ pivot_TADs_to_boundaries <- function(results.df){
 ################################################################################
 # Process cooltools TADs + Boundaries
 ################################################################################
+generate_cooltools_calling_cmd <- function(
+    threads,
+    mfvp,
+    threshold,
+    window.sizes.str,
+    ignore.diags,
+    normalization,
+    resolution,
+    SampleID,
+    mcool.filepath,
+    output_dir,
+    ...){
+    output_dir <- 
+        file.path(
+            output_dir,
+            glue("resolution_{resolution}"),
+            glue("normalization_{normalization}"),
+            glue("threshold_{threshold}"),
+            glue("mfvp_{mfvp}"),
+            glue("ignore.diags_{ignore.diags}")
+        )
+    # Create filenames
+    input.filename <- glue("{mcool.filepath}::resolutions/{resolution}")
+    TAD.filename   <- glue("{output_dir}/{SampleID}-TADs.tsv")
+    # Compose command to generate TAD for this set of inputs + params
+    weight_flag <- 
+        case_when(
+            normalization == 'balanced' ~ '--clr-weight-name weight',
+            normalization == 'raw'      ~ '',
+            .unmatched="error"
+        )
+    mkdir.cmd <- glue("mkdir -p {output_dir}")
+    TAD.cmd   <- glue("cooltools insulation {weight_flag} --verbose --nproc {threads} --append-raw-scores --window-pixels --min-frac-valid-pixels {mfvp} --ignore-diags {ignore.diags} --threshold {threshold} --output {TAD.filename} {window.sizes.str}")
+    # Paste  all commands together in one line to run in bash
+    tibble_row(
+        output.file=TAD.filename,
+        cmd=
+            paste(
+                c(
+                    mkdir.cmd,
+                    TAD.cmd
+                ),
+                collapse='; '
+            )
+    )
+}
+
 list_all_cooltools_results <- function(){
     COOLTOOLS_TAD_RESULTS_DIR %>% 
     parse_results_filelist(suffix='-TAD.tsv') %>%
@@ -379,7 +452,8 @@ post_process_cooltools_TAD_results <- function(results.df){
     ) %>% 
     unite(
         'TAD.params',
-        window.size.bins, mfvp, threshold, 
+        # window.size.bins, mfvp, threshold,
+        window.size.bins, mfvp, threshold, ignore.diags,
         sep='#',
         remove=TRUE
     ) %>% 
@@ -476,6 +550,48 @@ load_all_cooltools_Insulation <- function(){
 ################################################################################
 # Generate + Process hiTAD TADs + Boundaries
 ################################################################################
+generate_hiTAD_calling_cmd <- function(
+    threads,
+    normalization,
+    resolution,
+    SampleID,
+    mcool.filepath,
+    output_dir,
+    ...){
+    output_dir <- 
+        file.path(
+            output_dir,
+            glue("resolution_{resolution}"),
+            glue("normalization_{normalization}")
+        )
+    # Create filenames
+    input.filename <- glue("{mcool.filepath}::resolutions/{resolution}")
+    log.filename   <- glue("{output_dir}/{SampleID}-hitad.log")
+    DI.filename    <- glue("{output_dir}/{SampleID}-DI.tsv")
+    TAD.filename   <- glue("{output_dir}/{SampleID}-TADs.tsv")
+    # Compose command to generate TAD for this set of inputs + params
+    weight <- 
+        case_when(
+            normalization == 'balanced' ~ 'weight',
+            normalization == 'raw'      ~ 'RAW',
+            .unmatched="error"
+        )
+    mkdir.cmd <- glue("mkdir -p {output_dir}")
+    TAD.cmd   <- glue("domaincaller --cpu-core {threads} --weight-col {weight} --logFile {log.filename} --DI-output {DI.filename} --output {TAD.filename} --uri {input.filename}")
+    # Paste  all commands together in one line to run in bash
+    tibble_row(
+        output.file=TAD.filename,
+        cmd=
+            paste0(
+                c(
+                    mkdir.cmd,
+                    TAD.cmd
+                ),
+                collapse='; '
+            )
+    )
+}
+
 list_all_hiTAD_TADs <- function(){
     HITAD_TAD_RESULTS_DIR %>% 
     parse_results_filelist(suffix='.tsv') %>%

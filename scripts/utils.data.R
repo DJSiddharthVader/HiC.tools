@@ -827,152 +827,42 @@ load_mcool_files <- function(
 }
 
 ###############################################################################################################
-# Group samples by condition
+# Handle pairs of samples and sample groups
 ###############################################################################################################
-set_up_sample_groups <- function(
-    sample.groups,
-    # resolutions=c(),
-    use_merged=FALSE){
-    # sample.groups=ALL_SAMPLE_GROUPS; resolutions=parsed.args$resolutions; use_merged=FALSE
-    list_mcool_files() %>%
-    # get_min_resolution_per_matrix() %>% 
-    distinct() %>% 
-    {
-        if (use_merged) {
-            filter(., isMerged)
-        } else {
-            filter(., !isMerged)
-        }
-    } %>% 
-    # if any group spans multiple edits
-    nest(samples.df=-c(isMerged)) %>% 
-    cross_join(
-        sample.groups %>%
-        tibble(Sample.Group=.) %>% 
-        mutate(Sample.Group.Pattern=str_replace_all(Sample.Group, 'All', '.*')),
-    ) %>%
-    # subset relevant samples for each comparison
-    rowwise() %>% 
-    mutate(
-        samples.df=
-            samples.df %>%
-            mutate(
-                Sample.Group=
-                    case_when(
-                        str_detect(SampleID, Sample.Group.Pattern) ~ Sample.Group,
-                        TRUE ~ NA
-                    )
-            ) %>%
-            filter(!is.na(Sample.Group)) %>% 
-            list()
-    ) %>%
-    # # minimum and max resoltion of all individual matrices per comparison
-    # mutate(
-    #     resolution.min=min(samples.df$resolution),
-    #     resolution.max=max(samples.df$resolution)
-    # ) %>% 
-    ungroup() %>%
-    # mutate(resolution=list(unique(c(resolutions, resolution.min, resolution.max)))) %>%
-    # unnest(resolution) %>% 
-    # mutate(
-    #     resolution.type=
-    #         case_when(
-    #             resolution == resolution.max ~ 'max',
-    #             resolution == resolution.min ~ 'min',
-    #             TRUE                         ~ NA
-    #         )
-    # ) %>% 
-    # select(
-    #     -c(
-    #         resolution.min,
-    #         resolution.max,
-    #         ends_with('.Pattern')
-    #     )
-    # )
-    select(-c(ends_with('.Pattern')))
-}
-
-set_up_sample_comparisons <- function(
-    comparison.groups,
-    merging='individual'){
-    # comparison.groups=ALL_SAMPLE_GROUP_COMPARISONS; resolutions=parsed.args$resolutions; merging='individual'
+list_all_sample_group_comparisons <- function(
+    merge_status='individual',
+    comparison.groups=NULL,
+    delim='.',
+    suffixes=c('Numerator', 'Denominator')) {
+    comparison.col.names <- paste('Sample.Group', suffixes, sep=delim)
     # get info + filepaths for all contact matrices
-    list_mcool_files() %>%
-    # get_min_resolution_per_matrix() %>% 
-    # distinct() %>% 
+    list_all_mcool_files(merge_status=merge_status) %>%
+    # select(Sample.Group, filepath) %>% 
+    nest(samples.df=-c(isMerged, Sample.Group))
+    full_join(
+        .,
+        .,
+        by=join_by(isMerged),
+        suffix=paste0(delim, suffixes)
+    ) %>% 
     {
-        if (merging == 'individual' ) {
-            filter(., !isMerged)
-        } else if (merging == 'merged' ) {
-            filter(., isMerged)
+        if (!is.null(comparison.groups)) {
+            inner_join(
+                .,
+                comparison.groups %>% set_names(comparison.col.names),
+                by=comparison.col.names
+            )
         } else {
             .
         }
-    } %>%
-    # select(-c(isMerged)) %>% 
-    mutate(
-        across(
-            starts_with('Sample.Group.'),
-            ~ str_replace_all(.x, 'All', '.*'),
-            .names='{.col}.Pattern'
-        )
-    ) %>% 
-    # nest(samples.df=everything()) %>%
-    nest(samples.df=-c(isMerged)) %>%
-    # Now group samples by condition,
-    cross_join(
-        comparison.groups %>% 
-        mutate(
-            across(
-                starts_with('Sample.Group.'),
-                ~ str_replace_all(.x, 'All', '.*'),
-                .names='{.col}.Pattern'
-            )
-        )
-    ) %>% 
-    # subset relevant samples for each comparison
-    rowwise() %>% 
-    mutate(
-        samples.df=
-            samples.df %>%
-            mutate(
-                Sample.Group=
-                    case_when(
-                        str_detect(SampleID, Sample.Group.Numerator.Pattern) ~ Sample.Group.Numerator,
-                        str_detect(SampleID, Sample.Group.Denominator.Pattern) ~ Sample.Group.Denominator,
-                        TRUE ~ NA
-                    )
-            ) %>%
-            filter(!is.na(Sample.Group)) %>% 
-            list()
-    ) %>%
-    # # minimum and max resoltion of all individual matrices per comparison
-    # mutate(
-    #     resolution.min=min(samples.df$resolution),
-    #     resolution.max=max(samples.df$resolution)
-    # ) %>% 
-    # # List every comparison + resolution that is either a min or max for 1 comparison
-    # ungroup() %>%
-    # mutate(resolution=list(unique(c(resolutions, resolution.min, resolution.max)))) %>%
-    # unnest(resolution) %>% 
-    # mutate(
-    #     resolution.type=
-    #         case_when(
-    #             resolution == resolution.max ~ 'max',
-    #             resolution == resolution.min ~ 'min',
-    #             TRUE                         ~ NA
-    #         )
-    # ) %>% 
-    # select(-c(resolution.min, resolution.max)) %>%
-    ungroup() %>% 
-    select(-c(ends_with('.Pattern')))
+    }
 }
 
 set_foldchange_direction_as_factor <- function(
     results.df,
     sample_group_priority_fnc,
-    group1_colname='Sample.Group.Left', 
-    group2_colname='Sample.Group.Right',
+    group1_colname='Sample.Group.Numerator', 
+    group2_colname='Sample.Group.Denominator',
     ...){
     # results.df=hicrep.df; sample_group_priority_fnc=SAMPLE_GROUP_PRIORITY_FNC; group1_colname='SampleID.P1'; group2_colname='SampleID.P2'
     # Use this to make sure that when testing is done by edger::exactTest(), which relies only 
@@ -998,35 +888,25 @@ set_foldchange_direction_as_factor <- function(
     # the Numerator is enriched for the signal being compared
     # The Denominator is set to be the opposite group
     mutate(
-        Sample.Group.Numerator=
+        group1_colname :=
             case_when(
                 .data[[group1_priority]] <  .data[[group2_priority]] ~ .data[[group1_colname]],
                 .data[[group1_priority]] >  .data[[group2_priority]] ~ .data[[group2_colname]],
                 .data[[group1_priority]] == .data[[group2_priority]] ~ sort(c(.data[[group1_colname]], .data[[group2_colname]]))[[1]],
-                # TRUE ~ paste(list(.data[[group1_priority]], .data[[group2_priority]]), collapse='-')
                 TRUE                                                 ~ NA
             ),
-        Sample.Group.Denominator=
+        group2_colname :=
             case_when(
-                Sample.Group.Numerator == .data[[group1_colname]] ~ .data[[group2_colname]],
-                Sample.Group.Numerator == .data[[group2_colname]] ~ .data[[group1_colname]],
-                # TRUE ~ paste(sort(c(.data[[group1_colname]], .data[[group2_colname]]))[[1]], collapse='-')
-                TRUE                                              ~ NA
+                .data[[group1_priority]] <  .data[[group2_priority]] ~ .data[[group2_colname]],
+                .data[[group1_priority]] >  .data[[group2_priority]] ~ .data[[group1_colname]],
+                .data[[group1_priority]] == .data[[group2_priority]] ~ sort(c(.data[[group1_colname]], .data[[group2_colname]]))[[1]],
+                TRUE                                                 ~ NA
             )
     ) %>% 
     # clean up unneded columns since we now have explicity numerator/denominator labels
-    select(
-        -c(
-            ends_with('.Priority'),
-            group1_colname,
-            group2_colname
-        )
-    )
+    select(-c(ends_with('.Priority')))
 }
 
-###############################################################################################################
-# Handle pairs of samples
-###############################################################################################################
 join_all_rows <- function(
     df1,
     df2=NULL,
@@ -1076,7 +956,6 @@ get_all_row_combinations <- function(
     } %>% 
     # remove redundant combinations i.e. A~B vs B~A -> just keep A~B
     rowwise() %>% 
-    # mutate(pair.idx=paste(sort(idx.cols), collapse='-')) %>%
     mutate(
         pair.idx=
             sort(c(!!sym(idx.cols[1]), !!sym(idx.cols[2]))) %>% 
@@ -1089,52 +968,47 @@ get_all_row_combinations <- function(
 
 extract_sample_pair_metadata <- function(
     SampleIDs.df,
+    info.format,
     suffixes,
+    info.colnames=NULL,
+    delim='.',
     ...){
     # Separate IDs of 2 matrices being compared for each results file
     # Extract sample metadata from IDs
     SampleIDs.df %>% 
     # Split SampleID into separate metadata columns specified as input
-    get_info_from_SampleIDs(
-        SampleID.col=colnames(SampleIDs.df)[[1]],
-        field.suffix=suffixes[[1]],
+    parse_metadata_from_names(
+        info.format=info.format,
+        info.colname=
+            ifelse(
+                is.null(info.colnames),
+                glue('{info.format}{delim}{suffixes[[1]]}'),
+                info.colnames[[1]]
+            ),
+        suffix=suffixes[[1]],
+        delim=delim,
         ...
+        # include_merged_col=TRUE,
+        # keep_id=TRUE,
     ) %>% 
-    # Split SampleID into separate metadata columns specified as input
-    get_info_from_SampleIDs(
-        SampleID.col=colnames(SampleIDs.df)[[2]],
-        field.suffix=suffixes[[2]],
+    parse_metadata_from_names(
+        info.format=info.format,
+        info.colname=
+            ifelse(
+                is.null(info.colnames[[2]]),
+                glue('{info.format}{delim}{suffixes[[2]]}'),
+                info.colnames[[2]]
+            ),
+        suffix=suffixes[[2]],
+        delim=delim,
         ...
+        # include_merged_col=TRUE,
+        # keep_id=TRUE,
     )
-}
-
-extract_all_sample_pair_metadata <- function(
-    data.df,
-    SampleID.fields,
-    SampleID.cols=c('SampleID.P1', 'SampleID.P2'),
-    suffixes=c('P1', 'P2'),
-    ...){
-    data.df %>% 
-    mutate(
-        tidy.metadata=
-            extract_sample_pair_metadata(
-                SampleIDs.df=
-                    select(
-                        .data=., 
-                        all_of(c(SampleID.cols[[1]], SampleID.cols[[2]]))
-                    ),
-                suffixes=suffixes,
-                SampleID.fields=SampleID.fields,
-                keep_id=FALSE,
-                ...
-            )
-    ) %>%
-    unnest(tidy.metadata)
 }
 
 tidy_pair_metadata <- function(
     sampleID.pairs.df,
-    SampleID.fields,
     suffixes,
     delim='.',
     keep_separate_metadata_fields=FALSE,
@@ -1146,10 +1020,9 @@ tidy_pair_metadata <- function(
     # Separate IDs of 2 matrices being compared for each results file
     extract_sample_pair_metadata(
         keep_id=FALSE,
-        SampleID.fields=SampleID.fields,
         delim=delim,
         suffixes=c('P1', 'P2'),
-        # ...
+        ...
     ) %>% 
     # Now pivot to longer possible format i.e. 2 * nrow(sampleID.pairs.df) * length(SampleID.fields) rows
     pivot_longer(
@@ -1210,6 +1083,7 @@ enumerate_pairwise_comparisons <- function(
     delim='.',
     suffixes=c('P1', 'P2'),
     ...){
+    # sample.group.comparisons=ALL_SAMPLE_GROUP_COMPARISONS; SampleID.fields=NULL; sampleID_col='Sample.Group'; suffixes=c('.Numerator', '.Denominator'); pair_grouping_cols=c('TAD.method', 'TAD.params', 'TAD.metric', 'resolution', 'chr'); delim='.'; suffixes=c('Numerator', 'Denominator')
     data.df %>% 
     # get all possible pairs of rows of data.df 
     join_all_rows(
@@ -1231,29 +1105,12 @@ enumerate_pairwise_comparisons <- function(
     # format sample pair metadata
     {
         if(!is.null(SampleID.fields)) {
-            extract_all_sample_pair_metadata(
+            extract_sample_pair_metadata(
                 data.df=.,
-                SampleID.fields=SampleID.fields,
                 SampleID.cols=paste0(sampleID_col, delim, suffixes),
-                SampleID.delim=delim,
-                suffix=suffixes
+                delim=delim,
+                suffixes=suffixes
             )
-            # mutate(
-            #     .,
-            #     tidy.metadata=
-            #         tidy_pair_metadata(
-            #             sampleID.pairs.df=
-            #                 select(
-            #                     .data=., 
-            #                     all_of(c(sampleID_col.P1, sampleID_col.P2))
-            #                 ),
-            #             SampleID.fields=SampleID.fields,
-            #             suffixes=suffixes,
-            #             delim=delim,
-            #             ...
-            #         )
-            # ) %>%
-            # unnest(tidy.metadata)
         } else {
             .
         }
