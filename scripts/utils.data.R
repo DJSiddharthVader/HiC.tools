@@ -524,7 +524,9 @@ build_name_from_metadata <- function(
         case_when(
             info.format  == 'Sample.Group' ~ list(ALL.METADATA.FIELDS[1:3]),
             info.format  == 'SampleID'     ~ list(ALL.METADATA.FIELDS[1:5]), 
-            info.format  == 'MatrixID'     ~ list(ALL.METADATA.FIELDS[c(1:5, 7)])
+            info.format  == 'MatrixID'     ~ list(ALL.METADATA.FIELDS),
+            # info.format  == 'MatrixID'     ~ list(ALL.METADATA.FIELDS[c(1:5, 7)])
+            .unmatched='error'
         ) %>%
         unlist() %>% 
         {
@@ -613,6 +615,15 @@ load_sample_metadata <- function(filter=TRUE){
     }
 }
 
+filter_included_samples <- function(df){
+    included.samples <- 
+        load_sample_metadata() %>%
+        filter(Included) %>%
+        pull(SampleID)
+    df %>% 
+    filter(SampleID %in% included.samples | grepl('.Merged.Merged', SampleID))
+}
+
 load_chr_sizes <- function(){
     CHROMOSOME_SIZES_FILE %>% 
     read_tsv(
@@ -624,18 +635,55 @@ load_chr_sizes <- function(){
 ###############################################################################################################
 # Load mcool files
 ###############################################################################################################
-list_included_samples <- function(){
-    load_sample_metadata() %>%
-    filter(Included) %>%
-    pull(SampleID)
+list_all_mcool_files <- function(
+    pattern='.mcool',
+    merge_status='merged',
+    only_use_included_samples=TRUE, 
+    rm_metadata_cols=TRUE,
+    ...){
+    # pattern='.mcool'; only_use_included_samples=TRUE; rm_metadata_cols=TRUE;
+    # List all .mcool files
+    MCOOL_DIR %>% 
+    list.files(
+        pattern=pattern,
+        recursive=TRUE,
+        full.names=TRUE
+    ) %>% 
+    tibble(filepath=.) %>% 
+    mutate(MatrixID=str_remove(basename(filepath), pattern)) %>% 
+    # parse sample metadata from filename
     parse_metadata_from_names(
         info.format='MatrixID',
         include_merged_col=TRUE,
         keep_id=FALSE
     ) %>% 
-    build_name_from_metadata(name.col='SampleID') %>% 
-    build_name_from_metadata(name.col='Sample.Group') %>% 
-    # build_name_from_metadata(name.col='MatrixID') %>% 
+    build_name_from_metadata(info.format='SampleID') %>% 
+    build_name_from_metadata(info.format='Sample.Group') %>% 
+    build_name_from_metadata(info.format='MatrixID') %>% 
+    filter(ReadFilter == 'mapq_30') %>% 
+    {
+        case_when(
+            merge_status == 'both'       ~ list(.),
+            merge_status == 'merged'     ~ list(filter(., isMerged == 'Merged')),
+            merge_status == 'individual' ~ list(filter(., isMerged == 'Individual')),
+            .unmatched='error'
+        )
+    } %>% 
+    {.[[1]]} %>% 
+    {
+        if (only_use_included_samples){
+            filter_included_samples(df=.)
+        } else {
+            .
+        }
+    } %>% 
+    {
+        if (rm_metadata_cols){
+            select(., !all_of(intersect(colnames(.), ALL.METADATA.FIELDS)))
+        } else {
+            .
+        }
+    }
 }
 
 load_mcool_file <- function(
@@ -717,30 +765,6 @@ load_mcool_file <- function(
     }
 }
 
-list_mcool_files <- function(
-    pattern='.hg38.mapq_30.1000.mcool',
-    only_use_included_samples=TRUE, 
-    ...){
-    # List all cooler files 
-    COOLERS_DIR %>% 
-    list.files(
-        pattern=pattern,
-        recursive=TRUE,
-        full.names=TRUE
-    ) %>% 
-    tibble(filepath=.) %>% 
-    # parse sample metadata
-    mutate(MatrixID=str_remove(basename(filepath), '.mcool')) %>% 
-    get_info_from_MatrixIDs(include_merged_col=TRUE) %>% 
-    {
-        if (only_use_included_samples){
-            filter(., SampleID %in% list_included_samples() | grepl('.Merged.Merged', SampleID))
-        } else {
-            .
-        }
-    }
-}
-
 load_mcool_files <- function(
     pattern='.hg38.mapq_30.1000.mcool',
     resolutions=NULL,
@@ -780,11 +804,7 @@ load_mcool_files <- function(
             regions.df
         }
     # List all regions for all samples
-    list_mcool_files(
-        pattern=pattern,
-        resolutions=resolutions,
-        normalizations=normalizations,
-    ) %>% 
+    list_all_mcool_files(merge_status=merge_status) %>% 
     join_all_rows(regions.df) %>% 
     # Load contacts if specified or just return sample metadata + filepaths + regions
     {
