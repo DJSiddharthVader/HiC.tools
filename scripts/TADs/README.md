@@ -13,7 +13,7 @@ Rscript ./scripts/TADs/run.ConsensusTADs.R
 # Coallate TAD results into single, structured output files
 Rscript ./scripts/TADs/coallate.TAD.results.R
 # Compute TAD MoCs for all sets of TADs
-Rscript ./scripst/TADs/calculate_TAD_MoCs.R
+Rscript ./scripst/TADs/calculate.TAD.MoCs.R
 # Run TADCompare to generated differential TAD results
 # requires 120Gb for the largest matrix comparison (i.e. chr1 @5Kb)
 Rscript ./scripts/TADs/run.TADCompare.R -t 8 
