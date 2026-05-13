@@ -1,0 +1,682 @@
+Package	Version	Priority	Depends	Imports	LinkingTo	Suggests	Enhances	License	License_is_FOSS	License_restricts_use	OS_type	MD5sum	NeedsCompilation	Built
+abind	1.4-8	NA	R (>= 1.5.0)	methods, utils	NA	NA	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+aggregation	1.0.1	NA	NA	NA	NA	NA	NA	GPL-3	NA	NA	NA	NA	no	4.5.1
+askpass	1.2.1	NA	NA	sys (>= 2.1)	NA	testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+backports	1.5.1	NA	R (>= 3.0.0)	NA	NA	NA	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.3.3
+base	4.5.3	base	NA	NA	NA	methods	chron, date, round	Part of R 4.5.3	NA	NA	NA	NA	NA	4.5.3
+base64enc	0.1-6	NA	R (>= 2.9.0)	NA	NA	NA	png	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.3.3
+BH	1.90.0-1	NA	NA	NA	NA	NA	NA	BSL-1.0	NA	NA	NA	NA	no	4.5.1
+Biobase	2.70.0	NA	R (>= 2.10), BiocGenerics (>= 0.27.1), utils	methods	NA	tools, tkWidgets, ALL, RUnit, golubEsets, BiocStyle, knitr,
+limma	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+BiocGenerics	0.56.0	NA	R (>= 4.0.0), methods, utils, graphics, stats, generics	methods, utils, graphics, stats	NA	Biobase, S4Vectors, IRanges, S4Arrays, SparseArray,
+DelayedArray, HDF5Array, GenomicRanges, pwalign, Rsamtools,
+AnnotationDbi, affy, affyPLM, DESeq2, flowClust, MSnbase,
+annotate, MultiAssayExperiment, RUnit	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+BiocIO	1.20.0	NA	R (>= 4.3.0)	BiocGenerics, S4Vectors, methods, tools	NA	testthat, knitr, rmarkdown, BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+BiocManager	1.30.27	NA	NA	utils	NA	BiocVersion, BiocStyle, remotes, rmarkdown, testthat, withr,
+curl, knitr	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+BiocParallel	1.44.0	NA	methods, R (>= 4.1.0)	stats, utils, futile.logger, parallel, snow, codetools	BH (>= 1.87.0), cpp11	BiocGenerics, tools, foreach, BBmisc, doParallel,
+GenomicRanges, RNAseqData.HNRNPC.bam.chr14,
+TxDb.Hsapiens.UCSC.hg19.knownGene, VariantAnnotation,
+Rsamtools, GenomicAlignments, ShortRead, RUnit, BiocStyle,
+knitr, batchtools, data.table	Rmpi	GPL-2 | GPL-3 | BSL-1.0	NA	NA	NA	NA	yes	4.5.1
+BiocVersion	3.22.0	NA	R (>= 4.5.0)	NA	NA	NA	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+Biostrings	2.78.0	NA	R (>= 4.1.0), BiocGenerics (>= 0.37.0), S4Vectors (>=
+0.27.12), IRanges (>= 2.31.2), XVector (>= 0.37.1), Seqinfo	methods, utils, grDevices, stats, crayon	S4Vectors, IRanges, XVector	graphics, pwalign, BSgenome (>= 1.13.14),
+BSgenome.Celegans.UCSC.ce2 (>= 1.3.11),
+BSgenome.Dmelanogaster.UCSC.dm3 (>= 1.3.11),
+BSgenome.Hsapiens.UCSC.hg18, drosophila2probe, hgu95av2probe,
+hgu133aprobe, GenomicFeatures (>= 1.3.14), hgu95av2cdf, affy
+(>= 1.41.3), affydata (>= 1.11.5), RUnit, BiocStyle, knitr,
+testthat (>= 3.0.0), covr	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+bit	4.6.0	NA	R (>= 3.4.0)	NA	NA	testthat (>= 3.0.0), roxygen2, knitr, markdown, rmarkdown,
+microbenchmark, bit64 (>= 4.0.0), ff (>= 4.0.0)	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.3.3
+bit64	4.8.0	NA	R (>= 3.5.0)	bit (>= 4.0.0), graphics, methods, stats, utils	NA	patrick (>= 0.3.0), testthat (>= 3.3.0), withr	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.3.3
+bitops	1.0-9	NA	NA	NA	NA	NA	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.5.1
+blob	1.3.0	NA	NA	methods, rlang, vctrs (>= 0.2.1)	NA	covr, crayon, pillar (>= 1.2.1), testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+boot	1.3-32	recommended	R (>= 3.0.0), graphics, stats	NA	NA	MASS, survival	NA	Unlimited	NA	NA	NA	NA	no	4.5.1
+brew	1.0-10	NA	NA	NA	NA	testthat (>= 3.0.0)	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+brio	1.1.5	NA	R (>= 3.6)	NA	NA	covr, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+broom	1.0.12	NA	R (>= 4.1)	backports, cli, dplyr (>= 1.0.0), generics (>= 0.0.2), glue,
+lifecycle, purrr, rlang (>= 1.1.0), stringr, tibble (>= 3.0.0),
+tidyr (>= 1.0.0)	NA	AER, AUC, bbmle, betareg (>= 3.2-1), biglm, binGroup, boot,
+btergm (>= 1.10.6), car (>= 3.1-2), carData, caret, cluster,
+cmprsk, coda, covr, drc, e1071, emmeans, epiR (>= 2.0.85), ergm
+(>= 3.10.4), fixest (>= 0.9.0), gam (>= 1.15), gee, geepack,
+ggplot2, glmnet, glmnetUtils, gmm, Hmisc, interp, irlba,
+joineRML, Kendall, knitr, ks, Lahman, lavaan (>= 0.6.18),
+leaps, lfe, lm.beta, lme4, lmodel2, lmtest (>= 0.9.38),
+lsmeans, maps, margins, MASS, mclust, mediation, metafor, mfx,
+mgcv, mlogit, modeldata, modeltests (>= 0.1.6), muhaz,
+multcomp, network, nnet, ordinal, plm, poLCA, psych, quantreg,
+rmarkdown, robust, robustbase, rsample, sandwich, spatialreg,
+spdep (>= 1.1), speedglm, spelling, stats4, survey, survival
+(>= 3.6-4), systemfit, testthat (>= 3.0.0), tseries, vars, zoo	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+bslib	0.10.0	NA	R (>= 2.10)	base64enc, cachem, fastmap (>= 1.1.1), grDevices, htmltools
+(>= 0.5.8), jquerylib (>= 0.1.3), jsonlite, lifecycle, memoise
+(>= 2.0.1), mime, rlang, sass (>= 0.4.9)	NA	brand.yml, bsicons, curl, fontawesome, future, ggplot2,
+knitr, lattice, magrittr, rappdirs, rmarkdown (>= 2.7), shiny
+(>= 1.11.1), testthat, thematic, tools, utils, withr, yaml	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+cachem	1.1.0	NA	NA	rlang, fastmap (>= 1.2.0)	NA	testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+calibrate	1.7.7	NA	R (>= 3.5.0), MASS	NA	NA	NA	NA	GPL-2	NA	NA	NA	NA	no	4.5.1
+callr	3.7.6	NA	R (>= 3.4)	processx (>= 3.6.1), R6, utils	NA	asciicast (>= 2.3.1), cli (>= 1.1.0), mockery, ps, rprojroot,
+spelling, testthat (>= 3.2.0), withr (>= 2.3.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+car	3.1-5	NA	R (>= 3.5.0), carData (>= 3.0-0)	abind, Formula, MASS, mgcv, nnet, pbkrtest (>= 0.4-4),
+quantreg, grDevices, utils, stats, graphics, lme4 (>=
+1.1-27.1), nlme, scales	NA	alr4, boot, coxme, effects, knitr, leaps, lmtest, Matrix,
+MatrixModels, ordinal, plotrix, mvtnorm, rgl (>= 0.111.3), rio,
+sandwich, SparseM, survival, survey	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+carData	3.0-6	NA	R (>= 3.5.0)	NA	NA	car (>= 3.0-0)	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+cellranger	1.1.0	NA	R (>= 3.0.0)	rematch, tibble	NA	covr, testthat (>= 1.0.0), knitr, rmarkdown	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+cigarillo	1.0.0	NA	methods, BiocGenerics, S4Vectors (>= 0.47.2), IRanges,
+Biostrings	stats	S4Vectors, IRanges	Rsamtools, GenomicAlignments, RNAseqData.HNRNPC.bam.chr14,
+BSgenome.Hsapiens.UCSC.hg19, testthat, knitr, rmarkdown,
+BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+class	7.3-23	recommended	R (>= 3.0.0), stats, utils	MASS	NA	NA	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.5.1
+cli	3.6.6	NA	R (>= 3.4)	utils	NA	callr, covr, crayon, digest, glue (>= 1.6.0), grDevices,
+htmltools, htmlwidgets, knitr, methods, processx, ps (>=
+1.3.4.9000), rlang (>= 1.0.2.9003), rmarkdown, rprojroot,
+rstudioapi, testthat (>= 3.2.0), tibble, whoami, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+clipr	0.8.0	NA	NA	utils	NA	covr, knitr, rmarkdown, rstudioapi (>= 0.5), testthat (>=
+2.0.0)	NA	GPL-3	NA	NA	NA	NA	no	4.3.3
+cluster	2.1.8.2	recommended	R (>= 3.5.0)	graphics, grDevices, stats, utils	NA	MASS, Matrix	mvoutlier, fpc, ellipse, sfsmisc	GPL (>= 2)	NA	NA	NA	NA	yes	4.5.1
+codetools	0.2-20	recommended	R (>= 2.1)	NA	NA	NA	NA	GPL	NA	NA	NA	NA	no	4.5.1
+colorspace	2.1-2	NA	R (>= 3.0.0), methods	graphics, grDevices, stats	NA	datasets, utils, KernSmooth, MASS, kernlab, mvtnorm, vcd,
+tcltk, shiny, shinyjs, ggplot2, dplyr, scales, grid, png, jpeg,
+knitr, rmarkdown, RColorBrewer, rcartocolor, scico, viridis,
+wesanderson	NA	BSD_3_clause + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+commonmark	2.0.0	NA	NA	NA	NA	curl, testthat, xml2	NA	BSD_2_clause + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+compiler	4.5.3	base	NA	NA	NA	NA	NA	Part of R 4.5.3	NA	NA	NA	NA	NA	4.5.3
+conflicted	1.2.0	NA	R (>= 3.2)	cli (>= 3.4.0), memoise, rlang (>= 1.0.0)	NA	callr, covr, dplyr, Matrix, methods, pkgload, testthat (>=
+3.0.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+corrplot	0.95	NA	NA	NA	NA	seriation, knitr, RColorBrewer, rmarkdown, magrittr,
+prettydoc, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+cowplot	1.2.0	NA	R (>= 3.5.0)	ggplot2 (>= 3.5.2), grid, gtable, grDevices, methods, rlang,
+scales	NA	Cairo, covr, dplyr, forcats, gridGraphics (>= 0.4-0), knitr,
+lattice, magick, maps, PASWR, patchwork, rmarkdown, ragg,
+testthat (>= 1.0.0), tidyr, vdiffr (>= 0.3.0), VennDiagram	NA	GPL-2	NA	NA	NA	NA	no	4.3.3
+cpp11	0.5.4	NA	R (>= 4.0.0)	NA	NA	bench, brio, callr, cli, covr, decor, desc, ggplot2, glue,
+knitr, lobstr, mockery, progress, rmarkdown, scales, Rcpp,
+testthat (>= 3.2.0), tibble, utils, vctrs, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+crayon	1.5.3	NA	NA	grDevices, methods, utils	NA	mockery, rstudioapi, testthat, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+credentials	2.0.3	NA	NA	openssl (>= 1.3), sys (>= 2.1), curl, jsonlite, askpass	NA	testthat, knitr, rmarkdown	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+curl	7.1.0	NA	R (>= 3.0.0)	NA	NA	spelling, testthat (>= 1.0.0), knitr, jsonlite, later,
+rmarkdown, httpuv (>= 1.4.4), webutils	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.3
+data.table	1.18.2.1	NA	R (>= 3.4.0)	methods	NA	bit64 (>= 4.0.0), bit (>= 4.0.4), R.utils (>= 2.13.0), xts,
+zoo (>= 1.8-1), yaml, knitr, markdown	NA	MPL-2.0 | file LICENSE	NA	NA	NA	NA	yes	4.3.3
+datasets	4.5.3	base	NA	NA	NA	NA	NA	Part of R 4.5.3	NA	NA	NA	NA	NA	4.5.3
+DBI	1.3.0	NA	methods, R (>= 3.0.0)	NA	NA	arrow, blob, callr, covr, DBItest (>= 1.8.2), dbplyr,
+downlit, dplyr, glue, hms, knitr, magrittr, nanoarrow (>=
+0.3.0.1), otel, otelsdk, RMariaDB, rmarkdown, rprojroot,
+RSQLite (>= 1.1-2), testthat (>= 3.0.0), vctrs, xml2	NA	LGPL (>= 2.1)	NA	NA	NA	NA	no	4.3.3
+dbplyr	2.5.2	NA	R (>= 3.6)	blob (>= 1.2.0), cli (>= 3.6.1), DBI (>= 1.1.3), dplyr (>=
+1.1.2), glue (>= 1.6.2), lifecycle (>= 1.0.3), magrittr,
+methods, pillar (>= 1.9.0), purrr (>= 1.0.1), R6 (>= 2.2.2),
+rlang (>= 1.1.1), tibble (>= 3.2.1), tidyr (>= 1.3.0),
+tidyselect (>= 1.2.1), utils, vctrs (>= 0.6.3), withr (>=
+2.5.0)	NA	bit64, covr, knitr, Lahman, nycflights13, odbc (>= 1.4.2),
+RMariaDB (>= 1.2.2), rmarkdown, RPostgres (>= 1.4.5),
+RPostgreSQL, RSQLite (>= 2.3.8), testthat (>= 3.1.10)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+DelayedArray	0.36.1	NA	R (>= 4.0.0), methods, stats4, Matrix, BiocGenerics (>=
+0.53.3), MatrixGenerics (>= 1.1.3), S4Vectors (>= 0.47.6),
+IRanges (>= 2.17.3), S4Arrays (>= 1.9.3), SparseArray (>=
+1.7.5)	stats	NA	BiocParallel, HDF5Array (>= 1.17.12), genefilter,
+SummarizedExperiment, airway, lobstr, DelayedMatrixStats,
+knitr, rmarkdown, BiocStyle, RUnit	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+Deriv	4.2.0	NA	NA	methods	NA	testthat (>= 0.11.0)	NA	GPL (>= 3)	NA	NA	NA	NA	no	4.3.3
+desc	1.4.3	NA	R (>= 3.4)	cli, R6, utils	NA	callr, covr, gh, spelling, testthat, whoami, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+devtools	2.5.2	NA	R (>= 4.1), usethis (>= 3.2.1)	cli (>= 3.6.6), desc (>= 1.4.3), ellipsis (>= 0.3.3), fs (>=
+2.1.0), lifecycle (>= 1.0.5), memoise (>= 2.0.1), miniUI (>=
+0.1.2), pak (>= 0.9.5), pkgbuild (>= 1.4.8), pkgdown (>=
+2.2.0), pkgload (>= 1.5.2), profvis (>= 0.4.0), rcmdcheck (>=
+1.4.0), rlang (>= 1.2.0), roxygen2 (>= 7.3.3), rversions (>=
+3.0.0), sessioninfo (>= 1.2.3), testthat (>= 3.3.2), urlchecker
+(>= 1.0.1), withr (>= 3.0.2)	NA	BiocManager (>= 1.30.18), callr (>= 3.7.1), covr (>= 3.5.1),
+curl (>= 4.3.2), digest (>= 0.6.29), DT (>= 0.23), foghorn (>=
+1.4.2), gh (>= 1.3.0), httr2 (>= 1.0.0), knitr (>= 1.39), lintr
+(>= 3.0.0), quarto (>= 1.5.1), remotes (>= 2.5.0), rmarkdown
+(>= 2.14), rstudioapi (>= 0.13), spelling (>= 2.2), xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+diffobj	0.3.6	NA	R (>= 3.1.0)	crayon (>= 1.3.2), tools, methods, utils, stats	NA	knitr, rmarkdown	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.3.3
+digest	0.6.39	NA	R (>= 3.3.0)	utils	NA	tinytest, simplermarkdown, rbenchmark	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+doBy	4.7.1	NA	R (>= 4.2.0), methods	boot, broom, cowplot, Deriv, dplyr, forecast, ggplot2, MASS,
+Matrix, modelr, microbenchmark, rlang, purrr, tibble, tidyr,	NA	geepack, knitr, lme4, markdown, rmarkdown, multcomp, pbkrtest
+(>= 0.5.2), survival, testthat (>= 2.1.0)	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+downlit	0.4.5	NA	R (>= 4.0.0)	brio, desc, digest, evaluate, fansi, memoise, rlang, vctrs,
+withr, yaml	NA	covr, htmltools, jsonlite, MASS, MassSpecWavelet, pkgload,
+rmarkdown, testthat (>= 3.0.0), xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+dplyr	1.2.1	NA	R (>= 4.1.0)	cli (>= 3.6.2), generics, glue (>= 1.3.2), lifecycle (>=
+1.0.5), magrittr (>= 1.5), methods, pillar (>= 1.9.0), R6,
+rlang (>= 1.1.7), tibble (>= 3.2.0), tidyselect (>= 1.2.0),
+utils, vctrs (>= 0.7.1)	NA	broom, covr, DBI, dbplyr (>= 2.2.1), ggplot2, knitr, Lahman,
+lobstr, nycflights13, purrr, rmarkdown, RSQLite, stringi (>=
+1.7.6), testthat (>= 3.1.5), tidyr (>= 1.3.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+dtplyr	1.3.3	NA	R (>= 4.0)	cli (>= 3.4.0), data.table (>= 1.13.0), dplyr (>= 1.1.0),
+glue, lifecycle, rlang (>= 1.0.4), tibble, tidyselect (>=
+1.2.0), vctrs (>= 0.4.1)	NA	bench, covr, knitr, rmarkdown, testthat (>= 3.1.2), tidyr (>=
+1.1.0), waldo (>= 0.3.1)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+edgeR	4.8.2	NA	R (>= 3.6.0), limma (>= 3.63.6)	methods, graphics, stats, utils, locfit	NA	arrow, jsonlite, knitr, Matrix, readr, rhdf5, SeuratObject,
+splines, AnnotationDbi, Biobase, BiocStyle, org.Hs.eg.db,
+SummarizedExperiment	NA	GPL (>=2)	NA	NA	NA	NA	yes	4.5.1
+ellipsis	0.3.3	NA	R (>= 3.2)	rlang (>= 1.1.7)	NA	covr, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+evaluate	1.0.5	NA	R (>= 3.6.0)	NA	NA	callr, covr, ggplot2 (>= 3.3.6), lattice, methods, pkgload,
+ragg (>= 1.4.0), rlang (>= 1.1.5), knitr, testthat (>= 3.0.0),
+withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+fansi	1.0.7	NA	R (>= 3.1.0)	grDevices, utils	NA	unitizer, knitr, rmarkdown	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.3.3
+farver	2.1.2	NA	NA	NA	NA	covr, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+fastmap	1.2.0	NA	NA	NA	NA	testthat (>= 2.1.1)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+fontawesome	0.5.3	NA	R (>= 3.3.0)	rlang (>= 1.0.6), htmltools (>= 0.5.1.1)	NA	covr, dplyr (>= 1.0.8), gt (>= 0.9.0), knitr (>= 1.31),
+testthat (>= 3.0.0), rsvg	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+forcats	1.0.1	NA	R (>= 4.1)	cli (>= 3.4.0), glue, lifecycle, magrittr, rlang (>= 1.0.0),
+tibble	NA	covr, dplyr, ggplot2, knitr, readr, rmarkdown, testthat (>=
+3.0.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+forecast	9.0.2	NA	R (>= 4.1.0)	colorspace, fracdiff, generics (>= 0.1.2), ggplot2 (>= 3.4.0),
+graphics, lmtest, magrittr, nnet, parallel, Rcpp (>= 0.12.4),
+stats, timeDate, urca, withr, zoo	Rcpp (>= 0.12.4), RcppArmadillo (>= 0.2.35)	forecTheta, knitr, methods, rmarkdown, rticles, scales,
+seasonal, testthat (>= 3.3.0), uroot	NA	GPL-3	NA	NA	NA	NA	yes	4.3.3
+foreign	0.8-91	recommended	R (>= 4.0.0)	methods, utils, stats	NA	NA	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.5.2
+formatR	1.14	NA	R (>= 3.2.3)	NA	NA	rstudioapi, shiny, testit, rmarkdown, knitr	NA	GPL	NA	NA	NA	NA	no	4.5.1
+Formula	1.2-5	NA	R (>= 2.0.0), stats	NA	NA	NA	NA	GPL-2 | GPL-3	NA	NA	NA	NA	no	4.3.3
+fracdiff	1.5-4	NA	NA	stats	NA	longmemo, forecast, urca	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+fs	2.1.0	NA	R (>= 4.1)	methods	NA	covr, crayon, knitr, pillar (>= 1.0.0), rmarkdown, spelling,
+testthat (>= 3.0.0), tibble (>= 1.1.0), vctrs (>= 0.3.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+furrr	0.4.0	NA	future (>= 1.70.0), R (>= 4.1.0)	globals (>= 0.19.1), purrr (>= 1.2.1), rlang (>= 1.1.7), vctrs
+(>= 0.7.0)	NA	carrier, covr, dplyr (>= 1.1.4), knitr, parallelly (>=
+1.46.1), testthat (>= 3.3.2), tidyselect	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+futile.logger	1.4.9	NA	R (>= 3.0.0)	utils, lambda.r (>= 1.1.0), futile.options	NA	testit, jsonlite, httr, crayon, rsyslog, glue	NA	LGPL-3	NA	NA	NA	NA	no	4.5.1
+futile.options	1.0.1	NA	R (>= 2.8.0)	NA	NA	NA	NA	LGPL-3	NA	NA	NA	NA	no	4.5.1
+future	1.70.0	NA	R (>= 3.2.0)	digest, globals (>= 0.18.0), listenv (>= 0.8.0), parallel,
+parallelly (>= 1.44.0), tools, utils	NA	methods, RhpcBLASctl, R.rsp, markdown	NA	LGPL (>= 2.1)	NA	NA	NA	NA	no	4.5.1
+gargle	1.6.1	NA	R (>= 4.1)	cli (>= 3.0.1), fs (>= 1.3.1), glue (>= 1.3.0), httr (>=
+1.4.5), jsonlite, lifecycle (>= 0.2.0), openssl, rappdirs,
+rlang (>= 1.1.0), stats, utils, withr	NA	aws.ec2metadata, aws.signature, covr, httpuv, knitr,
+rmarkdown, sodium, spelling, testthat (>= 3.1.7)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+generics	0.1.4	NA	R (>= 3.6)	methods	NA	covr, pkgload, testthat (>= 3.0.0), tibble, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+GenomeInfoDb	1.46.2	NA	R (>= 4.0.0), methods, BiocGenerics (>= 0.53.2), S4Vectors (>=
+0.47.6), IRanges (>= 2.41.1), Seqinfo (>= 0.99.2)	stats, utils, UCSC.utils	NA	GenomeInfoDbData, R.utils, data.table, GenomicRanges,
+Rsamtools, GenomicAlignments, BSgenome, GenomicFeatures,
+TxDb.Dmelanogaster.UCSC.dm3.ensGene,
+BSgenome.Scerevisiae.UCSC.sacCer2, BSgenome.Celegans.UCSC.ce2,
+BSgenome.Hsapiens.NCBI.GRCh38, RUnit, BiocStyle, knitr	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+GenomeInfoDbData	1.2.15	NA	R (>= 3.5.0)	NA	NA	NA	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+GenomicAlignments	1.46.0	NA	R (>= 4.0.0), methods, BiocGenerics (>= 0.37.0), S4Vectors (>=
+0.47.6), IRanges (>= 2.23.9), Seqinfo, GenomicRanges (>=
+1.61.1), SummarizedExperiment (>= 1.39.1), Biostrings (>=
+2.77.2), Rsamtools (>= 2.25.1)	methods, utils, stats, BiocGenerics, S4Vectors, IRanges,
+GenomicRanges, Biostrings, Rsamtools, BiocParallel, cigarillo
+(>= 0.99.2)	S4Vectors, IRanges	ShortRead, rtracklayer, BSgenome, GenomicFeatures,
+RNAseqData.HNRNPC.bam.chr14, pasillaBamSubset,
+TxDb.Hsapiens.UCSC.hg19.knownGene,
+TxDb.Dmelanogaster.UCSC.dm3.ensGene,
+BSgenome.Dmelanogaster.UCSC.dm3, BSgenome.Hsapiens.UCSC.hg19,
+DESeq2, edgeR, RUnit, knitr, BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+GenomicRanges	1.62.1	NA	R (>= 4.0.0), methods, stats4, BiocGenerics (>= 0.53.2),
+S4Vectors (>= 0.45.2), IRanges (>= 2.43.6), Seqinfo (>= 0.99.3)	utils, stats	S4Vectors, IRanges	GenomeInfoDb, Biobase, AnnotationDbi, annotate, Biostrings
+(>= 2.77.2), SummarizedExperiment (>= 1.39.1), Rsamtools,
+GenomicAlignments, BSgenome, GenomicFeatures, UCSC.utils,
+txdbmaker, Gviz, VariantAnnotation, AnnotationHub, DESeq2,
+DEXSeq, edgeR, KEGGgraph, RNAseqData.HNRNPC.bam.chr14,
+pasillaBamSubset, KEGGREST, hgu95av2.db, hgu95av2probe,
+BSgenome.Scerevisiae.UCSC.sacCer2, BSgenome.Hsapiens.UCSC.hg38,
+BSgenome.Mmusculus.UCSC.mm10,
+TxDb.Athaliana.BioMart.plantsmart22,
+TxDb.Dmelanogaster.UCSC.dm3.ensGene,
+TxDb.Hsapiens.UCSC.hg38.knownGene,
+TxDb.Mmusculus.UCSC.mm10.knownGene, RUnit, digest, knitr,
+rmarkdown, BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+gert	2.2.0	NA	NA	askpass, credentials (>= 1.2.1), openssl (>= 2.0.3),
+rstudioapi (>= 0.11), sys, zip (>= 2.1.0)	NA	spelling, knitr, rmarkdown, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.2
+GGally	2.4.0	NA	ggplot2 (>= 3.5.2), R (>= 4.3)	cli, dplyr (>= 1.1.0), ggstats (>= 0.9.0), grDevices, grid,
+gtable (>= 0.2.0), lifecycle, magrittr, progress, RColorBrewer,
+rlang, S7 (>= 0.2.0), scales (>= 1.3.0), tidyr (>= 1.3.0),
+utils	NA	airports, broom (>= 0.7.0), broom.helpers (>= 1.3.0),
+chemometrics, crosstalk, emmeans, geosphere (>= 1.5-1),
+ggforce, Hmisc, igraph (>= 1.0.1), intergraph (>= 2.0-2),
+knitr, labelled, mapproj, maps (>= 3.1.0), network (>= 1.17.1),
+nnet, rmarkdown, scagnostics, sna (>= 2.3-2), spelling,
+survival, testthat (>= 3.0.0), vdiffr	NA	GPL (>= 2.0)	NA	NA	NA	NA	no	4.5.1
+ggh4x	0.3.1	NA	ggplot2 (>= 3.5.2)	grid, gtable, scales, vctrs (>= 0.5.0), rlang (>= 1.1.0),
+lifecycle, stats, cli, S7	NA	covr, fitdistrplus, ggdendro, vdiffr, knitr, MASS, rmarkdown,
+testthat (>= 3.0.0), utils	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+gghic	0.2.1	NA	R (>= 4.1.0)	dplyr, GenomicRanges, ggplot2, grid, InteractionSet, IRanges,
+Matrix, methods, purrr, rhdf5, rlang, rtracklayer, S4Vectors,
+scales, Seqinfo, tibble, tidyr	NA	AnnotationDbi, furrr, GenomicFeatures, Gviz, knitr, rappdirs,
+rmarkdown, txdbmaker	NA	GPL (>= 3)	NA	NA	NA	NA	yes	4.5.1
+ggplot2	4.0.3	NA	R (>= 4.1)	cli, grDevices, grid, gtable (>= 0.3.6), isoband, lifecycle (>
+1.0.1), rlang (>= 1.1.0), S7, scales (>= 1.4.0), stats, vctrs
+(>= 0.6.0), withr (>= 2.5.0)	NA	broom, covr, dplyr, ggplot2movies, hexbin, Hmisc, hms, knitr,
+mapproj, maps, MASS, mgcv, multcomp, munsell, nlme, profvis,
+quantreg, quarto, ragg (>= 1.2.6), RColorBrewer, roxygen2,
+rpart, sf (>= 0.7-3), svglite (>= 2.1.2), testthat (>= 3.1.5),
+tibble, vdiffr (>= 1.0.6), xml2	sp	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+ggpointdensity	0.2.1	NA	R (>= 3.2)	ggplot2, MASS	NA	viridis, dplyr, testthat (>= 3.0.0)	NA	GPL (>= 3)	NA	NA	NA	NA	yes	4.5.1
+ggpubr	0.6.3	NA	R (>= 4.1.0), ggplot2 (>= 3.5.2)	ggrepel (>= 0.9.2), grid, ggsci, stats, utils, tidyr (>=
+1.3.0), purrr, dplyr (>= 1.1.0), cowplot (>= 1.1.1), ggsignif,
+scales, gridExtra, glue, polynom, rlang (>= 0.4.6), rstatix (>=
+0.7.2), tibble, magrittr	NA	grDevices, knitr, RColorBrewer, gtable, testthat	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.5.1
+ggrepel	0.9.8	NA	R (>= 4.1.0), ggplot2 (>= 3.5.2)	grid, Rcpp, rlang (>= 1.1.6), S7, scales (>= 1.4.0), withr (>=
+3.0.2)	Rcpp	knitr, rmarkdown, testthat, svglite, vdiffr, gridExtra, ggpp,
+patchwork, devtools, prettydoc, ggbeeswarm, dplyr, magrittr,
+readr, stringr, marquee, rsvg, sf	NA	GPL-3 | file LICENSE	NA	NA	NA	NA	yes	4.3.3
+ggridges	0.5.7	NA	R (>= 3.2)	ggplot2 (>= 3.5.0), grid (>= 3.0.0), scales (>= 0.4.1), withr
+(>= 2.1.1)	NA	covr, dplyr, patchwork, ggplot2movies, forcats, knitr,
+rmarkdown, testthat, vdiffr	NA	GPL-2 | file LICENSE	NA	NA	NA	NA	no	4.5.1
+ggsci	5.0.0	NA	R (>= 3.5.0)	ggplot2 (>= 2.0.0), grDevices, rlang, scales	NA	gridExtra, knitr, ragg, rmarkdown	NA	GPL (>= 3)	NA	NA	NA	NA	no	4.3.3
+ggsignif	0.6.4	NA	NA	ggplot2 (>= 3.3.5)	NA	knitr, rmarkdown, testthat, vdiffr (>= 1.0.2)	NA	GPL-3 | file LICENSE	NA	NA	NA	NA	no	4.3.3
+ggstats	0.13.0	NA	R (>= 4.2)	cli, dplyr, forcats, ggplot2 (>= 4.0.0), lifecycle, patchwork,
+purrr, rlang, scales, stats, stringr, utils, tidyr	NA	betareg, broom, broom.helpers (>= 1.20.0), emmeans, glue,
+gtsummary, knitr, labelled (>= 2.11.0), reshape, rmarkdown,
+nnet, parameters, pscl, testthat (>= 3.0.0), spelling, survey,
+survival, vdiffr	NA	GPL (>= 3)	NA	NA	NA	NA	no	4.3.3
+gh	1.5.0	NA	R (>= 4.1)	cli (>= 3.0.1), gitcreds, glue, httr2 (>= 1.0.6), ini,
+jsonlite, lifecycle, rlang (>= 1.0.0)	NA	connectcreds, covr, knitr, rmarkdown, rprojroot, spelling,
+testthat (>= 3.0.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+gitcreds	0.1.2	NA	R (>= 3.4)	NA	NA	codetools, covr, knitr, mockery, oskeyring, rmarkdown,
+testthat (>= 3.0.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+globals	0.19.1	NA	R (>= 3.1.2)	codetools	NA	NA	NA	LGPL (>= 2.1)	NA	NA	NA	NA	no	4.3.3
+glue	1.8.1	NA	R (>= 4.1)	methods	NA	crayon, DBI (>= 1.2.0), dplyr, knitr, rlang, rmarkdown,
+RSQLite, testthat (>= 3.2.0), vctrs (>= 0.3.0), waldo (>=
+0.5.3), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+googledrive	2.1.2	NA	R (>= 4.1)	cli (>= 3.0.0), gargle (>= 1.6.0), glue (>= 1.4.2), httr,
+jsonlite, lifecycle, magrittr, pillar (>= 1.9.0), purrr (>=
+1.0.1), rlang (>= 1.0.2), tibble (>= 2.0.0), utils, uuid, vctrs
+(>= 0.3.0), withr	NA	curl, dplyr (>= 1.0.0), knitr, rmarkdown, spelling, testthat
+(>= 3.1.5)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+googlesheets4	1.1.2	NA	R (>= 3.6)	cellranger, cli (>= 3.0.0), curl, gargle (>= 1.6.0), glue (>=
+1.3.0), googledrive (>= 2.1.0), httr, ids, lifecycle, magrittr,
+methods, purrr, rematch2, rlang (>= 1.0.2), tibble (>= 2.1.1),
+utils, vctrs (>= 0.2.3), withr	NA	readr, rmarkdown, spelling, testthat (>= 3.1.7)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+graphics	4.5.3	base	NA	grDevices	NA	NA	vcd	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+grDevices	4.5.3	base	NA	NA	NA	KernSmooth	NA	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+grid	4.5.3	base	NA	grDevices, utils	NA	NA	NA	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+gridExtra	2.3	NA	NA	gtable, grid, grDevices, graphics, utils	NA	ggplot2, egg, lattice, knitr, testthat	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+gtable	0.3.6	NA	R (>= 4.0)	cli, glue, grid, lifecycle, rlang (>= 1.1.0), stats	NA	covr, ggplot2, knitr, profvis, rmarkdown, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+gtools	3.9.5	NA	methods, stats, utils	NA	NA	car, gplots, knitr, rstudioapi, SGP, taxize	NA	GPL-2	NA	NA	NA	NA	yes	4.5.1
+haven	2.5.5	NA	R (>= 3.6)	cli (>= 3.0.0), forcats (>= 0.2.0), hms, lifecycle, methods,
+readr (>= 0.1.0), rlang (>= 0.4.0), tibble, tidyselect, vctrs
+(>= 0.3.0)	cpp11	covr, crayon, fs, knitr, pillar (>= 1.4.0), rmarkdown,
+testthat (>= 3.0.0), utf8	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+here	1.0.2	NA	NA	rprojroot (>= 2.1.0)	NA	conflicted, covr, fs, knitr, palmerpenguins, plyr, readr,
+rlang, rmarkdown, testthat, uuid, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+HiCcompare	1.32.0	NA	R (>= 3.5.0), dplyr	data.table, ggplot2, gridExtra, mgcv, stats, InteractionSet,
+GenomicRanges, IRanges, S4Vectors, BiocParallel, KernSmooth,
+methods, utils, graphics, pheatmap, gtools, rhdf5	NA	knitr, rmarkdown, testthat, multiHiCcompare	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+hictkR	0.1.0	NA	R (>= 4.0)	methods, nanoarrow, Rcpp	Rcpp	knitr, rmarkdown, testthat (>= 3.0.0)	NA	GPL (>= 2) | file LICENSE	NA	NA	NA	NA	yes	4.5.3
+highr	0.12	NA	R (>= 3.3.0)	xfun (>= 0.18)	NA	knitr, markdown, testit	NA	GPL	NA	NA	NA	NA	no	4.3.3
+hms	1.1.4	NA	NA	cli, lifecycle, methods, pkgconfig, rlang (>= 1.0.2), vctrs
+(>= 0.3.8)	NA	crayon, lubridate, pillar (>= 1.1.0), testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+htmltools	0.5.9	NA	R (>= 2.14.1)	base64enc, digest, fastmap (>= 1.1.0), grDevices, rlang (>=
+1.0.0), utils	NA	Cairo, markdown, ragg, shiny, testthat, withr	knitr	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+htmlwidgets	1.6.4	NA	NA	grDevices, htmltools (>= 0.5.7), jsonlite (>= 0.9.16), knitr
+(>= 1.8), rmarkdown, yaml	NA	testthat	shiny (>= 1.1)	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+httpuv	1.6.17	NA	R (>= 2.15.1)	later (>= 0.8.0), promises, R6, Rcpp (>= 1.0.7), utils	later, Rcpp	callr, curl, jsonlite, testthat (>= 3.0.0), websocket	NA	GPL (>= 2) | file LICENSE	NA	NA	NA	NA	yes	4.3.3
+httr	1.4.8	NA	R (>= 3.6)	curl (>= 5.1.0), jsonlite, mime, openssl (>= 0.8), R6	NA	covr, httpuv, jpeg, knitr, png, readr, rmarkdown, testthat
+(>= 0.8.0), xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+httr2	1.2.2	NA	R (>= 4.1)	cli (>= 3.0.0), curl (>= 6.4.0), glue, lifecycle, magrittr,
+openssl, R6, rappdirs, rlang (>= 1.1.0), vctrs (>= 0.6.3),
+withr	NA	askpass, bench, clipr, covr, docopt, httpuv, jose, jsonlite,
+knitr, later (>= 1.4.0), nanonext, otel (>= 0.2.0), otelsdk (>=
+0.2.0), paws.common (>= 0.8.0), promises, rmarkdown, testthat
+(>= 3.1.8), tibble, webfakes (>= 1.4.0), xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+ids	1.0.1	NA	NA	openssl, uuid	NA	knitr, rcorpora, rmarkdown, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+ini	0.3.1	NA	NA	NA	NA	testthat	NA	GPL-3	NA	NA	NA	NA	no	4.3.3
+InteractionSet	1.38.0	NA	GenomicRanges, SummarizedExperiment	methods, Matrix, Rcpp, BiocGenerics, S4Vectors (>= 0.27.12),
+IRanges, Seqinfo	Rcpp	testthat, knitr, rmarkdown, BiocStyle	NA	GPL-3	NA	NA	NA	NA	yes	4.5.1
+IRanges	2.44.0	NA	R (>= 4.0.0), methods, utils, stats, BiocGenerics (>= 0.53.2),
+S4Vectors (>= 0.47.6)	stats4	S4Vectors	XVector, GenomicRanges, Rsamtools, GenomicAlignments,
+GenomicFeatures, BSgenome.Celegans.UCSC.ce2, pasillaBamSubset,
+RUnit, BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+isoband	0.3.0	NA	NA	cli, grid, rlang, utils	cpp11	covr, ggplot2, knitr, magick, bench, rmarkdown, sf, testthat
+(>= 3.0.0), xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+jquerylib	0.1.4	NA	NA	htmltools	NA	testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+jsonlite	2.0.0	NA	methods	NA	NA	httr, vctrs, testthat, knitr, rmarkdown, R.rsp, sf	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+KernSmooth	2.23-26	recommended	R (>= 2.5.0), stats	NA	NA	MASS, carData	NA	Unlimited	NA	NA	NA	NA	yes	4.5.1
+knitr	1.51	NA	R (>= 3.6.0)	evaluate (>= 0.15), highr (>= 0.11), methods, tools, xfun (>=
+0.52), yaml (>= 2.1.19)	NA	bslib, DBI (>= 0.4-1), digest, formatR, gifski, gridSVG,
+htmlwidgets (>= 0.7), jpeg, JuliaCall (>= 0.11.1), magick,
+litedown, markdown (>= 1.3), otel, otelsdk, png, ragg,
+reticulate (>= 1.4), rgl (>= 0.95.1201), rlang, rmarkdown,
+sass, showtext, styler (>= 1.2.0), targets (>= 0.6.0), testit,
+tibble, tikzDevice (>= 0.10), tinytex (>= 0.56), webshot,
+rstudioapi, svglite	NA	GPL	NA	NA	NA	NA	no	4.3.3
+labeling	0.4.3	NA	NA	stats, graphics	NA	NA	NA	MIT + file LICENSE | Unlimited	NA	NA	NA	NA	no	4.3.3
+lambda.r	1.2.4	NA	R (>= 3.0.0)	formatR	NA	testit	NA	LGPL-3	NA	NA	NA	NA	no	4.5.1
+later	1.4.8	NA	R (>= 3.5)	Rcpp (>= 1.0.10), rlang	Rcpp	knitr, nanonext, promises, rmarkdown, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+lattice	0.22-9	recommended	R (>= 4.0.0)	grid, grDevices, graphics, stats, utils	NA	KernSmooth, MASS, latticeExtra, colorspace	chron, zoo	GPL (>= 2)	NA	NA	NA	NA	yes	4.5.2
+lifecycle	1.0.5	NA	R (>= 3.6)	cli (>= 3.4.0), rlang (>= 1.1.0)	NA	covr, knitr, lintr (>= 3.1.0), rmarkdown, testthat (>=
+3.0.1), tibble, tidyverse, tools, vctrs, withr, xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+limma	3.66.0	NA	R (>= 3.6.0)	grDevices, graphics, stats, utils, methods, statmod	NA	BiasedUrn, ellipse, gplots, knitr, locfit, MASS, splines,
+affy, AnnotationDbi, Biobase, BiocStyle, GO.db, illuminaio,
+org.Hs.eg.db, vsn	NA	GPL (>=2)	NA	NA	NA	NA	yes	4.5.1
+listenv	0.10.1	NA	R (>= 3.1.2)	NA	NA	R.utils, R.rsp, markdown	NA	LGPL (>= 2.1)	NA	NA	NA	NA	no	4.3.3
+lme4	2.0-1	NA	R (>= 3.6), Matrix, methods, stats	MASS, Rdpack, boot, graphics, grid, lattice, minqa (>=
+1.1.15), nlme (>= 3.1-123), nloptr (>= 1.0.4), parallel,
+reformulas (>= 0.4.3.1), rlang, splines, utils	Matrix (>= 1.5-0), Rcpp (>= 0.10.5), RcppEigen (>=
+0.3.3.9.4)	HSAUR3, MEMSS, car, dfoptim, gamm4, ggplot2, glmmTMB, knitr,
+merDeriv, mgcv, mlmRev, numDeriv, optimx (>= 2013.8.6),
+pbkrtest, rmarkdown, rr2, semEff, statmod, testthat (>= 0.8.1),
+tibble	DHARMa, performance	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+lmtest	0.9-40	NA	R (>= 3.0.0), stats, zoo	graphics	NA	car, strucchange, sandwich, dynlm, stats4, survival, AER	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.3.3
+locfit	1.5-9.12	NA	R (>= 4.1.0)	lattice	NA	interp, gam	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.5.1
+lubridate	1.9.5	NA	methods, R (>= 3.2)	generics, timechange (>= 0.4.0)	NA	covr, knitr, rmarkdown, testthat (>= 2.1.0), vctrs (>= 0.6.5)	chron, data.table, timeDate, tis, zoo	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+magrittr	2.0.5	NA	R (>= 3.4.0)	NA	NA	covr, knitr, rlang, rmarkdown, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+MASS	7.3-65	recommended	R (>= 4.4.0), grDevices, graphics, stats, utils	methods	NA	lattice, nlme, nnet, survival	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.5.1
+Matrix	1.7-5	recommended	R (>= 4.4), methods	grDevices, graphics, grid, lattice, stats, utils	NA	MASS, datasets, sfsmisc, tools	SparseM, graph	GPL (>= 2) | file LICENCE	NA	NA	NA	NA	yes	4.5.1
+MatrixGenerics	1.22.0	NA	matrixStats (>= 1.4.1)	methods	NA	Matrix, sparseMatrixStats, SparseArray, DelayedArray,
+DelayedMatrixStats, SummarizedExperiment, testthat (>= 2.1.0)	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+MatrixModels	0.5-4	NA	R (>= 3.6.0)	stats, methods, Matrix (>= 1.6-0), Matrix(< 1.8-0)	NA	NA	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+matrixStats	1.5.0	NA	R (>= 3.4.0)	NA	NA	utils, base64enc, ggplot2, knitr, markdown, microbenchmark,
+R.devices, R.rsp	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+memoise	2.0.1	NA	NA	rlang (>= 0.4.10), cachem	NA	digest, aws.s3, covr, googleAuthR, googleCloudStorageR, httr,
+testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+methods	4.5.3	base	NA	utils, stats	NA	codetools	NA	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+mgcv	1.9-4	recommended	R (>= 4.4.0), nlme (>= 3.1-64)	methods, stats, graphics, Matrix, splines, utils	NA	parallel, survival, MASS	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.5.2
+microbenchmark	1.5.0	NA	R (>= 3.2.0)	graphics, stats	NA	ggplot2, multcomp, RUnit	NA	BSD_2_clause + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+mime	0.13	NA	NA	tools	NA	NA	NA	GPL	NA	NA	NA	NA	yes	4.3.3
+miniUI	0.1.2	NA	NA	shiny (>= 0.13), htmltools (>= 0.3), utils	NA	NA	NA	GPL-3	NA	NA	NA	NA	no	4.3.3
+minqa	1.2.8	NA	NA	Rcpp (>= 0.9.10)	Rcpp	NA	NA	GPL-2	NA	NA	NA	NA	yes	4.3.3
+modelr	0.1.11	NA	R (>= 3.2)	broom, magrittr, purrr (>= 0.2.2), rlang (>= 1.0.6), tibble,
+tidyr (>= 0.8.0), tidyselect, vctrs	NA	compiler, covr, ggplot2, testthat (>= 3.0.0)	NA	GPL-3	NA	NA	NA	NA	no	4.3.3
+multiHiCcompare	1.28.0	NA	R (>= 4.0.0)	data.table, dplyr, HiCcompare, edgeR, BiocParallel, qqman,
+pheatmap, methods, GenomicRanges, graphics, stats, utils,
+pbapply, GenomeInfoDbData, GenomeInfoDb, aggregation	NA	knitr, rmarkdown, testthat, BiocStyle	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+nanoarrow	0.8.0	NA	NA	NA	NA	arrow (>= 9.0.0), bit64, blob, dplyr, hms, jsonlite,
+reticulate, rlang, testthat (>= 3.0.0), tibble, vctrs, withr	NA	Apache License (>= 2)	NA	NA	NA	NA	yes	4.5.1
+nlme	3.1-169	recommended	R (>= 3.6.0)	graphics, stats, utils, lattice	NA	MASS, SASmixed	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.5.3
+nloptr	2.2.1	NA	NA	NA	NA	knitr, rmarkdown, covr, tinytest	NA	LGPL (>= 3)	NA	NA	NA	NA	yes	4.3.3
+nnet	7.3-20	recommended	R (>= 3.0.0), stats, utils	NA	NA	MASS	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.5.1
+numDeriv	2016.8-1.1	NA	R (>= 2.11.1)	NA	NA	NA	NA	GPL-2	NA	NA	NA	NA	no	4.3.3
+nvimcom	0.9.94	NA	R (>= 4.1.0)	methods, tools	NA	knitr, rmarkdown, quarto	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.5.1
+openssl	2.4.0	NA	NA	askpass	NA	curl, testthat (>= 2.1.0), digest, knitr, rmarkdown,
+jsonlite, jose, sodium	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.3
+optparse	1.8.2	NA	R (>= 3.6.0)	methods	NA	knitr (>= 1.15.19), rmarkdown, stringr, testthat	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.5.1
+otel	0.2.0	NA	R (>= 3.6.0)	NA	NA	callr, cli, glue, jsonlite, otelsdk, processx, shiny,
+spelling, testthat (>= 3.0.0), utils, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+pak	0.9.5	NA	R (>= 3.5)	tools, utils	NA	callr (>= 3.7.0), cli (>= 3.2.0), covr, curl (>= 4.3.2), desc
+(>= 1.4.1), filelock (>= 1.0.2), gitcreds, glue (>= 1.6.2),
+jsonlite (>= 1.8.0), keyring (>= 1.4.0), pingr, pkgbuild (>=
+1.4.2), pkgcache (>= 2.2.4), pkgdepends (>= 0.9.0), pkgload,
+pkgsearch (>= 3.1.0), processx (>= 3.8.1), ps (>= 1.6.0),
+rstudioapi, testthat (>= 3.2.0), webfakes, withr, yaml	NA	GPL-3	NA	NA	NA	NA	yes	4.3.3
+parallel	4.5.3	base	NA	tools, compiler	NA	methods	snow, Rmpi, mirai	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+parallelly	1.47.0	NA	NA	parallel, tools, utils	NA	commonmark, base64enc	NA	LGPL (>= 2.1)	NA	NA	NA	NA	yes	4.3.3
+patchwork	1.3.2	NA	NA	ggplot2 (>= 3.0.0), gtable (>= 0.3.6), grid, stats, grDevices,
+utils, graphics, rlang (>= 1.0.0), cli, farver	NA	knitr, rmarkdown, gridGraphics, gridExtra, ragg, testthat (>=
+2.1.0), vdiffr, covr, png, gt (>= 0.11.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+pbapply	1.7-4	NA	R (>= 3.2.0)	parallel	NA	shiny, future, future.apply	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.5.1
+pbkrtest	0.5.5	NA	R (>= 4.2.0), lme4 (>= 1.1.31)	broom, dplyr, MASS, methods, numDeriv, Matrix (>= 1.2.3), doBy
+(>= 4.6.22)	NA	nlme, markdown, knitr	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+pheatmap	1.0.13	NA	R (>= 2.0)	grid, RColorBrewer, scales, gtable, stats, grDevices, graphics	NA	NA	NA	GPL-2	NA	NA	NA	NA	no	4.5.1
+pillar	1.11.1	NA	NA	cli (>= 2.3.0), glue, lifecycle, rlang (>= 1.0.2), utf8 (>=
+1.1.0), utils, vctrs (>= 0.5.0)	NA	bit64, DBI, debugme, DiagrammeR, dplyr, formattable, ggplot2,
+knitr, lubridate, nanotime, nycflights13, palmerpenguins,
+rmarkdown, scales, stringi, survival, testthat (>= 3.1.1),
+tibble, units (>= 0.7.2), vdiffr, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+pkgbuild	1.4.8	NA	R (>= 3.5)	callr (>= 3.2.0), cli (>= 3.4.0), desc, processx, R6	NA	covr, cpp11, knitr, Rcpp, rmarkdown, testthat (>= 3.2.0),
+withr (>= 2.3.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+pkgconfig	2.0.3	NA	NA	utils	NA	covr, testthat, disposables (>= 1.0.3)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+pkgdown	2.2.0	NA	R (>= 4.1)	bslib (>= 0.5.1), callr (>= 3.7.3), cli (>= 3.6.1), desc (>=
+1.4.0), downlit (>= 0.4.4), fontawesome, fs (>= 1.4.0), httr2
+(>= 1.0.2), jsonlite, lifecycle, openssl, purrr (>= 1.0.0),
+ragg (>= 1.4.0), rlang (>= 1.1.4), rmarkdown (>= 2.27), tibble,
+whisker, withr (>= 2.4.3), xml2 (>= 1.3.1), yaml (>= 2.3.9)	NA	covr, diffviewer, evaluate (>= 0.24.0), gert, gt, htmltools,
+htmlwidgets, knitr (>= 1.50), magick, methods, pkgload (>=
+1.0.2), quarto, rsconnect, rstudioapi, rticles, sass, testthat
+(>= 3.1.3), tools	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+pkgload	1.5.2	NA	R (>= 3.4.0)	cli (>= 3.3.0), desc, fs, glue, lifecycle, methods, pkgbuild,
+processx, rlang (>= 1.1.1), rprojroot, utils	NA	bitops, jsonlite, mathjaxr, pak, Rcpp, remotes, rstudioapi,
+testthat (>= 3.2.1.1), usethis, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+plyr	1.8.9	NA	R (>= 3.1.0)	Rcpp (>= 0.11.0)	Rcpp	abind, covr, doParallel, foreach, iterators, itertools,
+tcltk, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+polynom	1.4-1	NA	NA	stats, graphics	NA	knitr, rmarkdown	NA	GPL-2	NA	NA	NA	NA	no	4.3.3
+praise	1.0.0	NA	NA	NA	NA	testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+prettyunits	1.2.0	NA	R(>= 2.10)	NA	NA	codetools, covr, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+PRIMME	3.2-6	NA	NA	Rcpp (>= 0.11.4), Matrix	Rcpp, Matrix	NA	NA	GPL-3	NA	NA	NA	NA	yes	4.5.1
+processx	3.9.0	NA	R (>= 3.4.0)	ps (>= 1.9.3), R6, utils	NA	callr (>= 3.7.3), cli (>= 3.3.0), codetools, covr, curl,
+debugme, parallel, rlang (>= 1.0.2), testthat (>= 3.0.0),
+webfakes, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+profvis	0.4.0	NA	R (>= 4.0)	htmlwidgets (>= 0.3.2), rlang (>= 1.1.0), vctrs	NA	htmltools, knitr, rmarkdown, shiny, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+progress	1.2.3	NA	R (>= 3.6)	crayon, hms, prettyunits, R6	NA	Rcpp, testthat (>= 3.0.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+promises	1.5.0	NA	R (>= 4.1.0)	fastmap (>= 1.1.0), later, lifecycle, magrittr (>= 1.5), otel
+(>= 0.2.0), R6, rlang	NA	future (>= 1.21.0), knitr, mirai, otelsdk (>= 0.2.0), purrr,
+Rcpp, rmarkdown, spelling, testthat (>= 3.0.0), vembedr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+ps	1.9.3	NA	R (>= 3.4)	utils	NA	callr, covr, curl, pillar, pingr, processx (>= 3.1.0), R6,
+rlang, testthat (>= 3.0.0), webfakes, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+purrr	1.2.2	NA	R (>= 4.1)	cli (>= 3.6.1), lifecycle (>= 1.0.3), magrittr (>= 1.5.0),
+rlang (>= 1.1.1), vctrs (>= 0.6.3)	cli	carrier (>= 0.3.0), covr, dplyr (>= 0.7.8), httr, knitr,
+lubridate, mirai (>= 2.5.1), rmarkdown, testthat (>= 3.0.0),
+tibble, tidyselect	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+qqman	0.1.9	NA	R (>= 3.0.0),	calibrate	NA	knitr, rmarkdown	NA	GPL-3	NA	NA	NA	NA	no	4.5.1
+quantreg	6.1	NA	R (>= 3.5), stats, SparseM	methods, graphics, Matrix, MatrixModels, survival, MASS	NA	interp, rgl, logspline, nor1mix, Formula, zoo, R.rsp, conquer	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+R6	2.6.1	NA	R (>= 3.6)	NA	NA	lobstr, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+ragg	1.5.2	NA	NA	systemfonts (>= 1.0.3), textshaping (>= 0.3.0)	systemfonts, textshaping	covr, graphics, grid, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+rappdirs	0.3.4	NA	R (>= 4.1)	NA	NA	covr, roxygen2, testthat (>= 3.2.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+rbibutils	2.4.1	NA	R (>= 2.10)	utils, tools	NA	testthat	NA	GPL-2	NA	NA	NA	NA	yes	4.3.3
+rcmdcheck	1.4.0	NA	NA	callr (>= 3.1.1.9000), cli (>= 3.0.0), curl, desc (>= 1.2.0),
+digest, pkgbuild, prettyunits, R6, rprojroot, sessioninfo (>=
+1.1.1), utils, withr, xopen	NA	covr, knitr, mockery, processx, ps, rmarkdown, svglite,
+testthat, webfakes	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+RColorBrewer	1.1-3	NA	R (>= 2.0.0)	NA	NA	NA	NA	Apache License 2.0	NA	NA	NA	NA	no	4.3.3
+Rcpp	1.1.1-1.1	NA	R (>= 3.5.0)	methods, utils	NA	tinytest, inline, rbenchmark, pkgKitten (>= 0.1.2)	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+RcppArmadillo	15.2.6-1	NA	R (>= 3.3.0)	Rcpp (>= 1.1.1), stats, utils, methods	Rcpp	tinytest, Matrix (>= 1.3.0), pkgKitten, reticulate, slam	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+RcppEigen	0.3.4.0.2	NA	R (>= 3.6.0)	Rcpp (>= 0.11.0), stats, utils	Rcpp	Matrix, inline, tinytest, pkgKitten, microbenchmark	NA	GPL (>= 2) | file LICENSE	NA	NA	NA	NA	yes	4.3.3
+RCurl	1.98-1.18	NA	R (>= 3.4.0), methods	bitops	NA	XML	NA	BSD_3_clause + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+Rdpack	2.6.6	NA	R (>= 2.15.0), methods	tools, utils, rbibutils (> 2.4)	NA	grDevices, testthat, rstudioapi, rprojroot, gbRd	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+readr	2.2.0	NA	R (>= 4.1)	cli, clipr, crayon, glue, hms (>= 0.4.1), lifecycle, methods,
+R6, rlang, tibble, utils, vroom (>= 1.7.0), withr	cpp11, tzdb (>= 0.1.1)	covr, curl, datasets, knitr, rmarkdown, spelling, stringi,
+testthat (>= 3.2.0), tzdb (>= 0.1.1), waldo, xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+readxl	1.4.5	NA	R (>= 3.6)	cellranger, tibble (>= 2.0.1), utils	cpp11 (>= 0.4.0), progress	covr, knitr, rmarkdown, testthat (>= 3.1.6), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+reformulas	0.4.4	NA	NA	stats, methods, Matrix, Rdpack	NA	lme4, tinytest, glmmTMB, Formula	NA	GPL-3	NA	NA	NA	NA	no	4.3.3
+rematch	2.0.0	NA	NA	NA	NA	covr, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+rematch2	2.1.2	NA	NA	tibble	NA	covr, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+remotes	2.5.0	NA	R (>= 3.0.0)	methods, stats, tools, utils	NA	brew, callr, codetools, covr, curl, git2r (>= 0.23.0), knitr,
+mockery, pingr, pkgbuild (>= 1.0.1), rmarkdown, rprojroot,
+testthat (>= 3.0.0), webfakes, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+reprex	2.1.1	NA	R (>= 3.6)	callr (>= 3.6.0), cli (>= 3.2.0), clipr (>= 0.4.0), fs, glue,
+knitr (>= 1.23), lifecycle, rlang (>= 1.0.0), rmarkdown,
+rstudioapi, utils, withr (>= 2.3.0)	NA	covr, fortunes, miniUI, rprojroot, sessioninfo, shiny,
+spelling, styler (>= 1.2.0), testthat (>= 3.2.1)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+reshape2	1.4.5	NA	R (>= 3.1)	plyr (>= 1.8.1), Rcpp, stringr	Rcpp	covr, lattice, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+restfulr	0.0.16	NA	R (>= 3.4.0), methods	XML, RCurl, rjson, S4Vectors (>= 0.13.15), yaml	NA	getPass, rsolr, RUnit	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+rhdf5	2.54.1	NA	R (>= 4.0.0), methods	Rhdf5lib (>= 1.13.4), rhdf5filters (>= 1.15.5)	Rhdf5lib	bit64, BiocStyle, knitr, rmarkdown, testthat, bench, dplyr,
+ggplot2, mockery, BiocParallel	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+rhdf5filters	1.22.0	NA	NA	NA	Rhdf5lib	BiocStyle, knitr, rmarkdown, tinytest, rhdf5 (>= 2.47.7)	NA	BSD_2_clause + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+Rhdf5lib	1.32.0	NA	R (>= 4.2.0)	NA	NA	BiocStyle, knitr, rmarkdown, tinytest, mockery	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+Rhtslib	3.6.0	NA	NA	tools	NA	knitr, rmarkdown, BiocStyle	NA	LGPL (>= 2)	NA	NA	NA	NA	yes	4.5.1
+rjson	0.2.23	NA	R (>= 4.0.0)	NA	NA	NA	NA	GPL-2	NA	NA	NA	NA	yes	4.5.1
+rlang	1.2.0	NA	R (>= 4.0.0)	utils	NA	cli (>= 3.1.0), covr, crayon, desc, fs, glue, knitr,
+magrittr, methods, pillar, pkgload, rmarkdown, stats, testthat
+(>= 3.3.2), tibble, usethis, vctrs (>= 0.2.3), withr	winch	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+rmarkdown	2.31	NA	R (>= 3.0)	bslib (>= 0.2.5.1), evaluate (>= 0.13), fontawesome (>=
+0.5.0), htmltools (>= 0.5.1), jquerylib, jsonlite, knitr (>=
+1.43), methods, tinytex (>= 0.31), tools, utils, xfun (>=
+0.36), yaml (>= 2.1.19)	NA	digest, dygraphs, fs, rsconnect, downlit (>= 0.4.0), katex
+(>= 1.4.0), sass (>= 0.4.0), shiny (>= 1.6.0), testthat (>=
+3.0.3), tibble, vctrs, cleanrmd, withr (>= 2.4.2), xml2	NA	GPL-3	NA	NA	NA	NA	no	4.3.3
+RMTstat	0.3.1	NA	NA	NA	NA	NA	NA	BSD_3_clause + file LICENSE	NA	NA	NA	NA	no	4.5.1
+roxygen2	7.3.3	NA	R (>= 3.6)	brew, cli (>= 3.3.0), commonmark, desc (>= 1.2.0), knitr,
+methods, pkgload (>= 1.0.2), purrr (>= 1.0.0), R6 (>= 2.1.2),
+rlang (>= 1.0.6), stringi, stringr (>= 1.0.0), utils, withr,
+xml2	cpp11	covr, R.methodsS3, R.oo, rmarkdown (>= 2.16), testthat (>=
+3.1.2), yaml	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+rpart	4.1.27	recommended	R (>= 2.15.0), graphics, stats, grDevices	NA	NA	survival	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.5.3
+rprojroot	2.1.1	NA	R (>= 3.0.0)	NA	NA	covr, knitr, lifecycle, rlang, rmarkdown, testthat (>=
+3.2.0), withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+Rsamtools	2.26.0	NA	R (>= 3.5.0), methods, Seqinfo, GenomicRanges (>= 1.61.1),
+Biostrings (>= 2.77.2)	utils, BiocGenerics (>= 0.25.1), S4Vectors (>= 0.17.25),
+IRanges (>= 2.13.12), XVector (>= 0.19.7), bitops,
+BiocParallel, stats	Rhtslib (>= 3.3.1), S4Vectors, IRanges, XVector, Biostrings	GenomicAlignments, ShortRead (>= 1.19.10), GenomicFeatures,
+VariantAnnotation, TxDb.Dmelanogaster.UCSC.dm3.ensGene,
+TxDb.Hsapiens.UCSC.hg18.knownGene, RNAseqData.HNRNPC.bam.chr14,
+BSgenome.Hsapiens.UCSC.hg19, RUnit, BiocStyle, knitr	NA	Artistic-2.0 | file LICENSE	NA	NA	NA	NA	yes	4.5.1
+rstatix	0.7.3	NA	R (>= 3.3.0)	stats, utils, tidyr (>= 1.0.0), purrr, broom (>= 0.7.4), rlang
+(>= 0.3.1), tibble (>= 2.1.3), dplyr (>= 0.7.1), magrittr,
+corrplot, tidyselect (>= 1.2.0), car, generics (>= 0.0.2)	NA	knitr, rmarkdown, ggpubr, graphics, emmeans, coin, boot,
+testthat, spelling	NA	GPL-2	NA	NA	NA	NA	no	4.3.3
+rstudioapi	0.18.0	NA	NA	NA	NA	testthat, knitr, rmarkdown, clipr, covr, curl, jsonlite,
+withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.2
+rtracklayer	1.70.1	NA	R (>= 3.5), methods, GenomicRanges (>= 1.37.2)	XML (>= 1.98-0), BiocGenerics (>= 0.35.3), S4Vectors (>=
+0.23.18), IRanges (>= 2.13.13), XVector (>= 0.19.7), Seqinfo,
+Biostrings (>= 2.77.2), curl, httr, Rsamtools (>= 1.31.2),
+GenomicAlignments (>= 1.15.6), BiocIO, tools, restfulr (>=
+0.0.13)	S4Vectors, IRanges, XVector	GenomeInfoDb, BSgenome (>= 1.33.4), humanStemCell, microRNA
+(>= 1.1.1), genefilter, limma, org.Hs.eg.db, hgu133plus2.db,
+GenomicFeatures, BSgenome.Hsapiens.UCSC.hg19,
+TxDb.Hsapiens.UCSC.hg19.knownGene, RUnit	NA	Artistic-2.0 + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+rversions	3.0.0	NA	NA	curl	NA	pillar, testthat (>= 3.0.0), webfakes, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+rvest	1.0.5	NA	R (>= 4.1)	cli, glue, httr (>= 0.5), lifecycle (>= 1.0.3), magrittr,
+rlang (>= 1.1.0), selectr, tibble, xml2 (>= 1.4.0)	NA	chromote, covr, knitr, purrr, R6, readr, repurrrsive,
+rmarkdown, spelling, stringi (>= 0.3.1), testthat (>= 3.0.2),
+tidyr, webfakes	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+S4Arrays	1.10.1	NA	R (>= 4.3.0), methods, Matrix, abind, BiocGenerics (>=
+0.45.2), S4Vectors (>= 0.47.6), IRanges	stats	S4Vectors	BiocParallel, SparseArray (>= 0.0.4), DelayedArray,
+HDF5Array, testthat, knitr, rmarkdown, BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+S4Vectors	0.48.1	NA	R (>= 4.0.0), methods, utils, stats, stats4, BiocGenerics (>=
+0.53.2)	NA	NA	IRanges, GenomicRanges, SummarizedExperiment, Matrix,
+DelayedArray, ShortRead, graph, data.table, RUnit, BiocStyle,
+knitr	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+S7	0.2.2	NA	R (>= 3.5.0)	utils	NA	bench, callr, covr, knitr, methods, rmarkdown, testthat (>=
+3.2.0), tibble	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+sass	0.4.10	NA	NA	fs (>= 1.2.4), rlang (>= 0.4.10), htmltools (>= 0.5.1), R6,
+rappdirs	NA	testthat, knitr, rmarkdown, withr, shiny, curl	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+scales	1.4.0	NA	R (>= 4.1)	cli, farver (>= 2.0.3), glue, labeling, lifecycle, R6,
+RColorBrewer, rlang (>= 1.1.0), viridisLite	NA	bit64, covr, dichromat, ggplot2, hms (>= 0.5.0), stringi,
+testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+selectr	0.5-1	NA	R (>= 3.0)	methods, stringr, R6	NA	testthat, XML, xml2	NA	BSD_3_clause + file LICENCE	NA	NA	NA	NA	no	4.3.3
+Seqinfo	1.0.0	NA	methods, BiocGenerics	stats, S4Vectors (>= 0.47.6), IRanges	NA	GenomeInfoDb, GenomicRanges, BSgenome, GenomicFeatures,
+TxDb.Hsapiens.UCSC.hg38.knownGene,
+TxDb.Dmelanogaster.UCSC.dm3.ensGene,
+BSgenome.Hsapiens.UCSC.hg38, BSgenome.Celegans.UCSC.ce2, RUnit,
+knitr, rmarkdown, BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+sessioninfo	1.2.3	NA	R (>= 3.4)	cli (>= 3.1.0), tools, utils	NA	callr, covr, gh, reticulate, rmarkdown, testthat (>= 3.2.0),
+withr	NA	GPL-2	NA	NA	NA	NA	no	4.3.3
+shiny	1.13.0	NA	methods, R (>= 3.1.2)	bslib (>= 0.6.0), cachem (>= 1.1.0), cli, commonmark (>=
+2.0.0), fastmap (>= 1.1.1), fontawesome (>= 0.4.0), glue (>=
+1.3.2), grDevices, htmltools (>= 0.5.4), httpuv (>= 1.5.2),
+jsonlite (>= 0.9.16), later (>= 1.0.0), lifecycle (>= 0.2.0),
+mime (>= 0.3), otel, promises (>= 1.5.0), R6 (>= 2.0), rlang
+(>= 0.4.10), sourcetools, tools, utils, withr, xtable	NA	Cairo (>= 1.5-5), coro (>= 1.1.0), datasets, DT, dygraphs,
+future, ggplot2, knitr (>= 1.6), magrittr, markdown, mirai,
+otelsdk (>= 0.2.0), ragg, reactlog (>= 1.0.0), rmarkdown, sass,
+showtext, testthat (>= 3.2.1), watcher, yaml	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+snow	0.4-4	NA	R (>= 2.13.1), utils	NA	NA	rlecuyer	Rmpi	GPL	NA	NA	NA	NA	no	4.5.1
+sourcetools	0.1.7-2	NA	R (>= 3.0.2)	NA	NA	testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+SparseArray	1.10.10	NA	R (>= 4.3.0), methods, Matrix, BiocGenerics (>= 0.43.1),
+MatrixGenerics (>= 1.11.1), S4Vectors (>= 0.43.2), S4Arrays (>=
+1.10.1)	utils, stats, matrixStats, IRanges, XVector	S4Vectors, IRanges, XVector	HDF5Array, ExperimentHub, testthat, knitr, rmarkdown,
+BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+SparseM	1.84-2	NA	R (>= 2.15), methods	graphics, stats, utils	NA	knitr	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+spatial	7.3-18	recommended	R (>= 3.0.0), graphics, stats, utils	NA	NA	MASS	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.5.1
+splines	4.5.3	base	NA	graphics, stats	NA	Matrix, methods	NA	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+statmod	1.5.1	NA	R (>= 3.0.0)	stats, graphics	NA	MASS, tweedie	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.5.1
+stats	4.5.3	base	NA	utils, grDevices, graphics	NA	MASS, Matrix, SuppDists, methods, stats4	Kendall, coin, multcomp, pcaPP, pspearman, robustbase	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+stats4	4.5.3	base	NA	graphics, methods, stats	NA	NA	NA	Part of R 4.5.3	NA	NA	NA	NA	NA	4.5.3
+strawr	0.0.92	NA	R (>= 3.4.0)	Rcpp	Rcpp	NA	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+stringi	1.8.7	NA	R (>= 3.4)	tools, utils, stats	NA	NA	NA	file LICENSE	yes	NA	NA	NA	yes	4.5.1
+stringr	1.6.0	NA	R (>= 4.1.0)	cli, glue (>= 1.6.1), lifecycle (>= 1.0.3), magrittr, rlang
+(>= 1.0.0), stringi (>= 1.5.3), vctrs (>= 0.4.0)	NA	covr, dplyr, gt, htmltools, htmlwidgets, knitr, rmarkdown,
+testthat (>= 3.0.0), tibble	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+SummarizedExperiment	1.40.0	NA	R (>= 4.0.0), methods, MatrixGenerics (>= 1.1.3),
+GenomicRanges (>= 1.61.4), Biobase	utils, stats, tools, Matrix, BiocGenerics (>= 0.51.3),
+S4Vectors (>= 0.33.7), IRanges (>= 2.23.9), Seqinfo, S4Arrays
+(>= 1.1.1), DelayedArray (>= 0.31.12)	NA	GenomeInfoDb (>= 1.45.5), rhdf5, HDF5Array (>= 1.7.5),
+annotate, AnnotationDbi, GenomicFeatures, SparseArray,
+SingleCellExperiment, TxDb.Hsapiens.UCSC.hg19.knownGene,
+hgu95av2.db, airway (>= 1.15.1), BiocStyle, knitr, rmarkdown,
+RUnit, testthat, digest	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+survival	3.8-6	recommended	R (>= 3.5.0)	graphics, Matrix, methods, splines, stats, utils	NA	NA	NA	LGPL (>= 2)	NA	NA	NA	NA	yes	4.5.2
+sys	3.4.3	NA	NA	NA	NA	unix (>= 1.4), spelling, testthat	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+systemfonts	1.3.2	NA	R (>= 3.2.0)	base64enc, grid, jsonlite, lifecycle, tools, utils	cpp11 (>= 0.2.1)	covr, farver, ggplot2, graphics, knitr, ragg, rmarkdown,
+svglite, testthat (>= 2.1.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+TADCompare	1.20.0	NA	R (>= 4.0)	dplyr, PRIMME, cluster, Matrix, magrittr, HiCcompare, ggplot2,
+tidyr, ggpubr, RColorBrewer, reshape2, cowplot	NA	BiocStyle, knitr, rmarkdown, microbenchmark, testthat, covr,
+pheatmap, SpectralTAD, magick, qpdf	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+tcltk	4.5.3	base	NA	utils	NA	NA	NA	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+testthat	3.3.2	NA	R (>= 4.1.0)	brio (>= 1.1.5), callr (>= 3.7.6), cli (>= 3.6.5), desc (>=
+1.4.3), evaluate (>= 1.0.4), jsonlite (>= 2.0.0), lifecycle (>=
+1.0.4), magrittr (>= 2.0.3), methods, pkgload (>= 1.4.0),
+praise (>= 1.0.0), processx (>= 3.8.6), ps (>= 1.9.1), R6 (>=
+2.6.1), rlang (>= 1.1.6), utils, waldo (>= 0.6.2), withr (>=
+3.0.2)	NA	covr, curl (>= 0.9.5), diffviewer (>= 0.1.0), digest (>=
+0.6.33), gh, knitr, otel, otelsdk, rmarkdown, rstudioapi, S7,
+shiny, usethis, vctrs (>= 0.1.0), xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+textshaping	1.0.5	NA	R (>= 3.2.0)	lifecycle, stats, stringi, systemfonts (>= 1.3.0), utils	cpp11 (>= 0.2.1), systemfonts (>= 1.0.0)	covr, grDevices, grid, knitr, rmarkdown, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+tibble	3.3.1	NA	R (>= 3.4.0)	cli, lifecycle (>= 1.0.0), magrittr, methods, pillar (>=
+1.8.1), pkgconfig, rlang (>= 1.0.2), utils, vctrs (>= 0.5.0)	NA	bench, bit64, blob, brio, callr, DiagrammeR, dplyr, evaluate,
+formattable, ggplot2, here, hms, htmltools, knitr, lubridate,
+nycflights13, pkgload, purrr, rmarkdown, stringi, testthat (>=
+3.0.2), tidyr, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+tictoc	1.2.1	NA	R (>= 2.15), methods	NA	NA	testthat (>= 3.0.0)	NA	Apache License (== 2.0) | file LICENSE	NA	NA	NA	NA	no	4.5.1
+tidyr	1.3.2	NA	R (>= 4.1.0)	cli (>= 3.4.1), dplyr (>= 1.1.0), glue, lifecycle (>= 1.0.3),
+magrittr, purrr (>= 1.0.1), rlang (>= 1.1.1), stringr (>=
+1.5.0), tibble (>= 2.1.1), tidyselect (>= 1.2.1), utils, vctrs
+(>= 0.5.2)	cpp11 (>= 0.4.0)	covr, data.table, knitr, readr, repurrrsive (>= 1.1.0),
+rmarkdown, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+tidyselect	1.2.1	NA	R (>= 3.4)	cli (>= 3.3.0), glue (>= 1.3.0), lifecycle (>= 1.0.3), rlang
+(>= 1.0.4), vctrs (>= 0.5.2), withr	NA	covr, crayon, dplyr, knitr, magrittr, rmarkdown, stringr,
+testthat (>= 3.1.1), tibble (>= 2.1.3)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+tidyverse	2.0.0	NA	R (>= 3.3)	broom (>= 1.0.3), conflicted (>= 1.2.0), cli (>= 3.6.0),
+dbplyr (>= 2.3.0), dplyr (>= 1.1.0), dtplyr (>= 1.2.2), forcats
+(>= 1.0.0), ggplot2 (>= 3.4.1), googledrive (>= 2.0.0),
+googlesheets4 (>= 1.0.1), haven (>= 2.5.1), hms (>= 1.1.2),
+httr (>= 1.4.4), jsonlite (>= 1.8.4), lubridate (>= 1.9.2),
+magrittr (>= 2.0.3), modelr (>= 0.1.10), pillar (>= 1.8.1),
+purrr (>= 1.0.1), ragg (>= 1.2.5), readr (>= 2.1.4), readxl (>=
+1.4.2), reprex (>= 2.0.2), rlang (>= 1.0.6), rstudioapi (>=
+0.14), rvest (>= 1.0.3), stringr (>= 1.5.0), tibble (>= 3.1.8),
+tidyr (>= 1.3.0), xml2 (>= 1.3.3)	NA	covr (>= 3.6.1), feather (>= 0.3.5), glue (>= 1.6.2), mockr
+(>= 0.2.0), knitr (>= 1.41), rmarkdown (>= 2.20), testthat (>=
+3.1.6)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.3
+timechange	0.4.0	NA	R (>= 3.3)	NA	cpp11 (>= 0.2.7)	testthat (>= 0.7.1.99), knitr	NA	GPL (>= 3)	NA	NA	NA	NA	yes	4.3.3
+timeDate	4052.112	NA	R (>= 3.6.0), methods	graphics, utils, stats	NA	RUnit	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+tinytex	0.59	NA	NA	xfun (>= 0.48)	NA	testit, rstudioapi	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+tools	4.5.3	base	NA	NA	NA	codetools, methods, xml2, curl, commonmark, knitr, xfun, mathjaxr, V8	NA	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+tzdb	0.5.0	NA	R (>= 4.0.0)	NA	cpp11 (>= 0.5.2)	covr, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+UCSC.utils	1.6.1	NA	NA	methods, stats, httr, jsonlite, S4Vectors (>= 0.47.6)	NA	DBI, RMariaDB, GenomeInfoDb, testthat, knitr, rmarkdown,
+BiocStyle	NA	Artistic-2.0	NA	NA	NA	NA	no	4.5.1
+urca	1.3-4	NA	R (>= 2.0.0), methods	nlme, graphics, stats	NA	NA	NA	GPL (>= 2)	NA	NA	NA	NA	yes	4.3.3
+urlchecker	1.0.1	NA	R (>= 3.3)	cli, curl, tools, xml2	NA	covr	NA	GPL-3	NA	NA	NA	NA	no	4.3.3
+usethis	3.2.1	NA	R (>= 4.1)	cli (>= 3.0.1), clipr (>= 0.3.0), crayon, curl (>= 2.7), desc
+(>= 1.4.2), fs (>= 1.3.0), gert (>= 1.4.1), gh (>= 1.2.1), glue
+(>= 1.3.0), jsonlite, lifecycle (>= 1.0.0), purrr, rappdirs,
+rlang (>= 1.1.0), rprojroot (>= 2.1.1), rstudioapi, stats,
+tools, utils, whisker, withr (>= 2.3.0), yaml	NA	covr, knitr, magick, pkgload (>= 1.3.2.1), quarto (>= 1.5.1),
+rmarkdown, roxygen2 (>= 7.1.2), spelling (>= 1.2), testthat (>=
+3.1.8)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+utf8	1.2.6	NA	R (>= 2.10)	NA	NA	cli, covr, knitr, rlang, rmarkdown, testthat (>= 3.0.0),
+withr	NA	Apache License (== 2.0) | file LICENSE	NA	NA	NA	NA	yes	4.3.3
+utils	4.5.3	base	NA	NA	NA	methods, xml2, commonmark, knitr, jsonlite	NA	Part of R 4.5.3	NA	NA	NA	NA	yes	4.5.3
+uuid	1.2-2	NA	R (>= 2.9.0)	NA	NA	NA	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+vctrs	0.7.3	NA	R (>= 4.0.0)	cli (>= 3.4.0), glue, lifecycle (>= 1.0.3), rlang (>= 1.1.7)	NA	bit64, covr, crayon, dplyr (>= 0.8.5), generics, knitr,
+pillar (>= 1.4.4), pkgdown (>= 2.0.1), rmarkdown, testthat (>=
+3.0.0), tibble (>= 3.1.3), waldo (>= 0.2.0), withr, xml2,
+zeallot	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+viridis	0.6.5	NA	R (>= 2.10), viridisLite (>= 0.4.0)	ggplot2 (>= 1.0.1), gridExtra	NA	hexbin (>= 1.27.0), scales, MASS, knitr, dichromat,
+colorspace, httr, mapproj, vdiffr, svglite (>= 1.2.0),
+testthat, covr, rmarkdown, maps, terra	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.5.1
+viridisLite	0.4.3	NA	R (>= 2.10)	NA	NA	hexbin (>= 1.27.0), ggplot2 (>= 1.0.1), testthat, covr	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+vroom	1.7.1	NA	R (>= 4.1)	bit64, cli (>= 3.2.0), crayon, glue, hms, lifecycle (>=
+1.0.3), methods, rlang (>= 1.1.0), stats, tibble (>= 2.0.0),
+tidyselect, tzdb (>= 0.1.1), vctrs (>= 0.2.0), withr	cpp11 (>= 0.2.0), progress (>= 1.2.3), tzdb (>= 0.1.1)	archive, bench (>= 1.1.0), covr, curl, dplyr, forcats, fs,
+ggplot2, knitr, patchwork, prettyunits, purrr, rmarkdown,
+rstudioapi, scales, spelling, testthat (>= 2.1.0), tidyr,
+utils, waldo, xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+waldo	0.6.2	NA	R (>= 4.0)	cli, diffobj (>= 0.3.4), glue, methods, rlang (>= 1.1.0)	NA	bit64, R6, S7, testthat (>= 3.0.0), withr, xml2	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+whisker	0.4.1	NA	NA	NA	NA	markdown	NA	GPL-3	NA	NA	NA	NA	no	4.3.3
+withr	3.0.2	NA	R (>= 3.6.0)	graphics, grDevices	NA	callr, DBI, knitr, methods, rlang, rmarkdown (>= 2.12),
+RSQLite, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+xfun	0.57	NA	R (>= 3.2.0)	grDevices, stats, tools	NA	testit, parallel, codetools, methods, rstudioapi, tinytex (>=
+0.30), mime, litedown (>= 0.6), commonmark, knitr (>= 1.50),
+remotes, pak, curl, xml2, jsonlite, magick, yaml, data.table,
+qs2	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+XML	3.99-0.23	NA	R (>= 4.0.0), methods, utils	NA	NA	bitops, RCurl	NA	BSD_3_clause + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+xml2	1.5.2	NA	R (>= 3.6.0)	cli, methods, rlang (>= 1.1.0)	NA	covr, curl, httr, knitr, mockery, rmarkdown, testthat (>=
+3.2.0), xslt	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+xopen	1.0.1	NA	R (>= 3.1)	processx	NA	ps, testthat (>= 3.0.0)	NA	MIT + file LICENSE	NA	NA	NA	NA	no	4.3.3
+xtable	1.8-8	NA	R (>= 2.10.0)	stats, utils, methods	NA	knitr, zoo, survival, glue, tinytex	NA	GPL (>= 2)	NA	NA	NA	NA	no	4.3.3
+XVector	0.50.0	NA	R (>= 4.0.0), methods, BiocGenerics (>= 0.37.0), S4Vectors (>=
+0.27.12), IRanges (>= 2.43.8)	methods, utils, stats, tools, BiocGenerics, S4Vectors, IRanges	S4Vectors, IRanges	Biostrings, drosophila2probe, RUnit	NA	Artistic-2.0	NA	NA	NA	NA	yes	4.5.1
+yaml	2.3.12	NA	NA	NA	NA	knitr, rmarkdown, testthat (>= 3.0.0)	NA	BSD_3_clause + file LICENSE	NA	NA	NA	NA	yes	4.3.3
+zip	2.3.3	NA	NA	NA	NA	covr, pillar, processx, R6, testthat, withr	NA	MIT + file LICENSE	NA	NA	NA	NA	yes	4.5.1
+zoo	1.8-15	NA	R (>= 3.1.0), stats	utils, graphics, grDevices, lattice (>= 0.20-27)	NA	AER, coda, chron, ggplot2 (>= 3.5.0), mondate, scales,
+stinepack, strucchange, timeDate, timeSeries, tinyplot, tis,
+tseries, xts	NA	GPL-2 | GPL-3	NA	NA	NA	NA	yes	4.3.3

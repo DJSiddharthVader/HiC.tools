@@ -1,4 +1,4 @@
-name: dist2
+name: distiller
 channels:
   - conda-forge
   - bioconda

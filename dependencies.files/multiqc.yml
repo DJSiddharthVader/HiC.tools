@@ -1,4 +1,4 @@
-name: mqc
+name: multiqc
 channels:
   - conda-forge
   - bioconda
