@@ -246,7 +246,7 @@ run_all_multiHiCCompare <- function(
         range1=chr, range2=chr,
         output_dir=
             file.path(
-                MULTIHICCOMPARE_DIR,
+                DIFFERENTIAL_CONTACTS_DIR,
                 'results',
                 glue('zero.p_{zero.p}'),
                 glue('A.min_{A.min}'),
@@ -349,7 +349,7 @@ list_all_multiHiCCompare_results <- function(
     }
     # Load all results
     parse_results_filelist(
-        input_dir=file.path(MULTIHICCOMPARE_DIR, 'results'),
+        input_dir=file.path(DIFFERENTIAL_CONTACTS_DIR, 'results'),
         suffix=file_suffix,
         filename.column.name='pair.name',
         param_delim='_',
@@ -420,7 +420,7 @@ load_all_multiHiCCompare_results <- function(
     ) %>% 
     unnest(results) %>% 
     select(-c(filepaths)) %>%
-    dplyr::rename('distance.bp'=D) %>% 
+    dplyr::rename('distance.bins'=D) %>% 
     mutate(
         merged=ifelse(merged, 'Merged', 'Individual'),
         chr=rename_chrs(chr, to_label=TRUE),

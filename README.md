@@ -193,7 +193,7 @@ results/
 ├── multiHiCCompare
 │   ├── all.multiHiCCompare.n.results.tsv
 │   ├── all.multiHiCCompare.results.tsv
-│   └── results
+│   └── results/
 ├── compartments
 │   ├── all.cooltools.compartments.tsv
 │   └── results_compartments
@@ -357,13 +357,6 @@ Are heavily nested regions enriched for Differential HiC signals or functional e
 | metric.max.log10_qval | 4.596627111104732  | 7.206963447063814  |  |
 | metric.sum.log10_qval | 27.868278581521214 | 13.946676515661137 |  |
 
-
-### Differential Contact Analysis
-
-We use the `multiHiCCompare` R package to look for individual difference in bin-pair contact frequency between conditions.
-We use the `fastlo()` implementation of the cyclic LOESS normalizaiton and we use the function `hic_exactTest()` since we are only every comparing a single binary condition (e.g. DEL vs WT).
-We calulate results separately for every resolution (@ 100,50,25,10,5Kb) + comparison + chromosome, and pool results genome-wide (i.e. by resolution by comparison) to apply BH adjustment to the raw p-values.
-
 ### Compartment Analysis
 
 #### Compartment Annotation
@@ -495,10 +488,6 @@ Rscript scripts/loops/run.IDR2D.loops.R
 Rscript scripts/loops/calculate.loop.valency.R
 # calculate loop nesting i.e. for each bin, how many loops overlap that bin
 Rscript scripts/loops/calculate.loop.nesting.level.R && parallel -j $(nproc) --bar --eta :::: ./results/loops/all.loop.nesting.bedtools.cmds.txt
-```
-Generate multiHiCCompare results
-```bash
-Rscript ./scripts/DifferentialContacts/run.multiHiCCompare.R
 ```
 Generate Compartment annotations
 ```bash
