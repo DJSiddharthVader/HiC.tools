@@ -290,8 +290,8 @@ generate_cooltools_calling_cmd <- function(
             glue("ignore.diags_{ignore.diags}")
         )
     # Create filenames
-    input.filename <- glue("{mcool.filepath}::resolutions/{resolution}")
-    TAD.filename   <- glue("{output_dir}/{SampleID}-TADs.tsv")
+    mcool.uri    <- glue("{mcool.filepath}::resolutions/{resolution}")
+    TAD.filename <- glue("{output_dir}/{SampleID}-TADs.tsv")
     # Compose command to generate TAD for this set of inputs + params
     weight_flag <- 
         case_when(
@@ -300,7 +300,7 @@ generate_cooltools_calling_cmd <- function(
             .unmatched="error"
         )
     mkdir.cmd <- glue("mkdir -p {output_dir}")
-    TAD.cmd   <- glue("cooltools insulation {weight_flag} --verbose --nproc {threads} --append-raw-scores --window-pixels --min-frac-valid-pixels {mfvp} --ignore-diags {ignore.diags} --threshold {threshold} --output {TAD.filename} {window.sizes.str}")
+    TAD.cmd   <- glue("cooltools insulation {weight_flag} --verbose --nproc {threads} --append-raw-scores --window-pixels --min-frac-valid-pixels {mfvp} --ignore-diags {ignore.diags} --threshold {threshold} --output {TAD.filename} {mcool.uri} {window.sizes.str}")
     # Paste  all commands together in one line to run in bash
     tibble_row(
         output.file=TAD.filename,

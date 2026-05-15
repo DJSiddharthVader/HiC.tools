@@ -32,8 +32,8 @@ hyper.params.df <-
         # cooltools params
         expand_grid(
             normalization=c('balanced', 'raw'),
-            window.sizes.str=c(20, 60, 100), # numer of bins, not bp 
-            # window.sizes.str='20 60 100', # numer of bins, not bp 
+            # window.sizes.str=c(20, 60, 100), # numer of bins, not bp 
+            window.sizes.str='20 60 100', # numer of bins, not bp 
             mfvp=c(0.66, 0.9),
             threshold=c('Li', 'Otsu'),
             ignore.diags=c(2),
