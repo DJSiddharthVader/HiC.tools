@@ -94,18 +94,6 @@ calculate_all_MoCs <- function(
 ################################################################################
 # Generate TADCompare results
 ################################################################################
-TADCompare_load_matrix <- function(
-    filepath,
-    ...){
-    load_mcool_file(
-        filepath,
-        type='df',
-        cis=TRUE,
-        ...
-    ) %>% 
-    select(c(range1, range2, IF))
-}
-
 load_all_TAD_results_for_TADCompare <- function(
     force.redo=FALSE,
     force_redo_sub=FALSE){

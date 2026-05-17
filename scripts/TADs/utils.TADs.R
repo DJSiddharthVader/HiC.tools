@@ -273,7 +273,6 @@ generate_cooltools_calling_cmd <- function(
     mfvp,
     threshold,
     window.sizes.str,
-    ignore.diags,
     normalization,
     resolution,
     SampleID,
@@ -286,8 +285,7 @@ generate_cooltools_calling_cmd <- function(
             glue("resolution_{resolution}"),
             glue("normalization_{normalization}"),
             glue("threshold_{threshold}"),
-            glue("mfvp_{mfvp}"),
-            glue("ignore.diags_{ignore.diags}")
+            glue("mfvp_{mfvp}")
         )
     # Create filenames
     mcool.uri    <- glue("{mcool.filepath}::resolutions/{resolution}")
@@ -300,7 +298,7 @@ generate_cooltools_calling_cmd <- function(
             .unmatched="error"
         )
     mkdir.cmd <- glue("mkdir -p {output_dir}")
-    TAD.cmd   <- glue("cooltools insulation {weight_flag} --verbose --nproc {threads} --append-raw-scores --window-pixels --min-frac-valid-pixels {mfvp} --ignore-diags {ignore.diags} --threshold {threshold} --output {TAD.filename} {mcool.uri} {window.sizes.str}")
+    TAD.cmd   <- glue("cooltools insulation {weight_flag} --verbose --nproc {threads} --append-raw-scores --window-pixels --min-frac-valid-pixels {mfvp} --threshold {threshold} --output {TAD.filename} {mcool.uri} {window.sizes.str}")
     # Paste  all commands together in one line to run in bash
     tibble_row(
         output.file=TAD.filename,
@@ -757,6 +755,18 @@ load_all_hiTAD_DIs <- function(){
 ################################################################################
 # Generate + Process ConsensusTAD TADs
 ################################################################################
+TADCompare_load_matrix <- function(
+    filepath,
+    ...){
+    load_mcool_file(
+        filepath,
+        type='df',
+        cis=TRUE,
+        ...
+    ) %>% 
+    select(c(range1, range2, IF))
+}
+
 run_ConsensusTAD <- function(
     samples.df,
     resolution,
@@ -767,28 +777,35 @@ run_ConsensusTAD <- function(
     window_size,
     gap_thresh,
     ...){
-    # isMerged=tmp$isMerged[[1]]; samples.df=tmp$samples.df[[1]]; Sample.Group=tmp$Sample.Group[[1]]; resolution=tmp$resolution[[1]]; normalization=tmp$normalization[[1]]; z_thresh=tmp$z_thresh[[1]]; window_size=tmp$window_size[[1]]; gap_thresh=tmp$gap_thresh[[1]]; chr=tmp$chr[[1]]; range1=tmp$range1[[1]]; range2=tmp$range2[[1]]; output_dir=tmp$output_dir[[1]]; results_file=tmp$results_file[[1]]
+    # paste('row.index=1;', paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', sep='', collapse='; '))
     sampleID.mapping <- 
         samples.df %>%
         mutate(
-            SampleID=as.character(glue('{SampleID}.score')),
-            og.sample=as.character(glue('Sample {row_number()}'))
+            og.sample=as.character(glue('Sample {row_number()}')),
+            SampleID=as.character(glue('{SampleID}.score'))
         ) %>%
         select(SampleID, og.sample) %>% 
         deframe()
     # Generate ConsensusTAD results
     consensus.results <- 
         samples.df %>%
-        pull(filepath) %>% 
-        sapply(
-            TADCompare_load_matrix,
-            resolution=resolution,
-            normalization=normalization,
-            range1=range1,
-            range2=range2,
-            simplify=FALSE,
-            USE.NAMES=FALSE
-        ) %>% 
+        # named list of all Hi-C replicate matrices to use
+        mutate(
+            contact.matrix=
+                pmap(
+                    .l=.,
+                    .f=TADCompare_load_matrix,
+                    resolution=resolution,
+                    normalization=normalization,
+                    range1=range1,
+                    range2=range2,
+                    .progress=TRUE
+                    # .progress=FALSE
+                )
+        ) %>%
+        select(SampleID, contact.matrix) %>%
+        deframe() %>% 
+        # pass named list of input matrics to ConsensusTAD
         ConsensusTADs(
             resolution=resolution,
             z_thresh=z_thresh,
@@ -806,6 +823,7 @@ run_ConsensusTAD <- function(
         add_column(isConsensusBoundary=TRUE),
         by=join_by(Coordinate)
     ) %>% 
+    # rename score columns to match SampleIDs
     mutate(isConsensusBoundary=ifelse(is.na(isConsensusBoundary), FALSE, isConsensusBoundary)) %>% 
     dplyr::rename(
         all_of(sampleID.mapping),
@@ -831,20 +849,18 @@ run_all_ConsensusTADs <- function(
         range1=chr, range2=chr,
         output_dir=
             file.path(
-                TAD_RESULTS_DIR,
-                'method_ConsensusTAD',
-                # glue('merged_{isMerged}'),
+                CONSENSUSTAD_TAD_RESULTS_DIR,
+                glue('resolution_{scale_numbers(resolution, force_numeric=TRUE)}'),
+                glue('normalization_{normalization}'),
                 glue('z.thresh_{z_thresh}'),
                 glue('window.size_{window_size}'),
                 glue('gap.thresh_{gap_thresh}'),
-                glue('resolution_{scale_numbers(resolution, force_numeric=TRUE)}'),
-                # glue('resolution.type_{resolution.type}'),
                 glue('region_{chr}')
             ),
         results_file=
             file.path(
                 output_dir,
-                glue('{Sample.Group}-ConsensusTADs.tsv')
+                glue('{SampleID}-ConsensusTADs.tsv')
             )
     ) %>% 
     {
@@ -869,6 +885,7 @@ run_all_ConsensusTADs <- function(
     } %>%
     arrange(desc(resolution)) %>% 
         # {.} -> tmp; tmp
+        # tmp %>% head(3) %>% 
     # pmap(
     future_pmap(
         .l=.,
