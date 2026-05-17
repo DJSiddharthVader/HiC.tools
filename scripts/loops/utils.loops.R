@@ -6,6 +6,100 @@ library(idr2d)
 ###################################################
 # cooltools dots
 ###################################################
+generate_cooltools_dots_calling_cmds <- function(
+    threads,
+    normalization,
+    resolution,
+    SampleID,
+    mcool.filepath,
+    distance.expectation.filepath,
+    output_dir,
+    ...){
+    output_dir <- 
+        file.path(
+            output_dir,
+            glue("resolution_{resolution}"),
+            glue("normalization_{normalization}"),
+        )
+    # Create filenames
+    mcool.uri       <- glue("{mcool.filepath}::resolutions/{resolution}")
+    output.filepath <- glue("{output_dir}/{SampleID}-dots.tsv")
+    # Compose command to generate TAD for this set of inputs + params
+    weight_flag <- 
+        case_when(
+            normalization == 'balanced' ~ '--clr-weight-name weight',
+            normalization == 'raw'      ~ '',
+            .unmatched="error"
+        )
+    mkdir.cmd <- glue("mkdir -p {output_dir}")
+    main.cmd  <- glue("cooltools dots {weight_flag} --nproc {threads} --output {output.filepath} {mcool.uri} {distance.expectation.filepath}")
+    # Paste  all commands together in one line to run in bash
+    tibble_row(
+        output.filepath=output.filepath,
+        cmd=
+            paste(
+                c(
+                    mkdir.cmd,
+                    main.cmd
+                ),
+                collapse='; '
+            )
+    )
+}
+
+generate_all_loop_calling_cmds <- function(
+    hyper.params.df,
+    cmds.output.filepath=NULL,
+    merge_status='merged',
+    force_redo=FALSE,
+    ...){
+    # resolutions=parsed.args$resolutions; force_redo=FALSE; merge_status='merged';
+    list_all_distance_expectation_files() %>% 
+    filter(track.type == 'cis') %>% 
+    inner_join(
+        hyper.params.df,
+        by=join_by(resolution)
+    ) %>% 
+    # list contacts matrices for all samples to generate compartments for
+    inner_join(
+        list_all_mcool_files(merge_status=merge_status) %>%
+        dplyr::rename('mcool.filepath'=filepath),
+        by=join_by(SampleID)
+    ) %>% 
+    mutate(output_dir=file.path(LOOP_RESULTS_DIR, glue("loop.method_{loop.method}"))) %>% 
+    mutate(
+        cmd.data=
+            pmap(
+                .l=.,
+                .f=
+                    function(loop.method, ...) {
+                        case_when(
+                            loop.method == 'cooltools' ~ generate_cooltools_dots_calling_cmds(...),
+                            .unmatched='error'
+                        )
+                    },
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(cmd.data) %>% 
+    save_cmds_to_file(
+        cmds.output.filepath=cmds.output.filepath,
+        force_redo=force_redo
+    )
+}
+
+list_all_cooltools_dots_results <- function(resolutions=NULL){
+    LOOP_RESULTS_DIR %>% 
+    parse_results_filelist(suffix='-dots.tsv') %>%
+    {
+        if (!is.null(resolutions)) {
+            filter(., resolution %in% resolutions)
+        } else {
+            .
+        }
+    }
+}
+
 load_cooltools_dots <- function(
     filepath,
     ...){
@@ -14,20 +108,6 @@ load_cooltools_dots <- function(
         show_col_types=FALSE,
         progress=FALSE
     )
-}
-
-list_all_cooltools_dots_results <- function(resolutions=NULL){
-    LOOP_RESULTS_DIR %>% 
-    parse_results_filelist(suffix='-dots.tsv') %>%
-    # filter(method == 'cooltools') %>% 
-    {
-        if (!is.null(resolutions)) {
-            filter(., resolution %in% resolutions)
-        } else {
-            .
-        }
-    } %>% 
-    get_info_from_MatrixIDs(keep_id=FALSE)
 }
 
 load_all_cooltools_dots <- function(resolutions=NULL){

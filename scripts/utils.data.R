@@ -202,6 +202,33 @@ parse_results_filelist <- function(
     readr::type_convert()
 }
 
+save_cmds_to_file <- function(
+    cmds.df,
+    cmds.output.filepath=NULL,
+    force_redo=FALSE){
+    cmds.df %>% 
+    # Only include cmds generating outputfiles that dont exist
+    {
+        if (!force_redo) {
+            filter(., !file.exists(output.filepath))
+        } else {
+            .
+        }
+    } %>% 
+    {
+         if (!is.null(cmds.output.filepath)) {
+            select(., cmd) %>% 
+            write_tsv(
+                cmds.output.filepath,
+                col_names=FALSE
+            )
+            message(glue('Saved all cmds to generat results to: {cmds.output.filepath}'))
+         } else {
+             .
+         }
+    }
+}
+
 handle_CLI_args <- function(
     args=c('threads', 'force', 'resolutions'),
     has.positional=FALSE){

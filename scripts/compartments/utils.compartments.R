@@ -48,8 +48,9 @@ generate_cooltools_calling_cmd <- function(
     )
 }
 
-generate_all_cooltools_calling_cmds <- function(
+generate_all_compartment_calling_cmds <- function(
     hyper.params.df,
+    cmds.output.filepath=NULL,
     merge_status='merged',
     force_redo=FALSE,
     ...){
@@ -83,14 +84,10 @@ generate_all_cooltools_calling_cmds <- function(
             )
     ) %>%
     unnest(cmd.data) %>% 
-    # Only include cmds generating outputfiles that dont exist
-    {
-        if (!force_redo) {
-            filter(., !file.exists(output.filepath))
-        } else {
-            .
-        }
-    }
+    save_cmds_to_file(
+        cmds.output.filepath=cmds.output.filepath,
+        force_redo=force_redo
+    )
 }
 
 ###################################################

@@ -35,6 +35,7 @@ generate_genome_binning_cmds <- function(
 
 generate_all_genome_binning_cmds <- function(
     resolutions,
+    cmds.output.filepath=NULL,
     force_redo=FALSE,
     ...){
     pmap(
@@ -42,13 +43,16 @@ generate_all_genome_binning_cmds <- function(
         .f=generate_genome_binning_cmds
     ) %>%
     bind_rows() %>% 
-    {
-        if (!force_redo) {
-            filter(., !file.exists(output.filepath))
-        } else {
-            .
-        }
-    }
+    save_cmds_to_file(
+        cmds.output.filepath=cmds.output.filepath,
+        force_redo=force_redo
+    )
+}
+
+list_all_genome_bin_files <- function(){
+    GENOME_BINS_FILES_DIR %>% 
+    parse_results_filelist(suffix='-genome.bins.tsv') %>% 
+    dplyr::rename('genomic.bins.filepath'=filepath)
 }
 
 ###################################################
@@ -86,100 +90,26 @@ generate_phasing_track_computation_cmds <- function(
 
 generate_all_phasing_track_computation_cmds <- function(
     track.types,
+    cmds.output.filepath=NULL,
     force_redo=FALSE,
     ...){
-    GENOME_BINS_FILES_DIR %>% 
-    parse_results_filelist(suffix='genome.bins.tsv') %>% 
-    dplyr::rename('genomic.bins.filepath'=filepath) %>% 
+    list_all_genome_bin_files() %>% 
     cross_join(tibble(track.type=track.types)) %>% 
     pmap(
         .l=.,
         .f=generate_phasing_track_computation_cmds,
     ) %>%
     bind_rows() %>% 
-    {
-        if (!force_redo) {
-            filter(., !file.exists(output.filepath))
-        } else {
-            .
-        }
-    }
-}
-
-###################################################
-# Distance-Expectation Calculation
-###################################################
-generate_marginal_coverage_calculation_cmds <- function(
-    threads,
-    resolution,
-    normalization,
-    contact.type,
-    ignore.diags,
-    mcool.filepath,
-    MatrixID,
-    output_dir,
-    ...){
-    output_dir <- 
-        file.path(
-            output_dir,
-            glue("normalization_{normalization}"),
-            glue("resolution_{resolution}")
-        )
-    # Create filepaths
-    mcool.uri       <- glue("{mcool.filepath}::resolutions/{resolution}")
-    output.filepath <- glue("{output_dir}/{MatrixID}-coverage.tsv")
-    # Compose command to generate TAD for this set of inputs + params
-    weight_flag <- 
-        case_when(
-            normalization == 'balanced' ~ '--clr-weight-name weight',
-            normalization == 'raw'      ~ '',
-            .unmatched="error"
-        )
-    mkdir.cmd <- glue("mkdir -p {output_dir}")
-    main.cmd  <- glue("cooltools coverage {weight_flag} --nproc {threads} --output {output.filepath} {mcool.uri}")
-    # Paste  all commands together in one line to run in bash
-    tibble_row(
-        output.filepath=output.filepath,
-        cmd=
-            paste(
-                c(
-                    mkdir.cmd,
-                    main.cmd
-                ),
-                collapse='; '
-            )
+    save_cmds_to_file(
+        cmds.output.filepath=cmds.output.filepath,
+        force_redo=force_redo
     )
 }
 
-generate_all_marginal_coverage_calculation_cmds <- function(
-    hyper.params.df,
-    merge_status='merged',
-    force_redo=FALSE,
-    ...){
-    # list contacts matrices for all samples to generate compartments for
-    list_all_mcool_files(merge_status=merge_status) %>%
-    dplyr::rename('mcool.filepath'=filepath) %>% 
-    # Map any other hyper-params to sets of related files
-    cross_join(hyper.params.df) %>% 
-    add_column(output_dir=MARGINAL_COVERAGE_DIR) %>% 
-    # build commands from relevant params + input files
-    mutate(
-        cmd.data=
-            pmap(
-                .l=.,
-                .f=generate_marginal_coverage_calculation_cmds,
-                .progress=TRUE
-            )
-    ) %>%
-    unnest(cmd.data) %>% 
-    # Only include cmds generating outputfiles that dont exist
-    {
-        if (!force_redo) {
-            filter(., !file.exists(output.filepath))
-        } else {
-            .
-        }
-    }
+list_all_phasing_track_files <- function(){
+    GENOME_TRACK_FILES_DIR %>% 
+    parse_results_filelist(suffix='-genome.track.tsv') %>%
+    dplyr::rename('phasing.track.filepath'=filepath)
 }
 
 ###################################################
@@ -230,6 +160,7 @@ generate_distance_expectation_calculation_cmds <- function(
 
 generate_all_distance_expectation_calculation_cmds <- function(
     hyper.params.df,
+    cmds.output.filepath=NULL,
     merge_status='merged',
     force_redo=FALSE,
     ...){
@@ -249,39 +180,105 @@ generate_all_distance_expectation_calculation_cmds <- function(
             )
     ) %>%
     unnest(cmd.data) %>% 
-    # Only include cmds generating outputfiles that dont exist
-    {
-        if (!force_redo) {
-            filter(., !file.exists(output.filepath))
-        } else {
-            .
-        }
-    }
+    save_cmds_to_file(
+        cmds.output.filepath=cmds.output.filepath,
+        force_redo=force_redo
+    )
+}
+
+list_all_distance_expectation_files <- function(){
+    DISTANCE_EXPECTED_CONTACTS_DIR %>% 
+    parse_results_filelist(suffix='-expected.tsv') %>%
+    dplyr::rename('distance.expectation.filepath'=filepath)
+}
+
+###################################################
+# Distance-Expectation Calculation
+###################################################
+generate_marginal_coverage_calculation_cmds <- function(
+    threads,
+    resolution,
+    normalization,
+    contact.type,
+    ignore.diags,
+    mcool.filepath,
+    MatrixID,
+    output_dir,
+    ...){
+    output_dir <- 
+        file.path(
+            output_dir,
+            glue("normalization_{normalization}"),
+            glue("resolution_{resolution}")
+        )
+    # Create filepaths
+    mcool.uri       <- glue("{mcool.filepath}::resolutions/{resolution}")
+    output.filepath <- glue("{output_dir}/{MatrixID}-coverage.tsv")
+    # Compose command to generate TAD for this set of inputs + params
+    weight_flag <- 
+        case_when(
+            normalization == 'balanced' ~ '--clr-weight-name weight',
+            normalization == 'raw'      ~ '',
+            .unmatched="error"
+        )
+    mkdir.cmd <- glue("mkdir -p {output_dir}")
+    main.cmd  <- glue("cooltools coverage {weight_flag} --nproc {threads} --output {output.filepath} {mcool.uri}")
+    # Paste  all commands together in one line to run in bash
+    tibble_row(
+        output.filepath=output.filepath,
+        cmd=
+            paste(
+                c(
+                    mkdir.cmd,
+                    main.cmd
+                ),
+                collapse='; '
+            )
+    )
+}
+
+generate_all_marginal_coverage_calculation_cmds <- function(
+    hyper.params.df,
+    cmds.output.filepath=NULL,
+    merge_status='merged',
+    force_redo=FALSE,
+    ...){
+    # list contacts matrices for all samples to generate compartments for
+    list_all_mcool_files(merge_status=merge_status) %>%
+    dplyr::rename('mcool.filepath'=filepath) %>% 
+    # Map any other hyper-params to sets of related files
+    cross_join(hyper.params.df) %>% 
+    add_column(output_dir=MARGINAL_COVERAGE_DIR) %>% 
+    # build commands from relevant params + input files
+    mutate(
+        cmd.data=
+            pmap(
+                .l=.,
+                .f=generate_marginal_coverage_calculation_cmds,
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(cmd.data) %>% 
+    save_cmds_to_file(
+        cmds.output.filepath=cmds.output.filepath,
+        force_redo=force_redo
+    )
+}
+
+list_all_marginal_coverage_files <- function(){
+    # List input files (generated by cooltools coverage)
+    MARGINAL_COVERAGE_DIR %>% 
+    parse_results_filelist(
+        suffix='-coverage.tsv',
+        filename.column.name='MatrixID',
+        param_delim='_'
+    ) %>% 
+    dplyr::rename('marginal.coverage.filepath'=filepath)
 }
 
 ###################################################
 # Load Genome Marginal Coverage
 ###################################################
-list_all_coverage_data <- function(
-    resolutions=NULL,
-    file.suffix='-coverage.tsv'){
-    # List input files (generated by cooltools coverage)
-    MARGINAL_COVERAGE_DIR %>% 
-    parse_results_filelist(
-        suffix=file.suffix,
-        filename.column.name='MatrixID',
-        param_delim='_'
-    ) %>%
-    # only keep specified resoltuions
-    { 
-        if (is.null(resolutions)) { 
-            . 
-        } else { 
-            filter(., resolution %in% resolutions) 
-        } 
-    }
-}
-
 load_coverage_data <- function(
     filepath,
     ...){

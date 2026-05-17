@@ -2,14 +2,14 @@
 # Dependencies
 ################################################################################
 library(here)
-here::i_am('scripts/compartments/make.compartment.calling.cmds.R')
+here::i_am('scripts/loops/make.loops.calling.cmds.R')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     # library(hictkR)
     source(file.path(BASE_DIR,   'scripts/constants.R'))
     source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
-    source(file.path(SCRIPT_DIR, 'compartments/utils.compartments.R'))
+    source(file.path(SCRIPT_DIR, 'loops/utils.loops.R'))
     library(tidyverse)
     library(magrittr)
 })
@@ -22,32 +22,29 @@ parsed.args <-
         args=c('threads', 'force', 'resolutions'),
         has.positional=FALSE
     )
+
+################################################################################
+# Generate cmds to call TADs with specified params
+################################################################################
 # All combinations of tool-specific hyper-params to call TADs with
 hyper.params.df <- 
     bind_rows(
         # cooltools params
         expand_grid(
-            track.type=c('genecov'),
-            normalization=c('balanced'),
-            # phasing.track=c('genecov', 'gene'),
-            # normalization=c('balanced', 'raw'),
-            Comp.method='cooltools'
-        )
+            normalization=c('balanced', 'raw'),
+            loop.method='cooltools'
+        ),
     ) %>%  
     cross_join(tibble(resolution=parsed.args$resolutions)) %>% 
     add_column(threads=parsed.args$threads)
-# parsed.args$force.redo=TRUE
-# parsed.args$force.redo=FALSE
-
-################################################################################
-# Generate cmds to call TADs with specified params
-################################################################################
-# Now generate commands to run cooltools eigs-cis to calculate + orient PC1 from the contact matrix
-# We can bin the PC1 data to define compartment type + strength (i.e. Weak A, Strong B etc.)
+# Now generated commands  to call TADs for each input matrix + param combo
+# This will generate 1 txt file with 1 cmd per line, each cmd generates all the output files in 
+# a named directory reflecting params/hyper-params used to generate those rsults
+# Using the file as input, you can run all the cmds together with GNU parllel and/or via SLURM/SGE
 hyper.params.df %>% 
-    generate_all_compartment_calling_cmds(
-        cmds.output.filepath=file.path(COMPARTMENTS_DIR, 'all.compartment.calling.cmds.txt'),
-        merge_status='merged',
-        force_redo=parsed.args$force.redo
+    generate_all_loop_calling_cmds(
+        cmds.output.filepath=file.path(LOOP_DIR, 'all.loop.calling.cmds.txt'),
+        force_redo=parsed.args$force.redo,
+        merge_status='merged'
     )
 
