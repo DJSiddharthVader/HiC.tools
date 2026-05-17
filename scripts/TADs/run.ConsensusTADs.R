@@ -7,10 +7,8 @@ BASE_DIR <- here()
 suppressPackageStartupMessages({
     library(hictkR)
     source(file.path(BASE_DIR,   'scripts/constants.R'))
-    source(file.path(SCRIPT_DIR, 'locations.R'))
+    source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
-    source(file.path(SCRIPT_DIR, 'utils.annotations.R'))
-    source(file.path(SCRIPT_DIR, 'TADs/utils.TADCompare.R'))
     source(file.path(SCRIPT_DIR, 'TADs/utils.TADs.R'))
     library(tidyverse)
     library(magrittr)
@@ -39,15 +37,32 @@ if (parsed.args$threads > 1) {
 hyper.params.df <- 
     expand_grid(
         resolution=parsed.args$resolutions,
-        normalization=c('balanced', 'raw'),
+        # normalization=c('balanced', 'raw'),
+        normalization=c('balanced'),
         z_thresh=c(3),
         window_size=c(15),
         gap_thresh=c(0.2)
     )
 # list all individual HiC replicates per condition
-set_up_sample_groups(use_merged=FALSE) %>% 
+edit.specific.sample.groups <- 
+    list_all_mcool_files(merge_status='individual') %>%
+    nest(samples.df=-c(isMerged, Sample.Group)) %>% 
+    mutate(SampleID=glue('{Sample.Group}.Consensus.Consensus'))
+# Group all WT replicates across all edits together (per celltype)
+cross.edit.sample.groups <- 
+    list_all_mcool_files(merge_status='individual') %>%
+    parse_metadata_from_names(info.format='Sample.Group') %>% 
+    nest(samples.df=-c(isMerged, Celltype, Genotype)) %>% 
+    filter(Genotype %in% c('WT')) %>% 
+    mutate(Sample.Group=glue('All.{Celltype}.{Genotype}')) %>% 
+    mutate(SampleID=glue('{Sample.Group}.Consensus.Consensus')) %>% 
+    select(-c(Celltype, Genotype))
     # Generate TADCompare results for each condition
-    # {.} -> sample.groups.df
+bind_rows(
+    edit.specific.sample.groups,
+    cross.edit.sample.groups
+    ) %>% 
+        # {.} -> sample.groups.df; sample.groups.df
     run_all_ConsensusTADs(
         hyper.params.df=hyper.params.df,
         force_redo=parsed.args$force.redo
