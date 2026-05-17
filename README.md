@@ -43,8 +43,7 @@ All filepaths below are relative to the project root on our server: `/data/talko
 
 Files for reproducibility
 ```
-$ tree -L 2 reference.files/ distiller-nf/
-├── distiller-nf/
+$ tree -L 2 dependencies.files
 └── dependencies.files/
     ├── conda.envs
     │   ├── cooltools.yml
@@ -58,52 +57,9 @@ $ tree -L 2 reference.files/ distiller-nf/
     │   └── hashmap_0.2.2.tar.gz
     └── README.md
 ```
-
-### Input Data
-
-Notice that all files contain a `SampleID` specifying which library the results are.
-Some files contain a pair of `SampleID`s since they are comparing 2 samples e.g. HiCRep.
-All SampleIDs are follow the same format format `Project.CellType.Genotype.BioRepID.TechRepID` e.g. 16p.NSC.DEL.A3.TR1 
-
-- `16p`: project this sample is a part of
-- `NSC`: Celltype {NSC, iN}
-- `DEL`: Genotype of the sample for the region/gene of interest {WT,DEL,DUP}
-- `A3`: ID string specifiying which biological replicate the sample is
-- `TR1`: ID string specifiyng which technical replicate the sample is
-
-```
-$ tree /data/talkowski/Samples/16p_HiC/
-./
-├── GRCh38.reference
-│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.chrom.sizes
-│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta
-│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.amb
-│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.ann
-│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.bwt
-│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.fai
-│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.pac
-│   └── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.sa
-├── HiC.16p.sample.metadata.tsv                                       # metadata for all HiC samples
-├── fastq/                                                            # Raw reads for HiC samples
-│   ├── 22LCC2LT4_3_2148261314_16pDELA3NSCHiC_S1_L003_R1_001.fastq.gz
-│   ├── 22LCC2LT4_3_2148261314_16pDELA3NSCHiC_S1_L003_R2_001.fastq.gz
-│   └── *.fastq.gz
-└── sample.configs/                                                   # Config files for distiller
-    ├── template.distiller.yml                                        # defining distiler-nf params
-    ├── 16p.NSC.DEL.A3.TR1.distiller.yml                              # Template with specific fastq files
-    └── *.distiller.yml
-```
-
-### Genome Annotation Files
-
-Annotations of genomic features, used for association analyses
-```
-$ tree -L 1 /data/talkowski/Samples/16p_HiC/reference.files/
-reference.files/
-├── raw.FGE.data/           # downloaded functional genomic element annotations used for FGE analysis
-├── genome.bins/            # coordinates of genomic bins at various resolutions
-└── genome.tracks/          # binwise metrics computed across the genome by cooltools
-    └── track.type_genecov/
+mamba environments can be installed via:
+```bash 
+$ mamba create --name ${ENV_NAME} --file ${ENV_NAME}.yml
 ```
 
 ### Results Files
@@ -174,32 +130,17 @@ results/
 │   └── results
 ├── weiner.replication
 │   └── plots/
+├── TAD
 ├── loops
+├── compartments
+│   ├── all.cooltools.compartments.tsv
+│   └── results_compartments/
 ├── multiHiCCompare
 │   ├── all.multiHiCCompare.n.results.tsv
 │   ├── all.multiHiCCompare.results.tsv
 │   └── results/
-├── compartments
-│   ├── all.cooltools.compartments.tsv
-│   └── results_compartments/
 └── gghic.plots 
     └── plots/
-```
-
-### Notebooks
-
-List all rmarkdown notebooks withsets of results
-```
-$ tree -L 1 /data/talkowski/Samples/16p_HiC/notebooks/ -P '*.html'
-/data/talkowski/Samples/16p_HiC/notebooks/
-├── matrix.QC.html
-├── matrix.coverage.html
-├── hicrep.html
-├── weiner.replication.html
-├── TADs.html
-├── loops.html
-├── loop.reproducibility.html
-└──multiHiCCompare.html
 ```
 
 ## Methods
@@ -210,7 +151,68 @@ Each sample as a `.yml` file (in `./sample.configs`) specifiying the params for 
 We use 64 cores total, with 128 maxCPUs set in the nextflow config. 
 This fully processes a sample (`.fastq -> .mcool`) with ~400M reads in ~9h.
 
-### Generate MultiQC reports
+#### Input Data
+
+Notice that all files contain a `SampleID` specifying which library the results are.
+Some files contain a pair of `SampleID`s since they are comparing 2 samples e.g. HiCRep.
+All SampleIDs are follow the same format format `Project.CellType.Genotype.BioRepID.TechRepID` e.g. 16p.NSC.DEL.A3.TR1 
+
+- `16p`: project this sample is a part of
+- `NSC`: Celltype {NSC, iN}
+- `DEL`: Genotype of the sample for the region/gene of interest {WT,DEL,DUP}
+- `A3`: ID string specifiying which biological replicate the sample is
+- `TR1`: ID string specifiyng which technical replicate the sample is
+
+```
+$ tree /data/talkowski/Samples/16p_HiC/
+./
+├── GRCh38.reference
+│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.chrom.sizes
+│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta
+│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.amb
+│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.ann
+│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.bwt
+│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.fai
+│   ├── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.pac
+│   └── GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.sa
+├── HiC.16p.sample.metadata.tsv                                       # metadata for all HiC samples
+├── fastq/                                                            # Raw reads for HiC samples
+│   ├── 22LCC2LT4_3_2148261314_16pDELA3NSCHiC_S1_L003_R1_001.fastq.gz
+│   ├── 22LCC2LT4_3_2148261314_16pDELA3NSCHiC_S1_L003_R2_001.fastq.gz
+│   └── *.fastq.gz
+└── sample.configs/                                                   # Config files for distiller
+    ├── template.distiller.yml                                        # defining distiler-nf params
+    ├── 16p.NSC.DEL.A3.TR1.distiller.yml                              # Template with specific fastq files
+    └── *.distiller.yml
+```
+
+#### Genome Annotation Files
+
+Annotations of genomic features, used for association analyses
+```
+$ tree -L 1 /data/talkowski/Samples/16p_HiC/reference.files/
+reference.files/
+├── raw.FGE.data/           # downloaded functional genomic element annotations used for FGE analysis
+├── genome.bins/            # coordinates of genomic bins at various resolutions
+└── genome.tracks/          # binwise metrics computed across the genome by cooltools
+    └── track.type_genecov/
+```
+
+#### Generate Results
+
+Generate `.mcool` files from `.fastq` files using the `distiller-nf` pipeline
+```bash
+# Generate individual yml files each sample for the distiller-nf pipeline using a template
+# Variables in the template are defined in locations.R or in make.distiller.configs.R
+Rscript ./scripts/distiller/make.distiller.configs.R ./sample.configs/template.distiller.yml
+# Run the distiller-nf pipeline by submitting each sample config as an individual SLURM job
+module load wget; module unload java; module load singularity/3.7.0; conda activate distiller
+./scripts/distiller/run.distiller.sh -w "./work_${USER}" -a ~/miniforge3 ./sample.configs/16p.*.yml
+```
+
+### Calculate QC Metrics
+
+#### Generate MultiQC reports
 
 distiller-nf outputs multiple QC reports/files per sample than can each be aggregated into a single multiqc report [docs](https://docs.seqera.io/multiqc). 
 In the two previous steps we have also generated stats files which can be aggretaed via multiqc into their own reports. 
@@ -218,11 +220,16 @@ Ultimately we can generate 3 multiqc reports
 
 - `fastqc`: Quality statistics for reads
 - `fastp`: Trimming+MAPQ statistics for filtered reads that were aligned
-- `qc3C`: Quality statistics from sub-sampled aligned reads
+<!-- - `qc3C`: Quality statistics from sub-sampled aligned reads -->
 - `pairtools stats`: Summary statistics of processed HiC pairs
 
-### Calculate QC Metrics
-
+Generate various QC results from `distiller-nf` output files
+```bash
+# Generate qc3C report for each bam file
+# ./scripts/matrix.utils.sh qc3C ./results/sample.QC/qc3C/ DpnII HinfI results/mapped_parsed_sorted_chunks/**/*.bam  
+# Generate multiQC reprots from fastqc and pairtools resutls
+./scripts/matrix.utils.sh multiqcs ./results/sample.QC/multiqc.reports/ ./results/
+```
 Two things we want to check to QC matrix samples 
 1. pair frequency by distance 
 2. Cis/Trans pair frequency
@@ -235,9 +242,12 @@ For metric 3 and subsequent plots we need to calculate the per-bin coverage usin
 
 For some subsequent steps we will analyze matrices formed by merging all biological/technical replicates for a given Edit+Genotype+CellType (e.g. 16p+WT+NSC).
 Merging her means summing all the total number of contacts over all samples for each bin-bin pair (matrix entry) and is handled by [cooler merge](https://cooler.readthedocs.io/en/latest/cli.html#cooler-merge).
-We create merged matrices for MAPQ filtered for each which produces the following files
-
+```bash
+# Generated merged matrices for each condition
+./scripts/matrix.utils.sh merge_16p ./results/coolers_library
 ```
+We create merged matrices for MAPQ filtered for each which produces the following files
+```bash
 results 
 └── coolers_library
     ├── 16p.NSC.WT.Merged.Merged/
@@ -264,45 +274,6 @@ Rscript ./scripts/hicrep/run.hicrep.R && parallel -j $(nproc) --bar --eta :::: .
 #### Compartment Annotation
 
 We call compartments using `cooltools eigs-cis`, and phase the calls using `genecov` track, compuated by `cooltools genome genecov`, using all default params @ 100,50,25,10,5Kb.
-
-#### Compartment Comparison
-
-Different filler text
-
-## Reproducing Results
-
-### Generate Results
-
-Generate `.mcool` files from `.fastq` files using the `distiller-nf` pipeline
-```bash
-# Generate individual yml files each sample for the distiller-nf pipeline using a template
-# Variables in the template are defined in locations.R or in make.distiller.configs.R
-Rscript ./scripts/distiller/make.distiller.configs.R ./sample.configs/template.distiller.yml
-# Run the distiller-nf pipeline by submitting each sample config as an individual SLURM job
-module load wget; module unload java; module load singularity/3.7.0; conda activate dist2
-./scripts/distiller/run.distiller.sh -w "./work_${USER}" -a ~/miniforge3 ./sample.configs/16p.*.yml
-```
-Generate various QC results from `distiller-nf` output files
-```bash
-# Generate qc3C report for each bam file
-./scripts/matrix.utils.sh qc3C ./results/sample.QC/qc3C/ DpnII HinfI results/mapped_parsed_sorted_chunks/**/*.bam  
-# Generate multiQC reprots from fastqc and pairtools resutls
-./scripts/matrix.utils.sh multiqcs ./results/sample.QC/multiqc.reports/ ./results/
-# Generated merged matrices for each condition
-./scripts/matrix.utils.sh merge_16p ./results/coolers_library
-# Calculate total bin-wise coverage 
-./scripts/coverage/run.cooltools.coverage.sh -o ./results/sample.QC/coverage/ ./results/coolers_library/**/*.mapq_30.1000.mcool
-```
-Generate HiCRep results
-```bash
-# Generate list of commands to run for all pairs of matrices + all hyper-param combos
-conda activate hicrep
-Rscript ./scripts/hicrep/run.hicrep.R && parallel -j $(nproc) --bar --eta :::: ./results/hicrep/all.hicrep.cmds.txt
-```
-Generate Weiner et al. 2022 replication analysis figures
-```bash
-Rscript ./scripts/weiner.replication/make.replication.figures.R
-```
 Generate Compartment annotations
 ```bash
 ./scripts/compartments/run.compartments.cooltools.sh -m mk_phase
@@ -311,6 +282,17 @@ Define which functional genomic annotations (e.g. CTCF sites) overlap with our a
 ```bash
 Rscript scripts/functional.enrichment/generate.cCRE.enrichment.cmds.R
 parallel -j $(nproc) --eta --bar :::::
+```
+
+#### Compartment Comparison
+
+Different filler text
+
+### Misc. Results Generation
+
+Generate Weiner et al. 2022 replication analysis figures
+```bash
+Rscript ./scripts/weiner.replication/make.replication.figures.R
 ```
 Make annotated HiC heatmaps w/gghic
 ```bash
@@ -322,6 +304,7 @@ Rscript ./scripts/gghic.plots/plot.annotated.contact.heatmaps.R
 Here is a convenient function to compile rmarkdown notebooks in bash
 Put this in your `.bashrc` to use it
 ```bash
+# can put this in your .bashrc or in a script
 knit() {
     input_rmd="$(readlink -e "${1}")"
     if [[ -z "${2}" ]]; then
@@ -349,33 +332,20 @@ knit() {
             )
     )"
 }
+# run function to compile notebook
 $ knit notebook.Rmd 
 ```
-
-### File Summary One-liners
-
+List all rmarkdown notebooks withsets of results
 ```bash
-# List all matrices
-find results/coolers_library/ -type f -name '*mapq_30.1000.mcool' | rev | cut -d'/' -f1 | rev  | cut -d'.' -f-3,7 | sort | uniq -c | column -s'\.' -t
-# List the marginal coverage results for all samples
-find results/sample.QC/coverage/ -type f  | sed -e 's/-coverage.tsv//' | cut -d'/' -f4-5 | sort | uniq -c | column -s'/' -t
-# List all HiCRep results
-find results/hicrep/ -type f -name '*.txt' | sed -e 's/-hicrep.txt//' | cut -d'/' -f3-6 | sort | uniq -c | column -s'/' -t
-# List all cooltools insulations results
-# find results/TADs/results_TADs/method_cooltools/ -type f -name '*-TAD.tsv' | cut -d'/' -f4-7 | sed -e 's/-TAD.tsv//' | sort | uniq -c | column -s'/' -t
-# List all hiTAD results
-find results/TADs/results_TADs/method_hiTAD/ -type f -name '*-TAD.tsv' | cut -d'/' -f4-6 | sed -e 's/-TAD.tsv//' | sort | uniq -c | column -s'/' -t
-# List all ConsensusTAD results
-find results/TADs/results_TADs/method_ConsensusTAD/ -type f  | cut -d'/' -f4-8,10- | sed -e 's/-ConsensusTADs.tsv//' | sort | uniq -c | column -s'/' -t
-# List all TADComapre results
-find results/TADs/results_TADCompare/ -type f -name '*-TADCompare.tsv' | sed -e 's/-TADCompare.tsv//' | sed -e 's/_vs_/\//' | cut -d'/' -f4-7,9- | sort | uniq -c | column -s'/' -t
-# List all loop results
-find results/loops/results_loops/method_cooltools -type f -name '*-dots.tsv' | cut -d'/' -f4-6 | sort | uniq -c | column -s'/' -t
-# IDR2D results
-find results/loops/results_IDR2D -type f -name '*.tsv' | sed -e 's/_vs_/\//' -e 's/-IDR2D.tsv//' | cut -d'/' -f7,12,13 | sort -t'/' -k1,1 -k3,3 | uniq -c | column -s'/' -t
-# List all multiHiCCompare results
-find results/multiHiCCompare/results/ -type f -name '*-multiHiCCompare.tsv' | sed -s 's/-multiHiCCompare.tsv//' | sed -e 's/_vs_/\//' | cut -d'/' -f4-7 | sort -t'/' -k4,4h | uniq -c | column -s'/' -t
-# List compartment results
-find results/compartments/results_compartments/ -type f -name '*-cis.vecs.tsv' | sed -s 's/-cis.vecs.tsv//' | cut -d'/' -f4- | sort | uniq -c | column -s'/' -t
+$ tree -L 1 ./notebooks -P '*.html'
+/data/talkowski/Samples/16p_HiC/notebooks/
+├── matrix.QC.html
+├── matrix.coverage.html
+├── hicrep.html
+├── weiner.replication.html
+├── TADs.html
+├── loops.html
+├── loop.reproducibility.html
+└── multiHiCCompare.html
 ```
 
