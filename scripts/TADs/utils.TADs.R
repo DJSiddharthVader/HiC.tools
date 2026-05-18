@@ -126,43 +126,10 @@ generate_all_TAD_Calling_cmds <- function(
 }
 
 load_all_TAD_score_results <- function(
-    resolutions=NULL,
-    force_redo_sub=FALSE){
-    # Load hiTAD results
-    hiTAD.scores.df <- 
-        check_cached_results(
-            results_file=HITAD_SCORE_RESULTS_FILE,
-            force_redo=force_redo_sub,
-            # force_redo=TRUE,
-            results_fnc=load_all_hiTAD_DIs
-        ) %>% 
-        select(-c(TAD.start, TAD.end, boundary.type)) %>% 
-        post_process_hiTAD_TAD_results() %>%
-        add_column(TAD.params=NULL)
-    # Load cooltools TAD results
-    cooltools.scores.df <- 
-        check_cached_results(
-            results_file=COOLTOOLS_SCORE_RESULTS_FILE,
-            force_redo=force_redo_sub,
-            # force_redo=TRUE,
-            results_fnc=load_all_cooltools_Insulation
-        ) %>% 
-        post_process_cooltools_TAD_results()
-    # Load ConsensusTAD results
-    # consensusTAD.scores.df <- 
-    #     check_cached_results(
-    #         results_file=,
-    #         force_redo=force_redo_sub,
-    #         # force_redo=TRUE,
-    #         results_fnc=
-    #     ) %>% 
-    #     post_process_ConsensusTAD_TAD_results()
-    # Bind evertything together
-    bind_rows(
-        hiTAD.scores.df,
-        cooltools.scores.df
-        # consensusTAD.scores.df
-    ) %>% 
+    scores.dfs.,
+    resolutions=NULL){
+    scores.dfs %>% 
+    bind_rows() %>% 
     {
         if (!is.null(resolutions)) {
             filter(., resolution %in% resolutions)
@@ -173,42 +140,11 @@ load_all_TAD_score_results <- function(
 }
 
 load_all_TAD_results <- function(
-    resolutions=NULL,
-    force_redo_sub=FALSE){
-    # Load hiTAD results
-    hiTAD.TADs.df <- 
-        check_cached_results(
-            results_file=HITAD_TAD_RESULTS_FILE,
-            force_redo=force_redo_sub,
-            # force_redo=TRUE,
-            results_fnc=load_all_hiTAD_TADs
-        ) %>% 
-        post_process_hiTAD_TAD_results() %>%
-        add_column(TAD.params=NULL)
-    # Load cooltools TAD results
-    cooltools.TADs.df <- 
-        check_cached_results(
-            results_file=COOLTOOLS_TAD_RESULTS_FILE,
-            force_redo=force_redo_sub,
-            # force_redo=TRUE,
-            results_fnc=load_all_cooltools_TADs
-        ) %>% 
-        post_process_cooltools_TAD_results()
-    # Load ConsensusTAD results
-    # consensusTAD.TADs.df <- 
-    #     check_cached_results(
-    #         results_file=CONSENSUSTAD_TAD_RESULTS_FILE,
-    #         force_redo=force_redo_sub,
-    #         # force_redo=TRUE,
-    #         results_fnc=load_all_ConsensusTAD_TADs
-    #     ) %>% 
-    #     post_process_ConsensusTAD_TAD_results()
+    TAD.dfs.,
+    resolutions=NULL){
     # Bind evertything together
-    bind_rows(
-        hiTAD.TADs.df,
-        cooltools.TADs.df
-        # consensusTAD.TADs.df
-    ) %>% 
+    TAD.results.dfs %>% 
+    bind_rows() %>% 
     {
         if (!is.null(resolutions)) {
             filter(., resolution %in% resolutions)
@@ -313,19 +249,18 @@ generate_cooltools_calling_cmd <- function(
     )
 }
 
-list_all_cooltools_results <- function(){
+list_all_cooltools_insulation_results_files <- function(){
     COOLTOOLS_TAD_RESULTS_DIR %>% 
     parse_results_filelist(suffix='-TAD.tsv') %>%
     add_column(TAD.method='cooltools') %>% 
     convert_MatrixID_to_SampleID_and_SampleGroup()
 }
 
-load_cooltools_TADs <- function(
+load_cooltools_insulation_TADs <- function(
     filepath,
     resolution,
     ...){
     # paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', sep='', collapse='; ')
-    # row.index=5; filepath=tmp$filepath[[row.index]]; resolution=tmp$resolution[[row.index]]; weight=tmp$weight[[row.index]]; threshold=tmp$threshold[[row.index]]; mfvp=tmp$mfvp[[row.index]]; TAD.method=tmp$TAD.method[[row.index]]; Sample.Group=tmp$Sample.Group[[row.index]]
     Insulation <- 
         filepath %>% 
         read_tsv(
@@ -425,49 +360,41 @@ load_cooltools_TADs <- function(
     compute_TAD_stats(resolution=resolution)
 }
 
-load_all_cooltools_TADs <- function(){
-    list_all_cooltools_results() %>% 
+load_all_cooltools_insulation_TADs <- function(){
+    list_all_cooltools_insulation_results_files() %>% 
         # {.} -> tmp
     mutate(
         insulation=
             # pmap(
             future_pmap(
                 .,
-                load_cooltools_TADs,
+                load_cooltools_insulation_TADs,
                 .progress=TRUE
             )
     ) %>%
     unnest(insulation) %>% 
-    select(-c(filepath))
-}
-
-post_process_cooltools_TAD_results <- function(results.df){
-    results.df %>% 
-    filter(weight == 'balanced') %>% 
     mutate(
         window.size.bins=window.size / resolution,
-        window.size=scale_numbers(window.size, force_numeric=TRUE),
+        # window.size=scale_numbers(window.size, force_numeric=TRUE),
     ) %>% 
     unite(
         'TAD.params',
-        # window.size.bins, mfvp, threshold,
-        window.size.bins, mfvp, threshold, ignore.diags,
+        window.size.bins, mfvp, threshold,
         sep='#',
         remove=TRUE
     ) %>% 
     select(
         -c(
-            weight,
-            window.size
+            window.size,
+            filepath
         )
     )
 }
 
-load_cooltools_Insulation <- function(
+load_cooltools_insulation_scores <- function(
     filepath,
     ...){
     # paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', sep='', collapse='; ')
-    # row.index=5; filepath=tmp$filepath[[row.index]]; resolution=tmp$resolution[[row.index]]; weight=tmp$weight[[row.index]]; threshold=tmp$threshold[[row.index]]; mfvp=tmp$mfvp[[row.index]]; TAD.method=tmp$TAD.method[[row.index]]; Sample.Group=tmp$Sample.Group[[row.index]]
     filepath %>% 
     read_tsv(
         progress=FALSE,
@@ -528,8 +455,8 @@ load_cooltools_Insulation <- function(
     )
 }
 
-load_all_cooltools_Insulation <- function(){
-    list_all_cooltools_results() %>% 
+load_all_cooltools_insulation_scores <- function(){
+    list_all_cooltools_insulation_results_files() %>% 
         head(5) %>% 
         # {.} -> tmp
     mutate(
@@ -537,7 +464,7 @@ load_all_cooltools_Insulation <- function(){
             # pmap(
             future_pmap(
                 .,
-                load_cooltools_Insulation,
+                load_cooltools_insulation_scores,
                 .progress=TRUE
             )
     ) %>%
@@ -590,14 +517,13 @@ generate_hiTAD_calling_cmd <- function(
     )
 }
 
-list_all_hiTAD_TADs <- function(){
+list_all_hiTAD_results_files <- function(){
     HITAD_TAD_RESULTS_DIR %>% 
     parse_results_filelist(suffix='.tsv') %>%
     # hiTAD only expects balanced matrices as input 
-    filter(weight == 'balanced') %>% 
     add_column(TAD.method='hiTAD') %>% 
     separate_wider_delim(
-        MatrixID,
+        filename,
         delim='-',
         names=c('MatrixID', 'feature.type')
     ) %>% 
@@ -615,7 +541,6 @@ load_hiTAD_TADs <- function(
     resolution,
     ...){
     # paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', sep='', collapse='; '); row.index=1
-    # resolution=tmp$resolution[[row.index]]; weight=tmp$weight[[row.index]]; TAD.method=tmp$TAD.method[[row.index]]; DI.filepath=tmp$DI.filepath[[row.index]]; TAD.filepath=tmp$TAD.filepath[[row.index]]; Sample.Group=tmp$Sample.Group[[row.index]]
     # Load bin-wise Adaptibe Directinality scores
     DIs <- 
         read_tsv(
@@ -662,7 +587,7 @@ load_hiTAD_TADs <- function(
 }
 
 load_all_hiTAD_TADs <- function(){
-    list_all_hiTAD_TADs() %>% 
+    list_all_hiTAD_results_files() %>% 
     mutate(
         TADs=
             # pmap(
@@ -673,14 +598,8 @@ load_all_hiTAD_TADs <- function(){
             )
     ) %>%
     unnest(TADs) %>% 
+    add_column(TAD.params=NA) %>% 
     select(-c(ends_with('.filepath')))
-}
-
-post_process_hiTAD_TAD_results <- function(results.df){
-    results.df %>% 
-    # Subset to only relevant parameters
-    filter(weight == 'balanced') %>% 
-    dplyr::select(-c(weight))
 }
 
 load_hiTAD_DIs <- function(
@@ -738,7 +657,7 @@ load_hiTAD_DIs <- function(
 }
 
 load_all_hiTAD_DIs <- function(){
-    list_all_hiTAD_TADs() %>% 
+    list_all_hiTAD_results_files() %>% 
     mutate(
         scores=
             # pmap(
@@ -749,6 +668,7 @@ load_all_hiTAD_DIs <- function(){
             )
     ) %>%
     unnest(scores) %>% 
+    add_column(TAD.params=NA) %>% 
     select(-c(ends_with('.filepath')))
 }
 
@@ -905,6 +825,15 @@ run_all_ConsensusTADs <- function(
     )
 }
 
+list_all_ConsensusTAD_TADs <- function(){
+    CONSENSUSTAD_TAD_RESULTS_DIR %>% 
+    parse_results_filelist(
+        filename.column='Sample.Group',
+        suffix='-ConsensusTADs.tsv'
+    ) %>%
+    add_column(method='ConsensusTAD')
+}
+
 load_ConsensusTAD_TADs <- function(
     filepath,
     resolution,
@@ -974,15 +903,6 @@ load_ConsensusTAD_TADs <- function(
     compute_TAD_stats(resolution=resolution)
 }
 
-list_all_ConsensusTAD_TADs <- function(){
-    CONSENSUSTAD_TAD_RESULTS_DIR %>% 
-    parse_results_filelist(
-        filename.column='Sample.Group',
-        suffix='-ConsensusTADs.tsv'
-    ) %>%
-    add_column(method='ConsensusTAD')
-}
-
 load_all_ConsensusTAD_TADs <- function(){
     list_all_ConsensusTAD_TADs() %>% 
     mutate(
@@ -995,20 +915,14 @@ load_all_ConsensusTAD_TADs <- function(){
             )
     ) %>%
     unnest(TADs) %>% 
-    dplyr::rename('chr'=region) %>% 
-    select(-c(filepath))
-}
-
-post_process_ConsensusTAD_TAD_results <- function(results.df){
-    results.df %>%
     unite(
         'TAD.params',
         sep='#',
         z.thresh,
         window.size,
         gap.thresh
-    )
-    # dplyr::select(-c(z.thresh, window.size, gap.thresh)) %>% 
-    # Only keep boundaries
+    ) %>% 
+    dplyr::rename('chr'=region) %>% 
+    select(-c(filepath))
 }
 
