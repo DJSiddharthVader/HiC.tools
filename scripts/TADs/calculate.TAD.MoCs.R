@@ -2,12 +2,12 @@
 # Dependencies
 ################################################################################
 library(here)
-here::i_am('scripts/TADs/calculate_TAD_MoCs.R')
+here::i_am('scripts/TADs/calculate.TAD.MoCs.R')
 BASE_DIR <- here()
 source(file.path(BASE_DIR,   'scripts/constants.R'))
 source(file.path(BASE_DIR,   'scripts/locations.R'))
 source(file.path(SCRIPT_DIR, 'utils.data.R'))
-source(file.path(SCRIPT_DIR, 'TADs/utils.TADs.R'))
+source(file.path(SCRIPT_DIR, 'TADs/utils.Comparing.TADs.R'))
 library(tidyverse)
 library(magrittr)
 
@@ -16,18 +16,18 @@ library(magrittr)
 ################################################################################
 nested.TADs.df <- 
     ALL_TAD_RESULTS_FILE %>%
-    read_tsv() %>% 
-    select(
-        resolution,
-        TAD.method, TAD.params, TAD.metric,
-        Sample.Group,
-        chr, start, end,
-        TAD.length, TAD.start.score, TAD.end.score, starts_with('TAD.inner.')
-    ) %>% 
+    read_tsv(show_col_types=FALSE) %>% 
+    # select(
+    #     resolution,
+    #     TAD.method, TAD.params, TAD.metric,
+    #     Sample.Group,
+    #     chr, start, end,
+    #     TAD.length, TAD.start.score, TAD.end.score, starts_with('TAD.inner.')
+    # ) %>% 
     nest(
         TADs=
             -c(
-                Sample.Group,
+                SampleID,
                 resolution,
                 TAD.method, TAD.params, TAD.metric,
                 chr

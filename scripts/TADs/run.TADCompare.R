@@ -38,41 +38,42 @@ if (parsed.args$threads > 1) {
 # TADCompare hypper-parameters
 hyper.params.df <- 
     expand_grid(
-        # normalization=c('weight', 'NONE'),
-        normalization=c('balanced', 'raw'),
+        # normalization=c('balanced', 'raw'),
+        normalization=c('balanced'),
         z_thresh=c(3),
         window_size=c(15),
         gap_thresh=c(0.2)
     )
 # List of pairs of merged matrices to compare
-# comparisons.df <- 
+TAD.sets.df <- 
     # group all replicate matrices by condition
     list_all_mcool_files(merge_status='merged') %>%
-    # select(isMerged, Sample.Group, filepath) %>% 
-    nest(samples.df=-c(isMerged, Sample.Group)) %>% 
-    # nest all individual replicates, so 1 row per sample group e.g. NIPBL.iN.DEL
     # add the TAD boundaries to compare between matrices
-    left_join(
+    inner_join(
         load_all_TAD_results_for_TADCompare(),
         relationship='many-to-many',
-        by=join_by(resolution, Sample.Group)
+        by=join_by(SampleID, Sample.Group)
     ) %>% 
-    # Specify which comparisons to evaluate
-    enumerate_pairwise_comparisons(
-        # sample.group.comparisons=comparisons.list,
-        sample.group.comparisons=ALL_SAMPLE_GROUP_COMPARISONS,
-        pair_grouping_cols=c('resolution', 'chr', 'TAD.method', 'TAD.params'),
-        sampleID_col='Sample.Group',
-        suffixes=c('Numerator', 'Denominator'),
-        delim='.',
-        SampleID.fields=c('Edit', 'Celltype', 'Genotype')
-    )
-    # select()
+    filter(resolution %in% parsed.args$resolutions) %>% 
+    filter(chr != 'chrY')
 # Run TADCompare on everything
-comparisons.df %>% 
+TAD.sets.df %>% 
     run_all_TADCompare(    
+        force_redo=parsed.args$force.redo,
         hyper.params.df=hyper.params.df,
-        TADs.df=TADs.df,
-        force_redo=parsed.args$force.redo
+        sample.group.comparisons=ALL_SAMPLE_GROUP_COMPARISONS,
+        sampleID_col='Sample.Group',
+        suffixes=
+            c(
+                'Numerator',
+                'Denominator'
+            ),
+        pair_grouping_cols=
+            c(
+                'isMerged',
+                'resolution',
+                'TAD.method', 'TAD.params', 'TAD.metric',
+                'chr'
+            )
     )
 
