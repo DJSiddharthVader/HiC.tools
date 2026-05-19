@@ -1,99 +1,92 @@
-###################################################
+################################################################################
 # Dependencies
-###################################################
+################################################################################
 library(here)
-library(broom)
-here::i_am('scripts/functional.enrichment/test.TAD.boundary.CTCF.enrichment.R')
+here::i_am('scripts/FGE.Association.Testing/compute.TAD.Boundary.FGE.test.results.R')
 BASE_DIR <- here()
-# BASE_DIR <- '/data/talkowski/Samples/cohesin_project/HiC'
-source(file.path(BASE_DIR,   'scripts/constants.R'))
-source(file.path(SCRIPT_DIR, 'locations.R'))
-source(file.path(SCRIPT_DIR, 'utils.data.R'))
-source(file.path(SCRIPT_DIR, 'utils.plot.R'))
-source(file.path(SCRIPT_DIR, 'functional.enrichment/utils.enrichment.R'))
-source(file.path(SCRIPT_DIR, 'TADs/utils.TADs.R'))
-# source(file.path(SCRIPT_DIR, 'DifferentialContacts/utils.multiHiCCompare.R'))
-library(tidyverse)
-library(magrittr)
-plan(sequential)
+suppressPackageStartupMessages({
+    library(broom)
+    source(file.path(BASE_DIR,   'scripts/constants.R'))
+    source(file.path(BASE_DIR,   'scripts/locations.R'))
+    source(file.path(SCRIPT_DIR, 'utils.data.R'))
+    source(file.path(SCRIPT_DIR, 'FGE.Association.Testing/utils.enrichment.R'))
+    source(file.path(SCRIPT_DIR, 'TADs/utils.TADs.R'))
+    library(tidyverse)
+    library(magrittr)
+})
 # options(future.globals.maxSize=2.5 * (1024 ** 3))
-# plan(multisession, workers=N_WORKERS_FOR_PARLLELIZATION)
 
-###################################################
+################################################################################
 # Testing params
-###################################################
+################################################################################
 parsed.args <- 
     handle_CLI_args(
-        args=c('threads', 'force'),
+        args=c('resolutions', 'threads', 'force'),
         has.positional=FALSE
     )
-FORCE_REDO <- parsed.args$force.redo
-RESOLUTIONS <- c(100, 50, 25) * 1e3
-HiCFeatureRadius.bins=c(0, 1, 2, 3, 4) # bins within X bins of a HiC feature == feature
-FISHER_PARAMS <- 
-    expand_grid(
-        HiCFeatureRadius.bins=HiCFeatureRadius.bins,
-        n.FE.min.thresh=c(1, 5, 10, 20, 30, 40) # min number of CTCF sites to classify bins
-    )
-TTEST_PARAMS <- 
-    tibble(
-        HiCFeatureRadius.bins=HiCFeatureRadius.bins
+parsed.args$resolutions <- c(100, 50, 25) * 1e3
+# bins within X bins of a HiC feature == feature
+HiCFeatureRadius.bins <- 
+    c(0, 1, 2, 3, 4) 
+test.hyper.params.df <- 
+    bind_rows(
+        # Fisher test params
+        expand_grid(
+            HiF.bin.radius=HiCFeatureRadius.bins,
+            FGE.classification.threshold=c(1, 5, 10, 20, 30, 40) # min threshold of FGEs per bin
+        ) %>%
+        add_column(test.type='fisher.test'),
+        # T-test params
+        tibble(
+            HiF.bin.radius=HiCFeatureRadius.bins
+        ) %>%
+        add_column(test.type='t.test'),
+        # Corr test params
+        expand_grid(
+            max.bin.dist.to.nearest.HiF=c(Inf, 200, 100, 50, 25),
+        ) %>%
+        add_column(test.type='corr.test'),
     )
 
-###################################################
+################################################################################
 # Load all TAD boundaries
-###################################################
+################################################################################
 # load TAD boundaries
 TAD.boundaries.df <- 
     ALL_TAD_RESULTS_FILE %>%
     read_tsv(show_col_types=FALSE) %>% 
-    filter(resolution %in% RESOLUTIONS) %>% 
     # change end of TAD to represent the start position of last bin in the TAD 
     # instead of the end of the last bin
     mutate(end=end - resolution) %>% 
-    pivot_TADs_to_boundaries() %>% 
+    pivot_all_TADs_to_boundaries() %>% 
     dplyr::rename('feature.start'=boundary.start) %>%
     # all boundaries are only 1 bin
     mutate(feature.end=feature.start + resolution)
 
-###################################################
-# Join TAD boundaries to bin-wise cCRE data
-###################################################
+################################################################################
+# Join TAD boundaries to binwise FGE signals
+################################################################################
 # map all bins to each TAD
-TAD.CTCF.overlaps.df <- 
-# load bin-wise summary CTCF stats
-    load_specific_overlap_results(
-        # force.redo=TRUE,
-        feature.type='binwise',
-        annotation='cCRE'
-    ) %>% 
-    filter(resolution %in% RESOLUTIONS) %>% 
-    dplyr::rename('cCRE.type'=annotation.type) %>% 
-    select(-c(SampleID)) %>% 
-    # nest(bins.df=-c(annotation, feature.type, resolution, motif, chr)),
-    nest(bins.df=-c(annotation, feature.type, resolution, cCRE.type)) %>% 
+TAD.Boundary.FGE.signal.joint.df <- 
+    list_all_binwise_signal_files() %>% 
     inner_join(
         TAD.boundaries.df %>% 
         # nest(features.df=-c(resolution, method, TAD.params, Sample.Group, chr)),
-        nest(features.df=-c(resolution, method, TAD.params, Sample.Group)),
+        nest(features.df=-c(resolution, TAD.method, TAD.params, TAD.metric, Sample.Group)),
         relationship='many-to-many',
         by=join_by(resolution)
         # by=join_by(resolution, chr)
     ) %>%
-    select(
-        annotation, feature.type, cCRE.type,
-        method, Sample.Group, 
-        resolution,
-        bins.df, features.df
-    )
+    filter(resolution %in% parsed.args$resolutions)
 
-# TAD.CTCF.overlaps.df %>% select(bins.df, features.df)
-###################################################
+TAD.Boundary.FGE.signal.joint.df
+TAD.CTCF.overlaps.df %>% select(bins.df, features.df)
+################################################################################
 # Calculate cCRE Fisher Enrichment tests
-###################################################
+################################################################################
 check_cached_results(
     results_file=TAD_CCRE_FISHER_ENRICHMENTS_FILE,
-    force_redo=FORCE_REDO,
+    force_redo=parsed.args$force.redo,
     # force_redo=TRUE,
     results_fnc=calculate_all_feature_CTCF_enrichments,
     overlaps.df=
@@ -110,12 +103,12 @@ check_cached_results(
         )
 )
 
-###################################################
+################################################################################
 # Calculate cCRE T-tests
-###################################################
+################################################################################
 check_cached_results(
     results_file=TAD_CCRE_TTEST_ENRICHMENTS_FILE,
-    force_redo=FORCE_REDO,
+    force_redo=parsed.args$force.redo,
     # force_redo=TRUE,
     results_fnc=calculate_all_feature_CTCF_enrichments,
     overlaps.df=
@@ -134,9 +127,9 @@ check_cached_results(
 )
 
 
-###################################################
+################################################################################
 # Join TAD boundaries to bin-wise CTCF data
-###################################################
+################################################################################
 # map all bins to each TAD
 TAD.CTCF.overlaps.df <- 
 # load bin-wise summary CTCF stats
@@ -166,12 +159,12 @@ TAD.CTCF.overlaps.df <-
         bins.df, features.df
     )
 
-###################################################
+################################################################################
 # Calculate CTCF Fisher Enrichment tests
-###################################################
+################################################################################
 check_cached_results(
     results_file=TAD_CTCF_FISHER_ENRICHMENTS_FILE,
-    force_redo=FORCE_REDO,
+    force_redo=parsed.args$force.redo,
     # force_redo=TRUE,
     results_fnc=calculate_all_feature_CTCF_enrichments,
     overlaps.df=
@@ -189,12 +182,12 @@ check_cached_results(
         )
 )
 
-###################################################
+################################################################################
 # Calculate CTCF T-tests
-###################################################
+################################################################################
 check_cached_results(
     results_file=TAD_CTCF_TTEST_ENRICHMENTS_FILE,
-    force_redo=FORCE_REDO,
+    force_redo=parsed.args$force.redo,
     # force_redo=TRUE,
     results_fnc=calculate_all_feature_CTCF_enrichments,
     overlaps.df=

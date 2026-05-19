@@ -280,24 +280,17 @@ list_all_binwise_signal_files <- function(){
     select(-c(MatrixID))
 }
 
-###################################################
-# Statistical Testing of FEs ~ HiC Features
-###################################################
-pivot_FE_binwise_metrics <- function(
+################################################################################
+# Hi-C Feature ~ Functional Genomic Element (FGE) Association  Testing
+################################################################################
+pivot_FGE_binwise_metrics <- function(
     results.df,
     statlist=NULL){
     results.df %>% 
     # Pivot CTCF summary stats to tidy-format
-    {
-        if ('n.overlaps' %in% colnames(.)) {
-            dplyr::rename(., 'FE.overlaps.n'=n.overlaps)
-        } else {
-            .
-        }
-    } %>% 
     pivot_longer(
-         starts_with('FE.'),
-         names_prefix='FE.',
+         starts_with('FGE.'),
+         names_prefix='FGE.',
          names_to='sumstat',
          values_to='value'
     ) %>% 
@@ -393,26 +386,26 @@ assign_nearest_feature_to_bins <- function(bins.df, features.df){
 compute_features_fisher_tests <- function(
     overlaps.df,
     resolution,
-    n.FE.min.thresh,
+    n.FGE.min.thresh,
     ...){
     # Count overlap of bins with enough CTCF sites & bins close enough to HiC Features
     contingency.table <- 
         overlaps.df %>% 
         group_by(isHiCFeature) %>% 
         summarize(
-            n.bins.wo.FE=sum(n.overlaps <  n.FE.min.thresh),
-            n.bins.w.FE=sum(n.overlaps  >= n.FE.min.thresh)
+            n.bins.wo.FGE=sum(n.overlaps <  n.FGE.min.thresh),
+            n.bins.w.FGE=sum(n.overlaps  >= n.FGE.min.thresh)
         ) %>%
-        select(n.bins.w.FE, n.bins.wo.FE) %>%
+        select(n.bins.w.FGE, n.bins.wo.FGE) %>%
         as.matrix()
     # Calculate enrichment stat for test
     bins.overlap      <- contingency.table[1,1]
     bins.w.feature    <- bins.overlap + contingency.table[1,2]
-    bins.w.FE       <- bins.overlap + contingency.table[2,1]
+    bins.w.FGE       <- bins.overlap + contingency.table[2,1]
     bins.total        <- sum(contingency.table)
     # Calculate enrichment stat for test
-    expected          <- bins.w.FE * (bins.w.feature / bins.total)
-    variance_term_1   <- (bins.total - bins.w.FE) / (bins.total - 1)
+    expected          <- bins.w.FGE * (bins.w.feature / bins.total)
+    variance_term_1   <- (bins.total - bins.w.FGE) / (bins.total - 1)
     variance_term_2   <- (bins.total - bins.w.feature) / (bins.total - 1)
     std_dev           <- sqrt(expected * variance_term_1 * variance_term_2)
     enrichment.zscore <- (bins.overlap - expected) / std_dev
@@ -439,14 +432,14 @@ compute_features_fisher_tests <- function(
 compute_features_t_tests <- function(overlaps.df) {
     overlaps.df %>% 
     # pivot metrics so can do 1 test per metric+stat (i.e. per row)
-    pivot_FE_binwise_metrics() %>% 
+    pivot_FGE_binwise_metrics() %>% 
     group_by(metric, stat) %>% 
     summarize(
-        # welch's t-test of the mean FE metric is > near  TAD boundaries or not
+        # welch's t-test of the mean FGE metric is > near  TAD boundaries or not
         # results.t.test=
             t.test(
                 value ~ isHiCFeature,
-                alternative='greater' # only care if TADs are enriched for FEs, not depleted
+                alternative='greater' # only care if TADs are enriched for FGEs, not depleted
             ) %>%
             tidy()
     ) %>%
@@ -456,11 +449,11 @@ compute_features_t_tests <- function(overlaps.df) {
 
 compute_features_corr_tests <- function(overlaps.df) {
     overlaps.df %>% 
-    pivot_FE_binwise_metrics() %>% 
+    pivot_FGE_binwise_metrics() %>% 
     group_by(metric, stat) %>% 
-    # calcualte test results for each FEs metric + stat combo
+    # calcualte test results for each FGEs metric + stat combo
     summarize(
-        # are TADs more enriched for FEs signal closer or farther from boundaries
+        # are TADs more enriched for FGEs signal closer or farther from boundaries
         results.pearson=
             cor.test(
                 x=dist.to.nearest,
@@ -468,7 +461,8 @@ compute_features_corr_tests <- function(overlaps.df) {
                 method='pearson',
                 exact=FALSE,
                 alternative='greater' # want closer to TAD ~ more CTCF signal, so +ve signal only
-            ) %>% list(),
+            ) %>% 
+            list(),
         results.spearman=
             cor.test(
                 x=dist.to.nearest,
@@ -476,7 +470,17 @@ compute_features_corr_tests <- function(overlaps.df) {
                 method='spearman',
                 exact=FALSE,
                 alternative='greater' # want closer to TAD ~ more CTCF signal, so +ve signal only
-        ) %>% list(),
+        ) %>% 
+        list(),
+        results.kendall=
+            cor.test(
+                x=dist.to.nearest,
+                y=value,
+                method='kendall',
+                exact=FALSE,
+                alternative='greater' # want closer to TAD ~ more CTCF signal, so +ve signal only
+        ) %>% 
+        list()
     ) %>%
     ungroup() %>% 
     pivot_longer(
@@ -604,12 +608,12 @@ post_process_test_results <- function(
         }
     {
     } %>% 
-        if ('n.FE.min.thresh' %in% colnames(.)) {
+        if ('n.FGE.min.thresh' %in% colnames(.)) {
             mutate(
                 .,
-                n.FE.min.thresh.fct=
-                    glue('>= {n.FE.min.thresh} FEs') %>% 
-                    fct_reorder(n.FE.min.thresh)
+                n.FGE.min.thresh.fct=
+                    glue('>= {n.FGE.min.thresh} FGEs') %>% 
+                    fct_reorder(n.FGE.min.thresh)
             )
         } else {
             .
