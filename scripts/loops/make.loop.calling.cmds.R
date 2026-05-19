@@ -31,7 +31,8 @@ hyper.params.df <-
     bind_rows(
         # cooltools params
         expand_grid(
-            normalization=c('balanced', 'raw'),
+            # normalization=c('balanced', 'raw'),
+            normalization=c('balanced'),
             loop.method='cooltools'
         ),
     ) %>%  

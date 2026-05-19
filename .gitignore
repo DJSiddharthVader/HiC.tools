@@ -59,3 +59,7 @@ public.data/PMID_37090552
 /reference.files/raw.FGE.data
 /reference.files/homo_sapiens_GRCh38_92.gene_annotations.strand.info.txt
 /reference.files/regional_gene_cor.tar.gz
+/reference.files/raw.gene.locus.association.data/H1_Derived_Neuronal_Progenitor_Cultured_Cells-Roadmap_abc_scores.tsv
+/scripts/coverage/generate.H1D.cmds.R
+/scripts/link.files.sh
+/scripts/FGE.Association.Testing/old.utils.R

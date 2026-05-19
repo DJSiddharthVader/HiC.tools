@@ -43,16 +43,16 @@ check_cached_results <- function(
         return_data <- TRUE
     } else {
         # Set read/write functions based on filetype
-        output_filetype <- results_file %>% str_extract('\\.[^\\.]*$') 
-        if (!silence) { message(output_filetype) }
-        if (output_filetype == '.rds') {
+        output.filetype <- results_file %>% str_extract('\\.[^\\.]*$') 
+        if (!silence) { message(output.filetype) }
+        if (output.filetype == '.rds') {
             load_fnc <- readRDS
             save_fnc <- saveRDS
-        } else if (output_filetype %in% c('.txt', '.tsv')) {
+        } else if (output.filetype %in% c('.txt', '.tsv')) {
             load_fnc <- partial(read_tsv, show_col_types=show_col_types)
             save_fnc <- write_tsv
         } else {
-            stop(glue('Invalid file extesion: {output_filetype}'))
+            stop(glue('Invalid file extesion: {output.filetype}'))
         }
         if (file.exists(results_file) & !force_redo) {
             if (!silence) { message(glue('{results_file} exists, not recomputing results')) }
