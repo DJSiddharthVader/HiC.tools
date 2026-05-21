@@ -63,3 +63,4 @@ public.data/PMID_37090552
 /scripts/coverage/generate.H1D.cmds.R
 /scripts/link.files.sh
 /scripts/FGE.Association.Testing/old.utils.R
+/reference.files/raw.gene.locus.association.data/tabix_ftp_paths.tsv

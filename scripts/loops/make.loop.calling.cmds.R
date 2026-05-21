@@ -2,13 +2,14 @@
 # Dependencies
 ################################################################################
 library(here)
-here::i_am('scripts/loops/make.loops.calling.cmds.R')
+here::i_am('scripts/loops/make.loop.calling.cmds.R')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     # library(hictkR)
     source(file.path(BASE_DIR,   'scripts/constants.R'))
     source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
+    source(file.path(SCRIPT_DIR, 'coverage/utils.coverage.R'))
     source(file.path(SCRIPT_DIR, 'loops/utils.loops.R'))
     library(tidyverse)
     library(magrittr)
@@ -32,6 +33,7 @@ hyper.params.df <-
         # cooltools params
         expand_grid(
             # normalization=c('balanced', 'raw'),
+            expected.col.name=c('balanced.avg.smoothed'),
             normalization=c('balanced'),
             loop.method='cooltools'
         ),
@@ -44,7 +46,7 @@ hyper.params.df <-
 # Using the file as input, you can run all the cmds together with GNU parllel and/or via SLURM/SGE
 hyper.params.df %>% 
     generate_all_loop_calling_cmds(
-        cmds.output.filepath=file.path(LOOP_DIR, 'all.loop.calling.cmds.txt'),
+        cmds.output.filepath=file.path(LOOPS_DIR, 'all.loop.calling.cmds.txt'),
         force_redo=parsed.args$force.redo,
         merge_status='merged'
     )

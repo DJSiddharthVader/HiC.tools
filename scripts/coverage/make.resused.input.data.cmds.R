@@ -27,7 +27,6 @@ hyper.params.df <-
     bind_rows(
         # cooltools params
         expand_grid(
-            ignore.diags=c(2),
             normalization=c('balanced'),
             track.type=c('genecov'),
             contact.type=c('cis')

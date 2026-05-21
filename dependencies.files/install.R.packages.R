@@ -34,6 +34,7 @@ install.packages(
 BiocManager::install(
     c(
         'TADCompare',
+        'idr2d',
         'multiHiCcompare'
     )
 )

@@ -13,15 +13,17 @@ generate_cooltools_dots_calling_cmds <- function(
     SampleID,
     mcool.filepath,
     distance.expectation.filepath,
+    expected.col.name,
     output_dir,
     ...){
     output_dir <- 
         file.path(
             output_dir,
             glue("resolution_{resolution}"),
-            glue("normalization_{normalization}"),
+            glue("normalization_{normalization}")
         )
     # Create filenames
+    expected.uri    <- glue("{distance.expectation.filepath}::{expected.col.name}")
     mcool.uri       <- glue("{mcool.filepath}::resolutions/{resolution}")
     output.filepath <- glue("{output_dir}/{SampleID}-dots.tsv")
     # Compose command to generate TAD for this set of inputs + params
@@ -32,7 +34,7 @@ generate_cooltools_dots_calling_cmds <- function(
             .unmatched="error"
         )
     mkdir.cmd <- glue("mkdir -p {output_dir}")
-    main.cmd  <- glue("cooltools dots {weight_flag} --nproc {threads} --output {output.filepath} {mcool.uri} {distance.expectation.filepath}")
+    main.cmd  <- glue("cooltools dots {weight_flag} --nproc {threads} --output {output.filepath} {mcool.uri} {expected.uri}")
     # Paste  all commands together in one line to run in bash
     tibble_row(
         output.filepath=output.filepath,
@@ -53,18 +55,23 @@ generate_all_loop_calling_cmds <- function(
     merge_status='merged',
     force_redo=FALSE,
     ...){
-    # resolutions=parsed.args$resolutions; force_redo=FALSE; merge_status='merged';
+    merge_status='merged';
     list_all_distance_expectation_files() %>% 
-    filter(track.type == 'cis') %>% 
+    # filter(type == 'cis') %>% 
+    filter(contact.type == 'cis') %>% 
     inner_join(
         hyper.params.df,
-        by=join_by(resolution)
+        by=
+            join_by(
+                normalization,
+                resolution
+            )
     ) %>% 
     # list contacts matrices for all samples to generate compartments for
     inner_join(
         list_all_mcool_files(merge_status=merge_status) %>%
         dplyr::rename('mcool.filepath'=filepath),
-        by=join_by(SampleID)
+        by=join_by(MatrixID)
     ) %>% 
     mutate(output_dir=file.path(LOOP_RESULTS_DIR, glue("loop.method_{loop.method}"))) %>% 
     mutate(

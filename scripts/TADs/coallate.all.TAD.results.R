@@ -47,8 +47,6 @@ inclusion.params.df <-
 ################################################################################
 # Combine all TAD results 
 ################################################################################
-# combine all TAD results into a single table with metadata i.e.
-# 1 TAD per row i.e. per condition + resolution + TAD Calling parameters
 # hiTAD results 
 all.hiTAD.TADs.df <- 
     check_cached_results(
@@ -73,8 +71,8 @@ all.ConsensusTAD.TADs.df <-
         # force_redo=TRUE
         force_redo=parsed.args$force.redo
     )
-    # all.ConsensusTAD.TADs.df %>% count(TAD.bins) %>% arrange(desc(n))
-# Combine all methods together 
+# combine all TAD results into a single table with metadata i.e.
+# 1 TAD per row i.e. per condition + resolution + TAD Calling parameters
 bind_rows(
     all.ConsensusTAD.TADs.df,
     all.cooltools.TADs.df,
@@ -91,7 +89,8 @@ inner_join(
             TAD.metric
         )
 ) %>% 
-mutate(TAD.idx=glue('{TAD.method}${TAD.params}${TAD.metric}$T{row_number()}')) %>% 
+# mutate(FeatureID=glue('{chr}#{start}#{end}')) %>% 
+mutate(FeatureID=glue('{resolution}#{TAD.method}#{TAD.params}#{TAD.metric}{chr}#{start}#{end}')) %>% 
 write_tsv(ALL_TAD_RESULTS_FILE)
 
 ################################################################################
@@ -101,6 +100,7 @@ write_tsv(ALL_TAD_RESULTS_FILE)
 ALL_TAD_RESULTS_FILE %>% 
     read_tsv(show_col_types=FALSE) %>% 
     pivot_all_TADs_to_boundaries() %>% 
+    # count(FeatureID) %>% arrange(desc(n))
     write_tsv(ALL_TAD_BOUNDARIES_FILE)
 
 ################################################################################
