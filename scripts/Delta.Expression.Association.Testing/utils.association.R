@@ -6,9 +6,7 @@
 # eQTL data
 ################################################################################
 get_remote_filepaths_for_eQTLs_of_interest <- function(){
-    tmp.filepath <- tempfile()
-    EQTL_REMOTE_FILEPATHS_LINK %>% download.file(tmp.filepath)
-    tmp.filepath %>%
+    EQTL_REMOTE_FILEPATHS_FILE %>%
     read_tsv(show_col_types=FALSE) %>%
     filter(sample_group %in% c()) %>% 
     filter(tissue_label %in% c()) %>% 
@@ -25,16 +23,27 @@ get_remote_filepaths_for_eQTLs_of_interest <- function(){
         sample_size,
         # quant_method
         ftp_cs_path  # path to credible set of eQTLs
-    )
+    ) %>%
+    dplyr::rename('eQTL.filpath'=ftp_cs_path)
 }
 
-download_and_parse_all_eQTL_files <- function(){
-    get_remote_filepaths_for_eQTLs_of_interest() %>%
+download_and_parse_eQTL_file <- function(eQTL.filpath){
+    tmp.filepath <- tempfile()
+    EQTL_REMOTE_FILEPATHS_LINK %>% download.file(tmp.filepath)
+    tmp.filepath %>%
     {.}
 }
 
-load_all_clean_eQTLs <- function(){
-    stop('not implemented')
+download_and_parse_all_eQTL_files <- function(force_redo=FALSE){
+    get_remote_filepaths_for_eQTLs_of_interest() %>%
+    mutate(results_file=file.path(CACHED_EQTLS_DIR, basename(eQTL.filpath))) %>% 
+    pmap(
+        .f=check_cached_results,
+        results_fnc=download_and_parse_eQTL_file,
+        force_redo=force_redo,
+        .progress=TRUE
+    ) %>%
+    bind_rows()
 }
 
 ################################################################################
@@ -152,33 +161,9 @@ load_gene_annotations <- function(gene.types=NULL){
     #     1 IG_pseudogene
 }
 
-map_all_indirect_gene_locus_associations_with_gene_metadata <- function(
-    gene.locus.association.dfs,
-    gene.positions.df){
-    gene.locus.association.dfs %>% 
-    # nest annotation-specific info into a single column 
-    sapply(
-        FUN=
-            function(df) {
-                df %>% 
-                nest(
-                    association.info=
-                        -c(
-                           chr, start, end,
-                           association.type,
-                           association.subtype,
-                           association.source,
-                           Target.Gene.Symbol
                         )
                 )
-            },
-        simplify=FALSE
     ) %>% 
-    bind_rows() %>% 
-    # for each gene-associated functional locus, join the gene position + metadata + EnsemblID
-    inner_join(
-        gene.positions.df,
-        suffix=c('.FGE', '.gene'),
         by=
             join_by(
                 chr,

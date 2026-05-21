@@ -2,7 +2,7 @@
 # Dependencies
 ################################################################################
 library(here)
-here::i_am('scripts/Delta.Expression.Association.Testing/make.clean.functional.locus.gene.mappings.R')
+here::i_am('scripts/Delta.Expression.Association.Testing/')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     source(file.path(BASE_DIR,   'scripts/constants.R'))
@@ -47,7 +47,7 @@ enhancers.df <-
     add_column(association.type='ABC.enhancer')
 # eQTLs linking genes to loci with specific variants
 # eQTLs.df <- 
-#     load_all_clean_eQTLs(parsed.args$fore.redo) %>% 
+#     load_all_clean_eQTLs(force_redo=parsed.args$fore.redo) %>% 
 #     dplyr::rename('association.subtype'=) %>% 
 #     add_column(association.source='EBI') %>% 
 #     add_column(association.type='eQTLs')
@@ -82,30 +82,35 @@ TFBS.df <-
 ################################################################################
 # Combine all functional elements and add gene metadata for downstream analysis
 ################################################################################
-# positions of genes, used for associations with condition-specific HiFs
-gene.positions.df <- 
-    load_gene_annotations(
-        gene.types=
-            c(
-                'lincRNA',
-                'snRNA',
-                'miRNA',
-                'snoRNA',
-                # 'transcribed_unprocessed_pseudogene',
-                # 'processed_transcript',
-                # 'transcribed_processed_pseudogene',
-                'protein_coding'
-            )
-    ) %>% 
-    standardize_data_cols(skip.resolution=TRUE)
 # Now combine all annotations together?
+    # for each gene-associated functional locus, join the gene position + metadata + EnsemblID
 all.functional.loci.gene.associations <- 
     check_cached_results(
         results_file=ALL_CLEAN_GENE_LOCUS_ASSOCIATIONS_FILE,
         force_redo=parsed.args$force.redo,
-        results_fnc=map_all_indirect_gene_locus_associations_with_gene_metadata,
-        gene.positions.df=gene.positions.df,
-        gene.locus.association.dfs=
+        results_fnc=
+            function(gene.linked.functional.annotations){
+                gene.linked.functional.annotations %>% 
+                sapply(
+                    FUN=
+                        function(df) {
+                            df %>% 
+                            nest(
+                                association.info=
+                                    -c(
+                                       chr, start, end,
+                                       association.type,
+                                       association.subtype,
+                                       association.source,
+                                       Target.Gene.Symbol
+                                    )
+                            )
+                        },
+                    simplify=FALSE
+                ) %>% 
+                bind_rows()
+            },
+        gene.linked.functional.annotations=
             list(
                 enhancers.df,
                 # eQTLs.df,
@@ -113,7 +118,4 @@ all.functional.loci.gene.associations <-
                 TFBS.df
             )
     )
-# all.functional.loci.gene.associations
-# all.functional.loci.gene.associations %>% count(association.type, association.subtype, association.source)
 
-# all.functional.loci.gene.associations %>% head(2) %>% t()
