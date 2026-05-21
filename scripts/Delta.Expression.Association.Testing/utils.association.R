@@ -1,6 +1,7 @@
 ################################################################################
 # Dependencies
 ################################################################################
+library(plyranges)
 
 ################################################################################
 # eQTL data
@@ -88,9 +89,21 @@ load_nasser_ABC_enhancers <- function(){
 }
 
 ################################################################################
-# Utils
+# Load Gene info + Differential results
 ################################################################################
-load_gene_annotations <- function(gene.types=NULL){
+load_gene_annotations <- function(
+    gene.types=
+        c(
+            'lincRNA',
+            'snRNA',
+            'miRNA',
+            'snoRNA',
+            # 'transcribed_unprocessed_pseudogene',
+            # 'processed_transcript',
+            # 'transcribed_processed_pseudogene',
+            'protein_coding'
+        )
+    ){
     # gene types
     GENE_ANNOTATIONS_FILE %>%
     read_tsv(
@@ -112,7 +125,8 @@ load_gene_annotations <- function(gene.types=NULL){
         } else {
             .
         }
-    }
+    } %>% 
+    standardize_data_cols(skip.resolution=TRUE)
     # 19913 protein_coding
     # 10214 processed_pseudogene
     #  7484 lincRNA
@@ -161,28 +175,113 @@ load_gene_annotations <- function(gene.types=NULL){
     #     1 IG_pseudogene
 }
 
+load_all_DESeq2_results <- function(force.redo=FALSE){
+    check_cached_results(
+        results_file=DESEQ2_RESULTS_FILE,
+        force_redo=force.redo,
+        results_fnc=
+            function(suffix='-DESeq2.tsv') {
+                # List all results files
+                DESEQ2_DATA_DIR %>% 
+                list.files(
+                    pattern=suffix,
+                    full.names=TRUE,
+                    recursive=TRUE
+                ) %>% 
+                tibble(filepath=.) %>%
+                mutate(info=str_remove(basename(filepath), suffix)) %>% 
+                filter(!grepl('iPSC', info)) %>% 
+                # Tidy pairwise metadata
+                separate_wider_delim(
+                    info,
+                    # delim='-',
+                    delim='_vs_',
+                    names=c('Sample.Group.Numerator', 'Sample.Group.Denominator'),
+                ) %>%
+                # load DEG results
+                mutate(
+                    results=
+                        pmap(
+                            list(filepath),
+                            read_tsv,
+                            show_col_types=FALSE
                         )
+                ) %>%
+                unnest(results) %>%
+                # rename_with(.f=~ str_replace(.x, '^', 'DESeq2.')) %>% 
+                # # run TRADEtools to define transcriptome-wide effects
+                # clean up columns
+                dplyr::rename('EnsemblID'=ensemblid) %>% 
+                mutate(gene.length=end - start) %>% 
+                select(
+                    -c(
+                        filepath,
+                        Sample.Group.Numerator, Sample.Group.Denominator,
+                        row_index,
+                        # strand,
+                        geneid,
+                        stat
+                    )
                 )
+            }
     ) %>% 
-        by=
-            join_by(
-                chr,
-                Target.Gene.Symbol == Gene.Symbol
-            )
-    )
+    standardize_data_cols()
 }
 
 ################################################################################
 # Directly link genes to HiFs by overlap/proximity
 ################################################################################
+map_HiF_to_genes_within <- function(
+    HiFs.df,
+    deg.results.df,
+    min.Gene.overlap.frac,
+    ...){
+    deg.results.df %>% 
+    # join_overlap(
+    #     HiFs.df,
+    left_join(
+        HiFs.df,
+        suffix=c('.Gene', '.HiF'),
+        by=
+            join_by(
+                chr,
+                within(start.Gene, end.Gene, start.HiF, end.HiF)
+            )
+    ) %>% 
+    filter(Gene.overlap.frac > min.Gene.overlap.frac)
+}
+
+map_HiF_to_genes_nearby <- function(
+    HiFs.df,
+    deg.results.df,
+    nearby.threshold,
+    ...){
+    # deg.results.df %>% 
+    stop('Not Implemented')
+}
+
 map_HiFs_to_genes_directly <- function(
     HiFs.df,
-    gene.positionsd.df,
-    min.overlap.frac,
-    recip.min.overlap.frac,
+    deg.results.df,
+    association.strategy,
     ...){
-    HiFs.df %>% 
-    {.}
+    # paste0('row.index=1; ', paste0(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', collapse='; '), '; tmp %>% head(row.index) %>% tail(1) %>% t()')
+    # row.index=161; resolution=tmp$resolution[[row.index]]; normalization=tmp$normalization[[row.index]]; SampleID=tmp$SampleID[[row.index]]; HiF.type=tmp$HiF.type[[row.index]]; HiFs.df=tmp$HiFs.df[[row.index]]; fuzzy.matching.threshold.bins=tmp$fuzzy.matching.threshold.bins[[row.index]]; association.strategy=tmp$association.strategy[[row.index]]; frac.reciprocal.matching.overlap=tmp$frac.reciprocal.matching.overlap[[row.index]]; association.type=tmp$association.type[[row.index]]; association.subtype=tmp$association.subtype[[row.index]]; association.source=tmp$association.source[[row.index]]; results_file=tmp$results_file[[row.index]]; tmp %>% head(row.index) %>% tail(1) %>% t()
+    if (association.strategy == 'nearby') {
+        map_HiF_to_genes_nearby(
+            HiFs.df,
+            deg.results.df,
+            ...
+        )
+    } else if (association.strategy == 'within') {
+        map_HiF_to_genes_within(
+            HiFs.df,
+            deg.results.df,
+            ...
+        )
+    } else {
+        stop(glue('Invalid association.strategy: {association.strategy}'))
+    }
 }
 
 ################################################################################
