@@ -18,9 +18,6 @@ Analysis and code of HiC data for 16p samples
     - [Generate MultiQC reports](#generate-multiqc-reports)
   - [Merging Matrices](#merging-matrices)
   - [HiCRep Analysis](#hicrep-analysis)
-  - [Compartment Analysis](#compartment-analysis)
-    - [Compartment Annotation](#compartment-annotation)
-    - [Compartment Comparison](#compartment-comparison)
   - [Misc. Results Generation](#misc-results-generation)
   - [Compile Notebooks](#compile-notebooks)
 
