@@ -41,7 +41,6 @@ Columns are:
 |  log10.qval-max     | 9.788118488133792  | 21.09790044160207    |  |
 |  log10.qval-median  | 9.788118488133792  | 6.791862325480757    |  |
 
-
 ### Loop Nesting
 
 We also want to analyze how "nested" regions of the genome are within loops. Since loops can overlap fully (but not partially) some genomic regions are "within" multiple loops.
@@ -78,14 +77,15 @@ Are heavily nested regions enriched for Differential HiC signals or functional e
 | metric.max.log10_qval | 4.596627111104732  | 7.206963447063814  |  |
 | metric.sum.log10_qval | 27.868278581521214 | 13.946676515661137 |  |
 
-
 ### Generate Loop results
 
 Commands to generate loop results
 ```bash
 # generate loop annotations 
 mamba activate r
-Rscript scripts/loops/
+Rscript scripts/loops/make.loop.calling.cmds.R
+mamba activate cooltools
+parallel -j $(nproc) --bar --eta :::: ./results/loops/all.loop.cmds.txt
 # Use IDR2D to define which loops are reproducible between conditions
 mamba activate r
 Rscript scripts/loops/run.IDR2D.loops.R

@@ -1,45 +1,4 @@
-# Generating TAD Results
-
-## Commands to Run
-
-Commands to generate TAD + TAD Comparison data
-```bash
-# generate commands to run shell tools for TAD calling
-mamba activtte r
-Rscript ./scripts/TADs/make.TAD.calling.cmds.R -t $(nproc)
-# now run those generated commands with GNU parallel
-mamba activtte TADs
-parallel -j 1 --eta --bar :::: ./results/TADs/all.TAD.calling.cmds.txt
-# Generate Consensus TAD results from set of individual matrices with spectralTAD
-mamba activtte r
-Rscript ./scripts/TADs/run.ConsensusTADs.R
-# Coallate TAD results into single, structured output files
-mamba activtte r
-Rscript ./scripts/TADs/coallate.all.TAD.results.R
-# Compute TAD MoCs for all sets of TADs
-mamba activtte r
-Rscript ./scripst/TADs/calculate.TAD.MoCs.R
-# Run TADCompare to generated differential TAD results
-# requires 120Gb for the largest matrix comparison (i.e. chr1 @5Kb)
-mamba activtte r
-Rscript ./scripts/TADs/run.TADCompare.R -t $(nproc)
-```
-
-## Output File Descriptions
-
-The TAD results files are as follows:
-```bash
-./results/TADs/
-├── results_TADs/                # Nested directory structure of individually generated results
-├── all.ConsensusTAD.TADs.tsv    # combined file with all TADs called by ConsensusTAD
-├── all.hiTAD.TADs.tsv           # combined file with all TADs called by hiTAD
-├── all.cooltools.TADs.tsv       # combined file with all TADs called by cooltools
-├── all.all.TADs.tsv             # combined file with all TADs called by all methods
-├── all.all.TAD.MoCs.tsv         # Computed Measure of Concordance of TADs for all pairs of conditions
-├── results_TADCompare/
-├── all.TADCompare.results.tsv
-└── all.TADCompare.n.results.tsv
-```
+## Generating TAD Results
 
 ### TADs
 
@@ -79,11 +38,110 @@ Columns are:
 
 ### TAD Boundaries
 
-### TAD MoC 
+These are generaed from just pivoting the TAD results so each row is a single TAD boundary, all boundaries are 1 bin long.
+Note that only the "start" boundaries are actually called by the tools, the "end" is just the bin before the next called boundary.
+If you want to limit the analysis to only "start" boundaries, just filter on the column "boundary.side"
+Columns are:
+| Column Name    | Example Row 1                         | Example Row 2                         | Column Description | 
+|------------    | -------------                         | -------------                         | ------------------ | 
+| resolution     | 10000                                 | 10000                                 | resolution |
+| normalization  | balanced                              | balanced                              | input matrix normalization |
+| TAD.method     | hiTAD                                 | hiTAD                                 | tool used to call TADs |
+| TAD.params     | NA                                    | NA                                    | tool-specific params used to call TADs |
+| TAD.metric     | ADI                                   | ADI                                   | tool-specific metric used to calculated boundary score |
+| Sample.Group   | All.iN.WT                             | All.iN.WT                             | biological condition of input data |
+| SampleID       | All.iN.WT.Merged.Merged               | All.iN.WT.Merged.Merged               | specific Sample boundaries were called in |
+| isMerged       | Merged                                | Merged                                | whether merged matrices were used as input to call TADs |
+| FeatureID      | 10000#hiTAD#NA#ADIchr1#900000#1030000 | 10000#hiTAD#NA#ADIchr1#900000#1030000 | uniqueID for identifying individual TADs that Boundaries belong to|
+| boundary.side  | start                                 | end                                   | whether boundary is the start or end of a TAD |
+| chr            | chr1                                  | chr1                                  | chromosome |
+| start          | 900000                                | 1030000                               | boundary start coord |
+| end            | 910000                                | 1040000                               | start + resolution |
+| boundary.score | -5.734                                | 0.4358                                | tool-specific score for the boundary bin |
+| TAD.length     | 130000                                | 130000                                | size of TAD in bp this boundary is part of |
+| TAD.bins       | 13                                    | 13                                    | size of TAD in bins this boundary is part of |
+
+### TAD Measure of Concordance (MoC)
+
+For each pair of conditions we can compare how similar a set of TAD annotations are by calculating the MoC. We limit comparisons to be between the same resolution, chr and TAD calling method + params, so we only compare biological conditions. Note that numerator/denominator are arbitrary, the MoC is not directionally specific.
+Columns are:
+| Column Name              | Example Row 1      | Example Row 2     | Column Description | 
+|------------              | -------------      | -------------     | ------------------ | 
+| resolution               | 10000              | 10000             | resolution |
+| TAD.method               | hiTAD              | hiTAD             | tool used to call TADs |
+| TAD.params               | NA                 | NA                | tool-specific params used to call TADs |
+| TAD.metric               | ADI                | ADI               | tool-specific metric used to calculated boundary score |
+| isMerged                 | Merged             | Merged            | whether merged matrices were used as input to call TADs |
+| Sample.Group.Numerator   | CTCF.iN.BIALLELIC  | CTCF.iN.BIALLELIC | one of the biological conditions who's TADs are being compared |
+| n.TADs.Numerator         | 1311               | 1311              | total number of TADs from numerator condition |
+| Sample.Group.Denominator | All.iN.WT          | CTCF.iN.DEL       | |
+| n.TADs.Denominator       | 1414               | 1276              | |
+| chr                      | chr1               | chr1              | chromosome |
+| n.Overlaps               | 3401               | 2559              | total number of pairs of overlapping TADs used to calculate MoC |
+| MoC                      | 0.8409605634496815 | 0.669946690981735 | calculate MoC value |
 
 ### TADCompare 
 
-For 2 different TAD annotation sets (start/end pairs) of the same region (e.g. chr16) we can calculate the similarity of the 2 sets by computing the Measure of Concordance as defined in [this paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-018-1596-9#Sec21). 
+We also compare TADs called using the r package TADCompare. It calcuatles a bin-wise spectral decomposition-based "boundary score" and comapre these scores around each TAD boundary used as input. The TAD Boundaries come from the called TADs above. The results include 
+Gap.Score is a directionally specific z-score, the sign will line up with the "Enriched.Condition" column i.e. -ve => enriched in denominator and vice versa. 
+Columns are:
+| Column Name              | Example Row 1        | Example Row 2         | Column Description | 
+|------------              | -------------        | -------------         | ------------------ | 
+| resolution               | 10000                | 10000                 | resolution |
+| normalization            | balanced             | balanced              | input matrix normalization |
+| TADCompare.params        | 3#15#0.2             | 3#15#0.2              | TADCompare specific params |
+| TAD.method               | hiTAD                | hiTAD                 | tool used to call TADs |
+| TAD.params               | NA                   | NA                    | tool-specific params used to call TADs |
+| Sample.Group.Numerator   | CTCF.iN.BIALLELIC    | CTCF.iN.BIALLELIC     | biological condition of numerator in comparison
+| Sample.Group.Denominator | All.iN.WT            | All.iN.WT             | |
+| chr                      | chr1                 | chr1                  | chromosome |
+| start                    | 1940000              | 2900000               | start of TAD boundary bin|
+| end                      | 1950000              | 2910000               | start + resolution |
+| isBoundary               | FALSE                | FALSE                 | whether the bin was TAD Boundary called by TAD.method in either condition |
+| DifferenceType           | Shifted              | Shifted               | Type of difference detected by TADCompare |
+| Enriched.Condition       | All.iN.WT            | All.iN.WT             | which condition is enriched for the TAD boundary difference |
+| TAD.Score.Numerator      | 0.8797242872092477   | 0.6460212128404218    | bin-specific boundary score for the boundary being compared |
+| TAD.Score.Denominator    | 1.9732218728763105   | 1.817865422191164     | |
+| Gap.Score                | -3.4442393791143675  | -3.726171792796507    | z-score of the difference between TAD.Score.* |
+| p.value                  | 5.726684378441336e-4 | 1.9440992804322307e-4 | p-value calculated from Gap.Score |
+| p.adj.gw                 | 0.06789254167713184  | 0.03075384322974094   | BH-adjusted p-value for all compared boundaries across the genome per condition |
 
-We also compare TADs called from merged matrices using `TADCompare`, since each merged matrix represents a biological condition (e.g. 16p.iN.WT) it is an expliciit differential analysis 
+### Generate TAD Results
+
+Commands to generate TAD + TAD Comparison data
+```bash
+# generate commands to run shell tools for TAD calling
+mamba activtte r
+Rscript ./scripts/TADs/make.TAD.calling.cmds.R -t $(nproc)
+# now run those generated commands with GNU parallel
+mamba activtte TADs
+parallel -j 1 --eta --bar :::: ./results/TADs/all.TAD.calling.cmds.txt
+# Generate Consensus TAD results from set of individual matrices with spectralTAD
+mamba activtte r
+Rscript ./scripts/TADs/run.ConsensusTADs.R
+# Coallate TAD results into single, structured output files
+mamba activtte r
+Rscript ./scripts/TADs/coallate.all.TAD.results.R
+# Compute TAD MoCs for all sets of TADs
+mamba activtte r
+Rscript ./scripst/TADs/calculate.TAD.MoCs.R
+# Run TADCompare to generated differential TAD results
+# requires 120Gb for the largest matrix comparison (i.e. chr1 @5Kb)
+mamba activtte r
+Rscript ./scripts/TADs/run.TADCompare.R -t $(nproc)
+```
+
+Ultimately these commands will generate the followig output files
+```bash
+./results/TADs/
+├── results_TADs/                # Nested directory structure of individually generated results
+├── all.ConsensusTAD.TADs.tsv    # combined file with all TADs called by ConsensusTAD
+├── all.hiTAD.TADs.tsv           # combined file with all TADs called by hiTAD
+├── all.cooltools.TADs.tsv       # combined file with all TADs called by cooltools
+├── all.all.TADs.tsv             # combined file with all TADs called by all methods
+├── all.all.TAD.MoCs.tsv         # Computed Measure of Concordance of TADs for all pairs of conditions
+├── results_TADCompare/
+├── all.TADCompare.results.tsv
+└── all.TADCompare.n.results.tsv
+```
 

@@ -41,10 +41,10 @@ $ tree -L 2 dependencies.files
     ├── conda.envs
     │   ├── cooltools.yml
     │   ├── distiller.yml
-    │   ├── HiCRep.yml
+    │   ├── hicrep.yml
     │   ├── multiqc.yml
     │   ├── TADs.yml
-    │   └── R.yml
+    │   └── r.yml
     ├── packages
     │   ├── functionsdchic_1.0.tar.gz
     │   └── hashmap_0.2.2.tar.gz
@@ -265,25 +265,6 @@ Generate HiCRep results
 conda activate hicrep
 Rscript ./scripts/hicrep/run.hicrep.R && parallel -j $(nproc) --bar --eta :::: ./results/hicrep/all.hicrep.cmds.txt
 ```
-
-### Compartment Analysis
-
-#### Compartment Annotation
-
-We call compartments using `cooltools eigs-cis`, and phase the calls using `genecov` track, compuated by `cooltools genome genecov`, using all default params @ 100,50,25,10,5Kb.
-Generate Compartment annotations
-```bash
-./scripts/compartments/run.compartments.cooltools.sh -m mk_phase
-./scripts/compartments/run.compartments.cooltools.sh -m compartments ./results/coolers_library/**/*.Merged.Merged*.mapq_30.1000.mcool
-Define which functional genomic annotations (e.g. CTCF sites) overlap with our annotated HiC features
-```bash
-Rscript scripts/functional.enrichment/generate.cCRE.enrichment.cmds.R
-parallel -j $(nproc) --eta --bar :::::
-```
-
-#### Compartment Comparison
-
-Different filler text
 
 ### Misc. Results Generation
 
