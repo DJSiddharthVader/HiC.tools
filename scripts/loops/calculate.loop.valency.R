@@ -2,13 +2,12 @@
 # Depdendencies
 ###################################################
 library(here)
-here::i_am('scripts/loops/calculate.loop.valency.R')
+# here::i_am('scripts/loops/calculate.loop.valency.R')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     library(purrr)
-    library(optparse)
     source(file.path(BASE_DIR,   'scripts/constants.R'))
-    source(file.path(SCRIPT_DIR, 'locations.R'))
+    source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
     source(file.path(SCRIPT_DIR, 'loops/utils.loops.R'))
     library(magrittr)
@@ -18,7 +17,6 @@ suppressPackageStartupMessages({
 ###################################################
 # Set up all comparisons
 ###################################################
-options(scipen=999)
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force'),
@@ -42,15 +40,18 @@ loops.df <-
     # Filter and clean up loops
     post_process_cooltools_dots_results() %>% 
     filter_loop_results() %>% 
+    mutate(log10.qvalue=-log10(qvalue)) %>% 
+    select(-c(qvalue)) %>% 
     nest(
         loops=
             c(
+                FeatureID,
                 anchor.left,
                 anchor.right,
                 count,
                 length,
                 enrichment,
-                log10.qval
+                log10.qvalue
             )
     )
 # Also calculate loop valency  i.e. how many loops each anchor is a part of
@@ -58,6 +59,7 @@ message('calculating loop valency...')
 check_cached_results(
     results_file=ALL_LOOP_VALENCY_RESULTS_FILE,
     force_redo=parsed.args$force.redo,
+    # force_redo=TRUE,
     results_fnc=calculate_all_loop_valency,
     loops.df=loops.df
 )

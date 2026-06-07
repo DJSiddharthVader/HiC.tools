@@ -566,30 +566,6 @@ calculate_all_loop_valency <- function(
     select(-c(loops))
 }
 
-post_process_loop_valency_results <- function(results.df){
-    results.df %>% 
-    pivot_longer(
-        -c(
-           type, weight, resolution,
-           SampleID, 
-           chr, 
-           kernel,
-           anchor.position, valency
-        ),
-        names_to='tmp',
-        values_to='value',
-    ) %>%
-    separate_wider_delim(
-        tmp,
-        delim='-',
-        names=c('feature', 'stat')
-    ) %>%
-    pivot_wider(
-        names_from=stat,
-        values_from=value
-    )
-}
-
 ###################################################
 # Nesting Analysis
 ###################################################
