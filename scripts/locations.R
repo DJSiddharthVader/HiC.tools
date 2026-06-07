@@ -90,9 +90,10 @@ COMPARTMENT_BED_FILES_DIR     <- file.path(COMPARTMENTS_DIR, 'BED_FILES')
 # Differential Contact results from multiHiCCompare
 ################################################################################
 DIFFERENTIAL_CONTACTS_DIR             <- file.path(RESULTS_DIR, 'DifferentialContacts')
+DIFFERENTIAL_CONTACTS_DIR             <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'results')
 ALL_MULTIHICCOMPARE_RESULTS_FILE      <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'all.multiHiCCompare.results.tsv')
-FILTERED_MULTIHICCOMPARE_RESULTS_FILE <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'filtered.multiHiCCompare.results.tsv')
 MULTIHICCOMPARE_SIG_RESULTS_FILE      <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'all.multiHiCCompare.n.results.tsv')
+FILTERED_MULTIHICCOMPARE_RESULTS_FILE <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'filtered.multiHiCCompare.results.tsv')
 
 ################################################################################
 # Functional Genomic Element (FGE) Data + Results

@@ -2,18 +2,15 @@
 # Depdendencies
 ###################################################
 library(here)
-here::i_am('scripts/DifferentialContacts/run.multiHiCCompare.R')
+# here::i_am('scripts/DifferentialContacts/run.multiHiCCompare.R')
 BASE_DIR <- here()
-# BASE_DIR <- '/data/talkowski/Samples/WAPL_NIPBL/HiC'
 suppressPackageStartupMessages({
     library(purrr)
-    library(optparse)
     library(BiocParallel)
     library(hictkR)
     source(file.path(BASE_DIR,   'scripts/constants.R'))
-    source(file.path(SCRIPT_DIR, 'locations.R'))
+    source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
-    source(file.path(SCRIPT_DIR, 'utils.annotations.R'))
     source(file.path(SCRIPT_DIR, 'DifferentialContacts/utils.multiHiCCompare.R'))
     library(magrittr)
     library(tidyverse)
@@ -22,39 +19,33 @@ suppressPackageStartupMessages({
 ###################################################
 # Set up all comparisons
 ###################################################
-options(scipen=999)
 # All combinations of multiHiCCompare hyper-params to test
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force', 'resolutions'),
         has.positional=FALSE
     )
+message(glue('using {parsed.args$threads} core to parallelize'))
+register(MulticoreParam(workers=parsed.args$threads * 2 / 4), default=TRUE)
+plan(multisession,      workers=parsed.args$threads * 2 / 4)
+
+###################################################
+# Generate DAC results for each comparison
+###################################################
+# 2 group comparison + no covariates -> use exact test
 hyper.params.df <- 
     expand_grid(
         resolution=parsed.args$resolutions,
         zero.p=c(0.8),
         A.min=c(5)
     )
-
-###################################################
-# Generate DAC results for each comparison
-###################################################
-# 2 group comparison + no covariates -> use exact test
-message(glue('using {parsed.args$threads} core to parallelize'))
-register(MulticoreParam(workers=parsed.args$threads * 2 / 4), default=TRUE)
-plan(multisession,      workers=parsed.args$threads * 2 / 4)
 # GRanges object with Centro/Telomere regions to filter
 data('hg38_cyto') 
 # List all separate sets of individual replicates to compare + parameters to run multiHiCComapre
 comparisons.df <- 
     ALL_SAMPLE_GROUP_COMPARISONS %>% 
-    set_up_sample_comparisons(merging='both') %>% 
-    dplyr::rename(
-        'Sample.Group.P1'=Sample.Group.Numerator,
-        'Sample.Group.P2'=Sample.Group.Denominator
-    )
-# List all pairs of merged matrices to compare
-# Run 
+    list_all_sample_group_comparisons(merging='both')
+# Run  multiHiCCompare on everything
 comparisons.df %>% 
     run_all_multiHiCCompare(    
         hyper.params.df=hyper.params.df,

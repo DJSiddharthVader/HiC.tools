@@ -2,35 +2,77 @@
 # Depdendencies
 ###################################################
 library(here)
-here::i_am('scripts/loops/run.IDR2D.loops.R')
+# here::i_am('scripts/loops/run.IDR2D.loops.R')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     library(purrr)
-    library(optparse)
     source(file.path(BASE_DIR,   'scripts/constants.R'))
-    source(file.path(SCRIPT_DIR, 'locations.R'))
+    source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
     source(file.path(SCRIPT_DIR, 'utils.plot.R'))
     source(file.path(SCRIPT_DIR, 'loops/utils.loops.R'))
     library(magrittr)
     library(tidyverse)
 })
-
-###################################################
-# Set up all comparisons
-###################################################
-options(scipen=999)
+# Cli args
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force'),
         has.positional=FALSE
+message(glue('using {parsed.args$threads} core to parallelize'))
     )
-# All combinations of multiHiCCompare hyper-params to test
+plan(multisession, workers=parsed.args$threads)
+
+###################################################
+# load loops to compare for each conditions
+###################################################
+# Prepare loops for comparison between conditions 
+# each row is 1 nested set of loop calls per condition + context
+nested.loops.df <- 
+    # load loop results
+    check_cached_results(
+        results_file=ALL_COOLTOOLS_LOOPS_RESULTS_FILE,
+        # force_redo=TRUE,
+        results_fnc=load_all_cooltools_dots
+    ) %>%
+    # Filter and clean up loops
+    post_process_cooltools_dots_results() %>% 
+    filter_loop_results() %>% 
+    standardize_data_cols() %>% 
+    # prep columns for input to IDR2D
+    mutate(resolution=scale_numbers(resolution, force_numeric=TRUE)) %>% 
+    dplyr::rename(
+        'start.A'=anchor.left,
+        'start.B'=anchor.right
+    ) %>% 
+    mutate(
+        log10.qvalue=-log10(qvalue),
+        end.A=start.A + resolution,
+        end.B=start.B + resolution,
+        chr.A=chr,
+        chr.B=chr
+    ) %>% 
+    select(-c(qvalue)) %>% 
+    # nest so one set of loop calls per row (SampleID + res + chr + weight)
+    nest(
+        loops=
+            c(
+                FeatureID,
+                chr.A, start.A, end.A,
+                chr.B, start.B, end.B, 
+                count, length, enrichment, log10.qvalue
+            )
+    )
+
+###################################################
+# Run IDR2D across all params
+###################################################
+# All IDR2D hyper-params to compute
 hyper.params.df <- 
     tribble(
         ~metric_colname, ~value_transformation,
         'enrichment',    'identity',  # high enrichment => most important loops 
-        'log10.qval',    'identity'   # high log10.qval => most important loops
+        'log10.qvalue',  'identity'   # high log10.qval => most important loops
     ) %>% 
     cross_join(
         tibble(
@@ -53,73 +95,28 @@ hyper.params.df <-
                 )
         )
     )
-
-###################################################
-# Generate DAC results for each comparison
-###################################################
-# 2 group comparison + no covariates -> use exact test
-message(glue('using {parsed.args$threads} core to parallelize'))
-plan(multisession, workers=parsed.args$threads)
-#  Prepare loops for comparison between conditions 
-#  each row is 1 nested set of loop calls per condition + context
-nested.loops.df <- 
-    # load loop results
-    check_cached_results(
-        results_file=ALL_COOLTOOLS_LOOPS_RESULTS_FILE,
-        # force_redo=TRUE,
-        results_fnc=load_all_cooltools_dots
-    ) %>%
-    # Filter and clean up loops
-    post_process_cooltools_dots_results() %>% 
-    filter_loop_results() %>% 
-    standardize_data_cols() %>% 
-    # prep columns for input to IDR2D
-    mutate(resolution=scale_numbers(resolution, force_numeric=TRUE)) %>% 
-    dplyr::rename(
-        'start.A'=anchor.left,
-        'start.B'=anchor.right
-    ) %>% 
-    mutate(
-        end.A=start.A + resolution,
-        end.B=start.B + resolution,
-        chr.A=chr,
-        chr.B=chr
-    ) %>% 
-    # nest so one set of loop calls per row (SampleID + res + chr + weight)
-    nest(
-        loops=
-            c(
-                chr.B, start.B, end.B, 
-                chr.A, start.A, end.A,
-                count, length, enrichment, log10.qval
-            )
-    )
+# list all pairs of matrices to compare  loops for
+comparisons.df <- 
+    ALL_SAMPLE_GROUP_COMPARISONS %>% 
+    rename_with(~ str_replace(.x, 'Sample.Group', 'SampleID')) %>% 
+    mutate(across(everything(), ~ str_replace(.x, '$', '.Merged.Merged')))
 # run IDR2D on all comparisons of sample groups + param sets
 nested.loops.df %>% 
     run_all_IDR2D_analysis(
         hyper.params.df=hyper.params.df,
         force.redo=parsed.args$force.redo,
-        sample.group.comparisons=
-            ALL_SAMPLE_GROUP_COMPARISONS %>% 
-            dplyr::rename(
-                'SampleID.P1'=Sample.Group.Numerator,
-                'SampleID.P2'=Sample.Group.Denominator
-            ),
-        suffixes=c('.P1', '.P2'),
+        # force.redo=TRUE,
+        sample.group.comparisons=comparisons.df,
+        # only compare loop call sets with matching param values for these columns
         pair_grouping_cols=
             c(
+                'isMerged',
+                'method',
                 'kernel',
                 'type',
-                'weight',
+                'normalization',
                 'resolution',
                 'chr'
-            ),
-        sampleID_col='SampleID',
-        SampleID.fields=
-            c(
-                'Edit',
-                'Celltype',
-                'Genotype'
             )
     )
 

@@ -316,6 +316,45 @@ run_all_multiHiCCompare <- function(
 ###################################################
 # Load resutls
 ###################################################
+list_all_multiHiCCompare_results <- function(
+    resolutions=NULL,
+    sample.group.comparisons=NULL,
+    file_suffix='-multiHiCCompare.tsv',
+    ...){
+    # resolutions=NULL; sample.group.comparisons=NULL; file_suffix='-multiHiCCompare.tsv'
+    DIFFERENTIAL_CONTACTS_DIR %>% 
+    parse_results_filelist(
+        suffix=file_suffix,
+        filename.column.name='pair.name'
+    ) %>%
+    # Split title into pair of groups ordered by numerator/denominator
+    mutate(pair.name=str_remove(pair.name, file_suffix)) %>% 
+    separate_wider_delim(
+        pair.name,
+        delim='_vs_',
+        names=c('Sample.Group.Numerator', 'Sample.Group.Denominator')
+    ) %>% 
+    # Filter relevant results sets
+    {
+        if (!is.null(resolutions)) {
+            filter(., resolution %in% resolutions)
+        } else {
+            .
+        }
+    } %>% 
+    {
+        if (!is.null(sample.group.comparisons)) {
+            inner_join(
+                .,
+                sample.group.comparisons,
+                by=c('Sample.Group.Numerator', 'Sample.Group.Denominator')
+            )
+        } else {
+            .
+        }
+    }
+}
+
 load_and_correct_multiHiCCompare_results <- function(
     filepaths,
     nom.threshold,
@@ -334,57 +373,6 @@ load_and_correct_multiHiCCompare_results <- function(
         p.adj    < fdr.threshold,
         p.value  < nom.threshold
     )
-}
-
-list_all_multiHiCCompare_results <- function(
-    resolutions=NULL,
-    sample.group.comparisons=NULL,
-    file_suffix='-multiHiCCompare.tsv',
-    ...){
-    # resolutions=NULL; sample.group.comparisons=NULL; file_suffix='-multiHiCCompare.tsv'
-    if (is.null(sample.group.comparisons)){
-        sample.group.comparison.colnames <- c('SampleID.Numerator','SampleID.Denominator')
-    } else {
-        sample.group.comparison.colnames <- colnames(sample.group.comparisons)
-    }
-    # Load all results
-    parse_results_filelist(
-        input_dir=file.path(DIFFERENTIAL_CONTACTS_DIR, 'results'),
-        suffix=file_suffix,
-        filename.column.name='pair.name',
-        param_delim='_',
-    ) %>%
-    # Split title into pair of groups ordered by numerator/denominator
-    mutate(pair.name=str_remove(pair.name, file_suffix)) %>% 
-    separate_wider_delim(
-        pair.name,
-        delim='_vs_',
-        names=sample.group.comparison.colnames
-    ) %>% 
-    extract_all_sample_pair_metadata(
-        SampleID.cols=c('SampleID.Numerator', 'SampleID.Denominator'),
-        SampleID.fields=c('Edit', 'Celltype', 'Genotype'),
-        suffixes=c('Numerator', 'Denominator')
-    ) %>% 
-    # Filter relevant results sets
-    {
-        if (!is.null(resolutions)) {
-            filter(., resolution %in% resolutions)
-        } else {
-            .
-        }
-    } %>% 
-    {
-        if (!is.null(sample.group.comparisons)) {
-            inner_join(
-                .,
-                sample.group.comparisons,
-                by=sample.group.comparison.colnames
-            )
-        } else {
-            .
-        }
-    }
 }
 
 load_all_multiHiCCompare_results <- function(
@@ -421,7 +409,9 @@ load_all_multiHiCCompare_results <- function(
     unnest(results) %>% 
     select(-c(filepaths)) %>%
     dplyr::rename('distance.bins'=D) %>% 
+    mutate(distance.bp=distance.bins * resolution) %>% 
     mutate(
+        comparison=glue('{Sample.Group.Numerator} vs {Sample.Group.Denominator}'),
         merged=ifelse(merged, 'Merged', 'Individual'),
         chr=rename_chrs(chr, to_label=TRUE),
         # calculate log of all pvalues + add columns
@@ -433,10 +423,13 @@ load_all_multiHiCCompare_results <- function(
     ) %>% 
     # Create a unique ID for each bin tested, to check overlaps across experiments
     unite(
-        'bin.pair.idx',
-        chr, region1, region2,
+        FeatureID,
         sep='#',
-        remove=FALSE
+        remove=FALSE,
+        c(
+            zero.p, A.min, merged,
+            chr, region1, region2
+        )
     )
 }
 
@@ -447,9 +440,9 @@ post_process_multiHiCCompare_results <- function(results.df){
     select(
         -c(
             A.min, zero.p,
+            # logCPM,
             p.value, p.adj,
-            log.p.value, log.p.adj,
-            logCPM
+            log.p.value, log.p.adj
         )
     )
 }
@@ -502,8 +495,8 @@ count_contacts_by_significance <- function(
     ungroup() %>% 
     mutate(
         results=
-            # future_pmap(
-            pmap(
+            future_pmap(
+            # pmap(
                 .l=.,
                 # correct adjusted pvalues genome-wide
                 .f=load_correct_count_multiHiCCompare_results,
