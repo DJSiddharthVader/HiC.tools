@@ -411,53 +411,74 @@ nest_and_combine_all_functional_loci_dataset <- function(
 }
 
 ################################################################################
-# Directly link genes to HiFs by overlap/proximity
+# Map HiFs to associated Genes directly or via linked functional loci 
 ################################################################################
-map_HiF_to_genes_within <- function(
+map_HiF_to_genes_with_associations_within <- function(
     HiFs.df,
+    associations.df,
     deg.results.df,
-    min.Gene.overlap.frac,
     ...){
-    deg.results.df %>% 
-    # join_overlap(
-    #     HiFs.df,
-    left_join(
-        HiFs.df,
-        suffix=c('.Gene', '.HiF'),
-        by=
-            join_by(
-                chr,
-                within(start.Gene, end.Gene, start.HiF, end.HiF)
+    # paste('row.index=1', paste0(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', collapse='; '), 'tmp %>% head(row.index) %>% tail(1) %>% t()', sep='; ')
+    # row.index=250 ; resolution=tmp$resolution[[row.index]]; SampleID=tmp$SampleID[[row.index]]; HiF.type=tmp$HiF.type[[row.index]]; HiFs.df=tmp$HiFs.df[[row.index]]; association.strategy=tmp$association.strategy[[row.index]]; association.type=tmp$association.type[[row.index]]; association.subtype=tmp$association.subtype[[row.index]]; association.source=tmp$association.source[[row.index]]; associations.df=tmp$associations.df[[row.index]]; results_file=tmp$results_file[[row.index]]; tmp %>% head(row.index) %>% tail(1) %>% t()
+    # map all associations to each HiF they are inside, include all associations outside all HiFs
+    associations.df %>% 
+    mutate(association.status='Gene-link within HiF') %>%
+    join_overlap_left(HiFs.df) %>% 
+    as_tibble() %>% 
+    mutate(
+        association.status=
+            ifelse(
+                is.na(association.status),
+                'Gene-link outside HiFs',
+                association.status
             )
     ) %>% 
-    filter(Gene.overlap.frac > min.Gene.overlap.frac)
+    left_join(
+        deg.results.df,
+        by=select(deg.results.df, starts_with('Target.Gene.')) %>% colnames()
+    ) %>% 
+    # count(is.na(FeatureID), is.na(association.status), is.na(padj.DESeq2), as.character(comparison))
+    dplyr::rename('chr'=seqnames) %>% 
+    select(-c(width, strand))
 }
 
-map_HiF_to_genes_nearby <- function(
+map_HiF_to_nearest_associated_gene <- function(
     HiFs.df,
-    deg.results.df,
-    nearby.threshold,
+    associations.df,
     ...){
-    # deg.results.df %>% 
-    stop('Not Implemented')
+    # paste('row.index=1', paste0(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', collapse='; '), 'tmp %>% head(row.index) %>% tail(1) %>% t()', sep='; ')
+    # row.index=1; resolution=tmp$resolution[[row.index]]; SampleID=tmp$SampleID[[row.index]]; HiF.type=tmp$HiF.type[[row.index]]; HiFs.df=tmp$HiFs.df[[row.index]]; association.strategy=tmp$association.strategy[[row.index]]; association.subtype=tmp$association.subtype[[row.index]]; association.source=tmp$association.source[[row.index]]; association.type=tmp$association.type[[row.index]]; comparison.DESeq2=tmp$comparison.DESeq2[[row.index]]; associations.df=tmp$associations.df[[row.index]]; results_file=tmp$results_file[[row.index]]; tmp %>% head(row.index) %>% tail(1) %>% t()
+    # for each gene-link, get the nearest HiF
+    # can perform fisher testing with arbitrary thresholdign later
+    join_nearest(
+        associations.df,
+        HiFs.df,
+        distance=TRUE
+    ) %>% 
+    as_tibble() %>% 
+    dplyr::rename('Gene.link.HiF.distance'=distance) %>% 
+    # Set coords to be nearest HiF coords, not gene coords
+    dplyr::rename('chr'=seqnames) %>% 
+    select(-c(width, strand))
 }
 
-map_HiFs_to_genes_directly <- function(
+associate_gene_links_to_HiFs <- function(
     HiFs.df,
-    deg.results.df,
+    associations.df,
     association.strategy,
+    deg.results.df,
     ...){
-    # paste0('row.index=1; ', paste0(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', collapse='; '), '; tmp %>% head(row.index) %>% tail(1) %>% t()')
-    # row.index=161; resolution=tmp$resolution[[row.index]]; normalization=tmp$normalization[[row.index]]; SampleID=tmp$SampleID[[row.index]]; HiF.type=tmp$HiF.type[[row.index]]; HiFs.df=tmp$HiFs.df[[row.index]]; fuzzy.matching.threshold.bins=tmp$fuzzy.matching.threshold.bins[[row.index]]; association.strategy=tmp$association.strategy[[row.index]]; frac.reciprocal.matching.overlap=tmp$frac.reciprocal.matching.overlap[[row.index]]; association.type=tmp$association.type[[row.index]]; association.subtype=tmp$association.subtype[[row.index]]; association.source=tmp$association.source[[row.index]]; results_file=tmp$results_file[[row.index]]; tmp %>% head(row.index) %>% tail(1) %>% t()
     if (association.strategy == 'nearby') {
-        map_HiF_to_genes_nearby(
+        map_HiF_to_nearest_associated_gene(
             HiFs.df,
+            associations.df,
             deg.results.df,
             ...
         )
     } else if (association.strategy == 'within') {
-        map_HiF_to_genes_within(
+        map_HiF_to_genes_with_associations_within(
             HiFs.df,
+            associations.df,
             deg.results.df,
             ...
         )
@@ -466,7 +487,78 @@ map_HiFs_to_genes_directly <- function(
     }
 }
 
+make_per_condition_mapping_results_filepath <- function(
+    association.type,
+    association.subtype,
+    association.source,
+    association.strategy,
+    resolution,
+    HiF.type,
+    SampleID,
+    # comparison.DESeq2,
+    ...){
+    file.path(
+        HIF_GENE_ASSOCIATION_MAPPING_DIR,
+        # association metadata
+        glue('association.type_{association.type}'),
+        glue('association.subtype_{association.subtype}'),
+        glue('association.source_{association.source}'),
+        glue('association.strategy_{association.strategy}'),
+        # HiF metadata
+        glue('resolution_{resolution}'),
+        glue('HiF.type_{HiF.type}'),
+        glue('HiF.scope_per.condition'),
+        glue('{SampleID}-HiF.Gene.Associations.tsv')
+        # glue('HiF.SampleID_{SampleID}'),
+        # HiFs for this SampleID, DEG results from all comparisons
+        # glue('{comparison.DESeq2}-HiF.Gene.Associations.tsv')
+    )
+}
+
+list_all_gene_association_HiF_mapping_results <- function(){
+    HIF_GENE_ASSOCIATION_MAPPING_DIR %>%
+    parse_results_filelist(
+        suffix='-HiF.Gene.Associations.tsv',
+        filename.column.name='SampleID'
+    ) %>%
+    mutate(
+        gene.HiF.mappings.df=
+            pmap(
+                .l=list(filepath),
+                .f=read_tsv,
+                show_col_types=FALSE,
+                progress=FALSE
+            )
+    )
+}
+
+
 ################################################################################
-# Indirectly link genes to HiFs by overlap/proximity with gene-associated functinoal elements
+# Map differential HiFs to associated Genes directly or via linked functional loci 
 ################################################################################
+make_between_condition_mapping_results_filepath <- function(
+    association.type,
+    association.subtype,
+    association.source,
+    association.strategy,
+    resolution,
+    HiF.type,
+    SampleID.Numerator,
+    SampleID.Denominator,
+    ...){
+    file.path(
+        HIF_GENE_ASSOCIATION_MAPPING_DIR,
+        # association metadata
+        glue('association.type_{association.type}'),
+        glue('association.subtype_{association.subtype}'),
+        glue('association.source_{association.source}'),
+        glue('association.strategy_{association.strategy}'),
+        # HiF metadata
+        glue('resolution_{resolution}'),
+        glue('HiF.type_{HiF.type}'),
+        glue('HiF.scope_between.conditions'),
+        # per pair of conditions that Hif is differential between
+        glue('{SampleID.Numerator}-{SampleID.Denominator}-HiF.Gene.Associations.tsv')
+    )
+}
 

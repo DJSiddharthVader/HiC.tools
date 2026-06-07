@@ -2,7 +2,7 @@
 # Dependencies
 ################################################################################
 library(here)
-here::i_am('scripts/Delta.Expression.Association.Testing/link.HiFs.to.Genes.R')
+# here::i_am('scripts/Delta.Expression.Association.Testing/link.HiFs.to.Genes.R')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     source(file.path(BASE_DIR,   'scripts/constants.R'))
@@ -13,38 +13,24 @@ suppressPackageStartupMessages({
     library(tidyverse)
     library(magrittr)
 })
-
-################################################################################
-# Params to specify
-################################################################################
+# CLI args
 parsed.args <- 
     handle_CLI_args(
         args=c('resolutions', 'threads', 'force'),
         has.positional=FALSE
     )
+# parallelization
 if (parsed.args$threads > 1){
-    # plan(multisession, workers=N_WORKERS_FOR_PARLLELIZATION)
-    options(future.globals.maxSize=1.23 * 1024**3)
+    # options(future.globals.maxSize=1.23 * 1024**3)
     plan(multisession, workers=parsed.args$threads)
 } else {
     plan(sequential)
 }
-# Params neede to define if a HiF is associated with a gene for a given association strategy or not
-# Some features are association specific
-# parsed.args$resolutions <- c(50, 25) * 1e3
-parsed.args$resolutions <- c(50) * 1e3
-association.params.df <- 
-    HiF.association.hyper.params.df %>% 
-    cross_join(tibble(resolution=parsed.args$resolutions))
-# load DEG results for all conditions
-deg.results.df <- 
-    load_all_DESeq2_results() %>% 
-    as_iranges()
 
 ################################################################################
 # Combine all HiFs + testing params into neat parsable table
 ################################################################################
-# combine everything, keeps things tidy by nesting miscelaneous feature data into a single column
+# combine all HiFs across HiF.types keeps things tidy by nesting feature-specific data into a single column
 # will be unnested and saved as individual columns
 all.HiFs.df <- 
     c(
@@ -56,16 +42,9 @@ all.HiFs.df <-
         'TAD.Boundary',
         'TAD'
     ) %>% 
-    combine_all_per_condition_HiFs(association.params.df=association.params.df)
-    
-################################################################################
-# Generate "Direct" HiF ~ Gene associations
-################################################################################
-all.HiFs.df %>% 
-    add_column(association.type='Direct') %>% 
-    add_column(association.subtype='Direct') %>% 
-    add_column(association.source='Direct') %>% 
-    # create nested directory of files with HiF ~ Gene mappings for easy parsing/loading
+    combine_all_per_condition_HiFs()
+# load functional element annotations i.e. functinoal loci linked each linked to a specific gene defined by 
+# a specific functional mechanisms (association type/subtype) from a specific dataset (annotation source)
 # Direct gene associations
 all.direct.gene.links.df <- 
     load_gene_annotations() %>%
@@ -74,78 +53,68 @@ all.direct.gene.links.df <-
         seqnames=Target.Gene.chr,
         start=Target.Gene.start,
         end=Target.Gene.end
-        results_file=
-            file.path(
-                HIF_GENE_ASSOCIATION_MAPPING_DIR,
-                glue('association.type_{association.type}'),
-                glue('association.subtype_{association.subtype}'),
-                glue('association.source_{association.source}'),
-                glue('association.strategy_{association.strategy}'),
-                glue('HiF.type_{HiF.type}'),
-                glue('resolution_{resolution}'),
-                glue('{SampleID}-HiF.Gene.Associations.tsv')
-            )
     ) %>% 
     as_granges() %>% 
     tribble(
         ~association.type, ~association.subtype, ~association.source, ~associations.df,
         'Direct',          'Direct',             'Direct',            .
-        {.} -> tmp; tmp
-    # map every gene within/narby
-    pmap(
-        .l=.,
-        .f=check_cached_results,
-        results_fnc=map_HiFs_to_genes_directly,
-        deg.results.df=deg.results.df,
-        .progress=TRUE
     )
+# Indirect gene associations
+all.indirect.gene.links.df <- 
+    ALL_CLEAN_GENE_LOCUS_ASSOCIATIONS_FILE %>% 
+    readRDS() %>% 
+    filter(association.type %in% c('ABC.enhancer'))
+# Parameters to guide mapping of HiFs to "associated" gene-linked functional loci
+association.params.df <- 
+    HiF.association.strategies.df %>% 
+    cross_join(tibble(resolution=c(100, 50, 25) * 1e3))
+    # cross_join(tibble(resolution=parsed.args$resolutions))
 # DEG results for all genes
 deg.results.df <- 
     prep_DESeq2_results_for_associations(force.redo=FALSE)
     # prep_DESeq2_results_for_associations(force.redo=TRUE)
 
 ################################################################################
-# Generate "Indirect" HiF ~ Gene associations i.e. those defined by functional elements
+# Map HiFs ~ Genes using Gene positions + gene-associated functional loci
 ################################################################################
-# load clean functional element annotations data 
-all.indirect.associations.df <- 
-    ALL_CLEAN_GENE_LOCUS_ASSOCIATIONS_FILE %>% 
-    nest(
-        associations.df=
-            -c(
-                association.source,
-                association.subtype,
-                association.type
-            )
-    ) %>%
-    mutate(associations.df=pmap(.l=list(associations.df), .f=as_iranges)) %>% 
-# join HiFs to functional loci
+# Now join all the input data together via matching relevant params 
+# so now each row represents a specific set of HiF ~ Gene mappings (associations) to 
+# save to an output file and use for downstream statistical testing
 all.HiFs.df %>% 
+    # Define association strategy for each type of Hi-C features
     inner_join(
-        all.indirect.associations.df,
+        association.params.df,
+        relationship='many-to-many',
+        by=
+            join_by(
+                HiF.type,
+                resolution
+            )
     ) %>% 
-    # create nested directory of files with HiF ~ Gene mappings for easy parsing/loading
+    # Compare all sets of HiFs against all sets of gene-associated functional loci 
+    cross_join(
+        bind_rows(
+            all.direct.gene.links.df,
+            all.indirect.gene.links.df
+        )
+    ) %>% 
+    # create output filepath using association metadata
     mutate(
         results_file=
-            file.path(
-                HIF_GENE_ASSOCIATION_MAPPING_DIR,
-                glue('association.type_{association.type}'),
-                glue('association.subtype_{association.subtype}'),
-                glue('association.source_{association.source}'),
-                glue('association.strategy_{association.strategy}'),
-                glue('HiF.type_{HiF.type}'),
-                glue('resolution_{resolution}'),
-                glue('{SampleID}-HiF.Gene.Associations.tsv')
+            pmap_chr(
+                .l=.,
+                .f=make_per_condition_mapping_results_filepath,
+                .progress=FALSE
             )
     ) %>% 
-        {.} -> tmp; tmp
-    # map every gene within/narby
+    # save mappings of HiFs to all associated genes + genes with 0 associated HiFs
     pmap(
         .l=.,
         .f=check_cached_results,
-        results_fnc=map_HiFs_to_genes_indirectly,
+        results_fnc=associate_gene_links_to_HiFs,
+        force_redo=TRUE,
+        return_data=FALSE,
         deg.results.df=deg.results.df,
-        all.indirect.associations.df=all.indirect.associations.df,
         .progress=TRUE
     )
 
