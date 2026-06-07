@@ -818,7 +818,7 @@ list_all_sample_group_comparisons <- function(
     # get info + filepaths for all contact matrices
     list_all_mcool_files(merge_status=merge_status) %>%
     # select(Sample.Group, filepath) %>% 
-    nest(samples.df=-c(isMerged, Sample.Group))
+    nest(samples.df=-c(isMerged, Sample.Group)) %>% 
     full_join(
         .,
         .,
