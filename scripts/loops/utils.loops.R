@@ -569,221 +569,137 @@ calculate_all_loop_valency <- function(
 ###################################################
 # Nesting Analysis
 ###################################################
-generate_loop_nesting_calculation_cmds <- function(
-    bin.files.df,
-    force_redo=FALSE){
-    LOOP_BED_FILES_DIR %>%
-    parse_results_filelist(
-        filename.column.name='SampleID',
-        suffix='-loops.bed'
-    ) %>%
-    left_join(
-        bin.files.df,
-        by='resolution'
-    ) %>%
-    mutate(
-        output_dir=
-            file.path(
-                ALL_LOOP_NESTING_RESULTS_DIR,
-                'method_cooltools',
-                glue('kernel_{kernel}'),
-                glue('type_{type}'),
-                glue('weight_{weight}'),
-                glue('resolution_{scale_numbers(resolution, force_numeric=TRUE)}')
-                # glue('region_{chr}')
-            ),
-        results_file=
-            file.path(
-                output_dir,
-                glue('{SampleID}-loops.nesting.track.tsv')
-            )
-    ) %>% 
-    {
-        if (!force_redo) {
-            filter(., !file.exists(results_file))
-        } else{
-            .
-        }
-    } %>% 
-    # bedtools intersect 
-    #     -a all.bins.bed  # list of all bins in a chr at a specified resolution
-    #     -b loops.bed     # all loops called on the same chr at the same resolution
-    #     -wao             # save all loop info for every loop overlapping a bin + include all bins with no overlaps 
-    #     -f 1.0           # only map loops to bins inside of them (i.e. fully overlapped)
-    mutate(bed.cmd=glue('mkdir -p {output_dir} && bedtools intersect -a {binlist.filepath} -b {filepath} -wao -f 1.0 >| {results_file}')) %>% 
-    select(bed.cmd) %>%
-    write_tsv(
-        file.path(LOOPS_DIR, 'all.loop.nesting.bedtools.cmds.txt'),
-        col_names=FALSE
-    )
-}
-
-load_loop_nesting_results <- function(filepath){
-    # Load bedtools intersect output with all data for each loop overlapping each bin
-    read_tsv(
-        filepath,
-        show_col_types=FALSE,
-        progress=FALSE,
-        col_names=
-            c(
-                'chr', 'bin.start', 'bin.end',
-                'chr.loop', 'loop.start', 'loop.end',
-                'loop.count', 'loop.length', 'loop.enrichment', 'loop.log10_qval',
-                'bin.overlap.bp'
-            ),
-        col_types=
-            list(
-                col_character(), col_integer(), col_integer(), 
-                col_character(), col_integer(), col_integer(), 
-                col_integer(), col_integer(), col_double(), col_double(),
-                col_integer()
-            )
-    )
-}
-
-summarize_loop_nesting_results <- function(results.df, resolution, ...) {
+define_nested_loop_regions_and_compute_summary_stats <- function(
+    loops.df,
+    bins.df,
+    resolution,
+    ...){
+    # paste('row.index=1', paste0(colnames(tmp), "=tmp$", colnames(tmp), "[[row.index]]", collapse='; '), 'tmp %>% head(row.index) %>% tail(1) %>% t()', sep='; ')
     # compute summary stats across all loops overlapping each bin
     # then collapse run of contiguous bins together (i.e. all bins within the exact same set of loops)
-    # nesting results as output from bedtools intersect
-    # filepath %>% load_loop_nesting_results() %>% 
-    results.df %>% 
-    # filter out bins that overlap 0 loops
-    filter(chr.loop != '.') %>% 
-    # pivot so each loop feature is its own row per loop overlap
+    bins.df %>%
+    dplyr::rename('seqnames'=chr) %>%
+    as_granges() %>% 
+    # map all individual bins to all loops overlapping them
+    join_overlap_inner_within(
+        loops.df %>% 
+        dplyr::rename('seqnames'=chr) %>%
+        as_granges(),
+        minoverlap=1L,
+        suffix=c('.bin', '.loop')
+    ) %>%
+    as_tibble() %>% 
+    select(-c(strand, width)) %>% 
+    # pivot so each loop feature is on its own row
     pivot_longer(
-        c(starts_with('loop.'), -loop.start, -loop.end),
-        names_prefix='loop.',
+        -c(seqnames, start, end, FeatureID),
         names_to='loop.feature',
         values_to='loop.value'
     ) %>%
     # for each bin + loop feature 
     group_by(
-        chr, bin.start, bin.end,
+        seqnames, start, end,
         loop.feature
     ) %>%
-    # summarize the loop feature statistics + count how many loops overlap this bin
+    # calculate loop feature summary statistics + count nesting lvl (how many loops overlap each bin)
     summarize(
         nesting.lvl=n(),
         across(
             .cols=c(loop.value),
             .fn=
                 list(
+                    'var'=var,
                     'mean'=mean,
                     'min'=min,
                     'max'=max,
                     'sum'=sum
                 ),
-            .names="metric.{.fn}"
-
+            .names="metric_{.fn}"
         )
     ) %>%
-    # pivot so every stat across every feature is a sperate column
-    # now each row represents 1 bin + the nesting results for the bin
     ungroup() %>% 
     pivot_wider(
         names_from=loop.feature,
-        names_glue='{.value}.{loop.feature}',
-        values_from=starts_with('metric.')
+        names_glue='{.value}_{loop.feature}',
+        values_from=starts_with('metric_')
     ) %>% 
-    # Now collapse bin-wise results for all sets of contiguous bins at the same nesting lvl
+    # Now collapse all sets of contiguous bins at the same nesting lvl into segments
     # so each row is a segment (start-end) instead of a single bin
-    # all bins collapsed this way have the same nesting stats
+    # all bins squashed into the same segment are this way overlapped by the same set of loops
+    # so all summary stats per nesting segment are the same
     group_by(
         across(
             c(
-                starts_with('metric.'), 
+                starts_with('metric_'), 
                 'nesting.lvl',
-                'chr'
+                'seqnames'
             )
         )
     ) %>%
     # Take the leftmost start and righmost end for all groups of contiguous bins (i.e. segments) that
     # by definition have the same loop nesting stats, since they are covered by the same set of loops
     summarize(
-        nest.start=min(bin.start),
-        nest.end=max(bin.end) - resolution # start of the last bin in the nested region
+        start=min(start),
+        end=max(end)
     ) %>%
     ungroup() %>%
-    relocate(chr, nest.start, nest.end, nesting.lvl)
+    dplyr::rename('chr'=seqnames) %>% 
+    arrange(chr, start) %>% 
+    relocate(chr, start, end, nesting.lvl)
 }
 
-list_all_loop_nesting_results <- function(){
-    ALL_LOOP_NESTING_RESULTS_DIR %>% 
-    parse_results_filelist(
-        filename.column.name='SampleID',
-        suffix='-loops.nesting.track.tsv'
+compute_all_loop_nesting_results <- function(
+    all.loops.df,
+    all.bins.df){
+    all.loops.df %>%
+    left_join(
+        all.bins.df,
+        by=join_by(resolution)
     ) %>% 
-    separate_wider_delim(
-        SampleID,
-        delim='.',
-        names=c('Edit', 'Celltype', 'Genotype'),
-        cols_remove=FALSE
-    )
-}
-
-load_all_loop_nesting_results <- function(){
-    # results.df <- 
-    list_all_loop_nesting_results() %>% 
     mutate(
         nesting.results=
-        # future_pmap(
-            pmap(
+            future_pmap(
+            # pmap(
                 .l=.,
-                .f=
-                    function(filepath, resolution, ...){
-                        filepath %>% 
-                        load_loop_nesting_results() %>% 
-                        summarize_loop_nesting_results(resolution)
-                    },
+                .f=define_nested_loop_regions_and_compute_summary_stats,
                 .progress=TRUE
             )
     ) %>%
     unnest(nesting.results) %>% 
-    select(-c(filepath))
+    select(-c(loops.df, bins.df))
+    # mutate(
+    #     results_file=
+    #         file.path(
+    #             ALL_LOOP_NESTING_RESULTS_DIR,
+    #             glue('resolution_{resolution}'),
+    #             glue("normalization_{normalization}"),
+    #             glue("kernel_{kernel}"),
+    #             glue('{SampleID}-loop.nesting.results.tsv'),
+    #         )
+    # ) %>% 
+    # future_pmap(
+    #     .l=.,
+    #     .f=check_cached_results,
+    #     results_fnc=define_nested_loop_regions_and_compute_summary_stats,
+    #     .progress=TRUE
+    # )
 }
 
 post_process_loop_nesting_result <- function(results.df){
     results.df %>% 
     filter(kernel == 'donut') %>% 
-    filter(weight == 'balanced') %>% 
-    mutate(nest.length=nest.end - nest.start) %>% 
+    filter(normalization == 'balanced') %>% 
+    mutate(length=end - start) %>% 
     pivot_longer(
-        starts_with('metric.'),
+        starts_with('metric_'),
         names_to='tmp',
         values_to='value'
     ) %>% 
     separate_wider_delim(
         tmp,
-        delim='.',
+        delim='_',
         names=c(NA, 'stat', 'loop.feature')
     )
-}
-
-load_all_loop_nesting_count_result <- function(){
-    list_all_loop_nesting_results() %>% 
-    mutate(
-        nesting.results=
-        # future_pmap(
-            pmap(
-                .l=.,
-                .f=
-                    function(filepath, ...){
-                        filepath %>% 
-                        load_loop_nesting_results() %>% 
-                        # mark which bins had no overlapping loops
-                        mutate(no.overlaps=(chr.loop != '.')) %>%
-                        count(
-                            chr, bin.start, bin.end, 
-                            no.overlaps,
-                            name='n.loops.overlapping'
-                        ) %>%
-                        mutate(n.loops.overlapping=ifelse(no.overlaps, 0, n.loops.overlapping))
-                    },
-                .progress=TRUE
-            )
-    ) %>%
-    unnest(nesting.results) %>% 
-    select(-c(filepath, no.overlaps))
 }
 
 ###################################################
