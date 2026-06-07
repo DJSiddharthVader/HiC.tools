@@ -51,7 +51,7 @@ generate_all_genome_binning_cmds <- function(
 
 list_all_genome_bin_files <- function(){
     GENOME_BINS_FILES_DIR %>% 
-    parse_results_filelist(suffix='-genome.bins.tsv') %>% 
+    parse_results_filelist(suffix='genome.bins.tsv') %>% 
     select(-c(filename)) %>% 
     dplyr::rename('genomic.bins.filepath'=filepath)
 }
