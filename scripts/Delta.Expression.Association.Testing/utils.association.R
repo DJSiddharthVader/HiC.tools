@@ -4,89 +4,21 @@
 library(plyranges)
 
 ################################################################################
-# eQTL data
+# Fixed association analaysis parameter sets
 ################################################################################
-get_remote_filepaths_for_eQTLs_of_interest <- function(){
-    EQTL_REMOTE_FILEPATHS_FILE %>%
-    read_tsv(show_col_types=FALSE) %>%
-    filter(sample_group %in% c()) %>% 
-    filter(tissue_label %in% c()) %>% 
-    filter(condition_label %in% c()) %>% 
-    filter(quant_method %in% c()) %>% 
-    select(
-        # study_id,
-        # dataset_id,
-        study_label,
-        sample_group,
-        # tissue_id,
-        tissue_label,
-        condition_label,
-        sample_size,
-        # quant_method
-        ftp_cs_path  # path to credible set of eQTLs
-    ) %>%
-    dplyr::rename('eQTL.filpath'=ftp_cs_path)
-}
-
-download_and_parse_eQTL_file <- function(eQTL.filpath){
-    tmp.filepath <- tempfile()
-    EQTL_REMOTE_FILEPATHS_LINK %>% download.file(tmp.filepath)
-    tmp.filepath %>%
-    {.}
-}
-
-download_and_parse_all_eQTL_files <- function(force_redo=FALSE){
-    get_remote_filepaths_for_eQTLs_of_interest() %>%
-    mutate(results_file=file.path(CACHED_EQTLS_DIR, basename(eQTL.filpath))) %>% 
-    pmap(
-        .f=check_cached_results,
-        results_fnc=download_and_parse_eQTL_file,
-        force_redo=force_redo,
-        .progress=TRUE
-    ) %>%
-    bind_rows()
-}
-
-################################################################################
-# ABC data
-################################################################################
-load_internal_ABC_enhancers <- function(){
-    INTERNAL_ABC_SCORES_FILE %>% 
-    read_tsv(show_col_types=FALSE) %>% 
-    # dplyr::rename(
-    #     'association.subtype'=,
-    #     'EnhancerID'=,
-    #     'Target.Gene.TSS.Enhancer.distance'=,
-    #     'Target.Gene.TSS'=,
-    #     'Target.Gene.Symbol'=
-    # ) %>% 
-    add_column(
-        association.source='Internal',
-        association.type='ABC.enhancer'
+HiF.association.strategies.df <- 
+    tribble(
+        ~HiF.type,            ~association.strategy,
+        'DIR.anchors',        'nearby',
+        'DIR',                'within',
+        'compartment.switch', 'nearby',
+        'compartment.region', 'within',
+        'loop.nesting',       'within',
+        'loop.anchor',        'within',
+        'loop',               'within',
+        'TAD.Boundary',       'nearby',
+        'TAD',                'within'
     )
-}
-
-load_nasser_ABC_enhancers <- function(){
-    # every row is the position of an enhancer and what gene it is linked to and how
-    NASSER_ABC_SCORES_FILE %>%
-    read_tsv(show_col_types=FALSE) %>% 
-    # Elements with an ABC score > 0.015 are typically considered "significant" connections. 
-    # according to Nasser et al. 2021
-    filter(ABC.Score > 0.15) %>% 
-    mutate(
-        association.subtype=
-            case_when(
-                isSelfPromoter ~ 'self.promoter',
-                !isSelfPromoter ~ glue('enhancer.linked.{class}')
-            )
-    ) %>% 
-    dplyr::rename(
-        'EnhancerID'=name,
-        'Target.Gene.TSS.Enhancer.distance'=distance,
-        'Target.Gene.TSS'=TargetGeneTSS,
-        'Target.Gene.Symbol'=TargetGene
-    )
-}
 
 ################################################################################
 # Load Gene info + Differential results
@@ -226,6 +158,241 @@ load_all_DESeq2_results <- function(force.redo=FALSE){
             }
     ) %>% 
     standardize_data_cols()
+}
+
+################################################################################
+# Combine all indirect gene-linked functional loci annotations together 
+################################################################################
+# eQTL data
+get_remote_filepaths_for_eQTLs_of_interest <- function(){
+    EQTL_REMOTE_FILEPATHS_FILE %>%
+    read_tsv(show_col_types=FALSE) %>%
+    filter(
+        tissue_label %in% 
+            c(
+                'brain (DLPFC)',
+                'brain (cerebellum)',
+                'brain (putamen)',
+                'brain (substantia nigra)',
+                'brain (amygdala)',
+                'brain (anterior cingulate cortex)',
+                'brain (caudate)',
+                'brain (cortex)',
+                'brain (hippocampus)',
+                'brain (hypothalamus)',
+                'brain (nucleus accumbens)',
+                'brain (spinal cord)',
+                'neocortex',
+                'microglia',
+                'neuron,',
+                'neural progenitor',
+                'sensory neuron',
+                'serotonergic neuron',
+                'tibial nerve',
+                'dopaminergic neuron',
+                'astrocyte',
+                'dendritic cell',
+                'plasmacytoid dendritic cell',
+                # controls?
+                'neutrophil',
+                'lung'
+            )
+    ) %>% 
+    filter(str_detect(condition_label, 'naive')) %>% 
+    filter(
+        quant_method %in% 
+            c(
+                'ge',
+                'tx',
+                'txrev'
+            )
+    )
+}
+
+download_and_clean_all_eQTL_files <- function(
+    p.adj.thresh=0.1,
+    force.redo=FALSE){
+    get_remote_filepaths_for_eQTLs_of_interest() %>%
+    dplyr::rename('url'=ftp_cs_path) %>% 
+    mutate(
+        eQTL.results=
+            pmap(
+                .l=.,
+                .f=
+                    function(url, p.adj.thresh, force.redo, ...){ 
+                        destfile <- file.path(CACHED_EQTLS_DIR, basename(url))
+                        if (!file.exists(destfile) & !force.redo) {
+                            download.file(
+                                url=url,
+                                destfile=destfile
+                            )
+                        } 
+                        destfile %>%
+                        gzfile() %>% 
+                        read_tsv(show_col_types=FALSE) %>%
+                        mutate(p.adj=p.adjust(pvalue, method='BH')) %>% 
+                        filter(p.adj < p.adj.thresh)
+
+                    },
+                p.adj.thresh=p.adj.thresh,
+                force.redo=force.redo,
+                .progress=TRUE
+            )
+    ) %>% 
+    unnest(eQTL.results) %>% 
+    # parse eQTL locus locations into separate columns 
+    separate_wider_delim(
+        region,
+        delim=':',
+        names=c('chr', 'region')
+    ) %>% 
+    separate_wider_delim(
+        region,
+        delim=fixed('-'),
+        names=c('start', 'end', 'tmp'),
+        too_few='align_start'
+    ) %>% 
+    # idk wierd case where start coords are negative?
+    filter(is.na(tmp)) %>% select(-c(tmp)) %>% 
+    # only keep most significant eQTL at each locus
+    add_count(
+        gene_id,
+        chr, start, end,
+        name='n.eQTLs.at.locus'
+    ) %>% 
+    group_by(
+        gene_id,
+        chr, start, end
+    ) %>% 
+    slice_min(p.adj, n=1) %>% 
+    ungroup() %>% 
+    dplyr::rename(
+        'PiP'=pip,
+        'csID'=cs_id,
+        'cs.size'=cs_size,
+        'VariantID'=variant,
+        'Target.EnsemblID'=molecular_trait_id,
+        'Target.Gene.EnsemblID'=gene_id
+    ) %>% 
+    select(
+        -c(
+            beta, se, z, cs_min_r2,
+            ends_with('_id'),
+            ends_with('_path'), 
+            url
+        )
+    )
+}
+# ABC data
+load_internal_ABC_enhancers <- function(){
+    INTERNAL_ABC_SCORES_FILE %>% 
+    read_tsv(show_col_types=FALSE) %>% 
+    # dplyr::rename(
+    #     'association.subtype'=,
+    #     'EnhancerID'=,
+    #     'Target.Gene.TSS.Enhancer.distance'=,
+    #     'Target.Gene.TSS'=,
+    #     'Target.Gene.Symbol'=
+    # ) %>% 
+    add_column(
+        association.source='Internal',
+        association.type='ABC.enhancer'
+    )
+}
+
+load_nasser_ABC_enhancers <- function(){
+    # every row is the position of an enhancer and what gene it is linked to and how
+    NASSER_ABC_SCORES_FILE %>%
+    read_tsv(show_col_types=FALSE) %>% 
+    # Elements with an ABC score > 0.015 are typically considered "significant" connections. 
+    # according to Nasser et al. 2021
+    mutate(is.enhancer.sig=ABC.Score > 0.15) %>% 
+    mutate(
+        association.subtype=
+            case_when(
+                isSelfPromoter ~ 'self.promoter',
+                !isSelfPromoter ~ glue('enhancer.linked.{class}')
+            )
+    ) %>% 
+    dplyr::rename(
+        'EnhancerID'=name,
+        'Target.Gene.TSS.Enhancer.distance'=distance,
+        'Target.Gene.TSS'=TargetGeneTSS,
+        'Target.Gene.Symbol'=TargetGene
+    )
+}
+# combine everything
+nest_and_combine_all_functional_loci_dataset <- function(
+    gene.linked.functional.annotations,
+    gene.annotations.df){
+    # gene.linked.functional.annotations=list(TFBS.df, eQTLs.df, enhancers.df); gene.annotations.df=load_gene_annotations()
+    pmap(
+        .l=list(df=gene.linked.functional.annotations),
+        .f=
+            function(df, gene.annotations.df, ...){
+                df %>% 
+                {
+                    if (length(setdiff(c('Target.Gene.EnsemblID', 'Target.Gene.Symbol'), colnames(.))) == 0) {
+                        left_join(
+                            .,
+                            gene.annotations.df,
+                            relationship='many-to-many',
+                            by=
+                                join_by(
+                                    Target.Gene.Symbol,
+                                    Target.Gene.EnsemblID
+                                    # Target.Gene.Symbol == Symbol,
+                                    # Target.Gene.EnsemblID == EnsemblID
+                                )
+                        )
+                    } else if (length(setdiff(c('Target.Gene.EnsemblID'), colnames(.))) == 0) {
+                        left_join(
+                            .,
+                            gene.annotations.df,
+                            relationship='many-to-many',
+                            by=join_by(Target.Gene.EnsemblID)
+                            # by=join_by(Target.Gene.EnsemblID == EnsemblID)
+                                    
+                        )
+                    } else if (length(setdiff(c('Target.Gene.Symbol'), colnames(.))) == 0) {
+                        left_join(
+                            .,
+                            gene.annotations.df,
+                            relationship='many-to-many',
+                            by=join_by(Target.Gene.Symbol)
+                            # by=join_by(Target.Gene.Symbol == Symbol,)
+                        )
+                    } else {
+                        .
+                    }
+                }
+            },
+        gene.annotations.df=gene.annotations.df,
+        .progress=TRUE
+    ) %>% 
+    bind_rows() %>% 
+    # nest specific associations by type
+    nest(
+        associations.df=
+            -c(
+                association.source,
+                association.subtype,
+                association.type
+            )
+    ) %>%
+    # convert associations info to granges
+    mutate(
+        associations.df=
+            pmap(
+                .l=list(associations.df),
+                .f=
+                    function(associations.df) {
+                        associations.df %>% 
+                        dplyr::rename('seqnames'=chr) %>% 
+                        as_granges()
+                    }
+            )
+    )
 }
 
 ################################################################################

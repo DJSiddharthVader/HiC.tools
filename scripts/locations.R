@@ -15,7 +15,7 @@ GENOME_BINS_FILES_DIR  <- file.path(REF_DIR, 'genome.bins')
 GENOME_TRACK_FILES_DIR <- file.path(REF_DIR, 'genome.tracks')
 GENOME_NAME            <- 'hg38'
 GRCH38_DIR             <- file.path(BASE_DIR, 'GRCh38.Reference')
-CHROMSIZES_FILE        <- file.path(GRCH38_DIR, 'GRCh38_no_alt_analysis_set_GCA_000001405.15.chrom.sizes')
+CHROMOSOME_SIZES_FILE  <- file.path(GRCH38_DIR, 'GRCh38_no_alt_analysis_set_GCA_000001405.15.chrom.sizes')
 
 ################################################################################
 # Sample QC Results
@@ -124,10 +124,11 @@ DESEQ2_DATA_DIR             <- file.path(RESULTS_DIR, 'RNASeq', 'DESeq2')
 DESEQ2_RESULTS_FILE         <- file.path(RESULTS_DIR, 'RNASeq', 'all.DESeq2.results.tsv')
 # Genomic data to link genes to Hi-C features via non-coding annotations
 GENE_LOCUS_ASSOCIATIONS_DIR <- file.path(REF_DIR, 'raw.gene.locus.association.data')
-CACHED_EQTLS_DIR            <- file.path(GENE_LOCUS_ASSOCIATIONS_DIR, 'raw.eQTL.data')
 NASSER_ABC_SCORES_FILE      <- file.path(GENE_LOCUS_ASSOCIATIONS_DIR, 'H1_Derived_Neuronal_Progenitor_Cultured_Cells-Roadmap_abc_scores.tsv')
 INTERNAL_ABC_SCORES_FILE    <- file.path(GENE_LOCUS_ASSOCIATIONS_DIR, 'gnomAD_SV_v3.vs.ABC_H1_Derived_Neuronal_Progenitor_Cultured_Cells_Roadmap.over_50perc_ovr.bed.gz')
 EQTL_REMOTE_FILEPATHS_FILE  <- file.path(GENE_LOCUS_ASSOCIATIONS_DIR, 'tabix_ftp_paths.tsv')
+CACHED_EQTLS_DIR            <- file.path(GENE_LOCUS_ASSOCIATIONS_DIR, 'raw.eQTL.data')
+ALL_RELEVANT_EQTLS_FILE     <- file.path(GENE_LOCUS_ASSOCIATIONS_DIR, 'all.relevant.eQTLs.tsv')
 # Association testing results
 EXPRESSION_ASSOCIATION_DIR              <- file.path(RESULTS_DIR, 'Delta.Expression.Association.Testing')
 ALL_CLEAN_GENE_LOCUS_ASSOCIATIONS_FILE  <- file.path(EXPRESSION_ASSOCIATION_DIR, 'all.cleaned .Gene.Locus.Associations.rds')
