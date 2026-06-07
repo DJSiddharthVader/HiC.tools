@@ -47,7 +47,7 @@ load_gene_annotations <- function(
                 'end',
                 'strand',
                 'EnsemblID',
-                'Gene.Symbol',
+                'Symbol',
                 'Gene.Type'
             )
     ) %>%
@@ -58,6 +58,7 @@ load_gene_annotations <- function(
             .
         }
     } %>% 
+    dplyr::rename_with(~ str_replace(.x, '^', 'Target.Gene.')) %>% 
     standardize_data_cols(skip.resolution=TRUE)
     # 19913 protein_coding
     # 10214 processed_pseudogene
@@ -121,14 +122,14 @@ load_all_DESeq2_results <- function(force.redo=FALSE){
                     recursive=TRUE
                 ) %>% 
                 tibble(filepath=.) %>%
-                mutate(info=str_remove(basename(filepath), suffix)) %>% 
-                filter(!grepl('iPSC', info)) %>% 
+                mutate(comparison=str_remove(basename(filepath), suffix)) %>% 
+                # filter(!grepl('iPSC', filepath)) %>% 
                 # Tidy pairwise metadata
                 separate_wider_delim(
-                    info,
-                    # delim='-',
+                    comparison,
                     delim='_vs_',
                     names=c('Sample.Group.Numerator', 'Sample.Group.Denominator'),
+                    cols_remove=FALSE
                 ) %>%
                 # load DEG results
                 mutate(
@@ -140,15 +141,14 @@ load_all_DESeq2_results <- function(force.redo=FALSE){
                         )
                 ) %>%
                 unnest(results) %>%
-                # rename_with(.f=~ str_replace(.x, '^', 'DESeq2.')) %>% 
-                # # run TRADEtools to define transcriptome-wide effects
-                # clean up columns
                 dplyr::rename('EnsemblID'=ensemblid) %>% 
-                mutate(gene.length=end - start) %>% 
+                dplyr::rename('Symbol'=symbol) %>% 
+                dplyr::rename('Gene.Type'=type) %>% 
                 select(
                     -c(
                         filepath,
-                        Sample.Group.Numerator, Sample.Group.Denominator,
+                        comparison,
+                        # Sample.Group.Numerator, Sample.Group.Denominator,
                         row_index,
                         # strand,
                         geneid,
@@ -158,6 +158,21 @@ load_all_DESeq2_results <- function(force.redo=FALSE){
             }
     ) %>% 
     standardize_data_cols()
+}
+
+prep_DESeq2_results_for_associations <- function(force.redo=FALSE){
+    load_all_DESeq2_results(force.redo=force.redo) %>% 
+    rename_with(
+        .,
+        .fn=~str_replace(.x, '$', '.DESeq2'),
+        .cols=-c(starts_with('Sample.Group.'), Gene.Type, Symbol, EnsemblID, chr, start, end)
+    ) %>% 
+    rename_with(
+        .fn=~str_replace(.x, '^', 'Target.Gene.'),
+        # .cols=!ends_with('.DESeq2')
+        .cols=c(Symbol, EnsemblID, chr, start, end)
+    ) %>% 
+    mutate(comparison=glue('{Sample.Group.Numerator} vs {Sample.Group.Denominator}'))
 }
 
 ################################################################################

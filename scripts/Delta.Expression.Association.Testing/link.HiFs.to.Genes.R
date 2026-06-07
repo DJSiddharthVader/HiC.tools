@@ -66,7 +66,14 @@ all.HiFs.df %>%
     add_column(association.subtype='Direct') %>% 
     add_column(association.source='Direct') %>% 
     # create nested directory of files with HiF ~ Gene mappings for easy parsing/loading
+# Direct gene associations
+all.direct.gene.links.df <- 
+    load_gene_annotations() %>%
+    standardize_data_cols() %>% 
     mutate(
+        seqnames=Target.Gene.chr,
+        start=Target.Gene.start,
+        end=Target.Gene.end
         results_file=
             file.path(
                 HIF_GENE_ASSOCIATION_MAPPING_DIR,
@@ -79,6 +86,10 @@ all.HiFs.df %>%
                 glue('{SampleID}-HiF.Gene.Associations.tsv')
             )
     ) %>% 
+    as_granges() %>% 
+    tribble(
+        ~association.type, ~association.subtype, ~association.source, ~associations.df,
+        'Direct',          'Direct',             'Direct',            .
         {.} -> tmp; tmp
     # map every gene within/narby
     pmap(
@@ -88,6 +99,10 @@ all.HiFs.df %>%
         deg.results.df=deg.results.df,
         .progress=TRUE
     )
+# DEG results for all genes
+deg.results.df <- 
+    prep_DESeq2_results_for_associations(force.redo=FALSE)
+    # prep_DESeq2_results_for_associations(force.redo=TRUE)
 
 ################################################################################
 # Generate "Indirect" HiF ~ Gene associations i.e. those defined by functional elements
