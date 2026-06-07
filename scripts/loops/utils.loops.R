@@ -55,7 +55,7 @@ generate_all_loop_calling_cmds <- function(
     merge_status='merged',
     force_redo=FALSE,
     ...){
-    merge_status='merged';
+    # merge_status='merged';
     list_all_distance_expectation_files() %>% 
     # filter(type == 'cis') %>% 
     filter(contact.type == 'cis') %>% 
@@ -97,14 +97,18 @@ generate_all_loop_calling_cmds <- function(
 
 list_all_cooltools_dots_results <- function(resolutions=NULL){
     LOOP_RESULTS_DIR %>% 
-    parse_results_filelist(suffix='-dots.tsv') %>%
+    parse_results_filelist(
+        filename.column.name='MatrixID',
+        suffix='-dots.tsv'
+    ) %>%
+    convert_MatrixID_to_SampleID_and_SampleGroup() %>% 
     {
         if (!is.null(resolutions)) {
             filter(., resolution %in% resolutions)
         } else {
             .
         }
-    }
+    } 
 }
 
 load_cooltools_dots <- function(
@@ -128,17 +132,24 @@ load_all_cooltools_dots <- function(resolutions=NULL){
                 .progress=TRUE
             )
     ) %>%
-        # {.} -> tmp; tmp
-        # tmp %>% select(SampleID, loops)
     unnest(loops) %>% 
-    rename_with(
-        ~ stri_replace_all(
-            .x, 
-            regex='la_exp.([a-z]+).(value|qval)',
-            '$2.$1'
-        )
+    mutate(length=start2 - start1) %>% 
+    # pivot so each lloop as one kernel estimate per row
+    pivot_longer(
+        starts_with('la_exp.'),
+        names_to='metric',
+        names_prefix='la_exp.',
+        values_to='value'
     ) %>% 
-    select(-c(filepath))
+    separate_wider_delim(
+        metric,
+        delim='.',
+        names=c('kernel', 'metric')
+    ) %>% 
+    pivot_wider(
+        names_from='metric',
+        values_from='value'
+    )
 }
 
 post_process_cooltools_dots_results <- function(results.df) {
@@ -146,64 +157,34 @@ post_process_cooltools_dots_results <- function(results.df) {
     dplyr::rename(
         'chr'=chrom1,
         'anchor.left'=start1,
-        'anchor.right'=start2
+        'anchor.right'=start2,
+        'normalization'=weight,
+        'enrichment'=value,
+        'qvalue'=qval
     ) %>% 
-    pivot_longer(
+    unite(
+        FeatureID,
+        sep='#',
+        remove=FALSE,
         c(
-            starts_with('value.'),
-            starts_with('qval.')
-        ),
-        names_to='statistic',
-        values_to='value'
+            method, type,
+            normalization,
+            kernel,
+            chr, anchor.left, anchor.right
+        )
     ) %>% 
-    separate_wider_delim(
-        statistic,
-        delim='.',
-        names=c('statistic', 'kernel')
-    ) %>% 
-    pivot_wider(
-        names_from=statistic,
-        values_from=value
-    ) %>%
-    mutate(
-        SampleID=str_replace_all(SampleID, '.Merged.Merged', ''),
-        log10.qval=-log10(qval),
-        length=anchor.right - anchor.left
-    ) %>% 
-    dplyr::rename('enrichment'=value) %>% 
-    dplyr::select(
-        type,
-        weight,
-        resolution,
-        Edit,
-        Celltype,
-        Genotype,
-        # CloneID,
-        # TechRepID,
-        # ReadFilter,
-        # isMerged,
-        SampleID,
-        chr,
-        anchor.left,
-        anchor.right,
-        count,
-        # c_label,
-        # c_size,
-        length,
-        kernel,
-        enrichment,
-        log10.qval
-    )
+    select(-c(ends_with(c('1', '2')), cstart1 ,cstart2, c_label, c_size ,region, filepath))
 }
 
 filter_loop_results <- function(
     results.df,
-    q.thresh=LOOP_QVALUE_THRESHOLD){
+    q.thresh=0.1){
     results.df %>% 
-    filter(type == 'cis') %>% 
-    filter(weight == 'balanced') %>% 
     filter(kernel == 'donut') %>% 
-    filter(log10.qval >= -log10(q.thresh))
+    filter(type == 'cis') %>% 
+    filter(normalization == 'balanced') %>% 
+    filter(kernel == 'donut') %>% 
+    filter(qvalue < q.thresh)
 }
 
 ###################################################
@@ -557,6 +538,22 @@ calculate_all_loop_valency <- function(
                                 .names="{.col}-{.fn}"
                             ),
                             valency=dplyr::n()
+                        ) %>% 
+                        pivot_longer(
+                            -c(
+                               anchor.position, valency
+                            ),
+                            names_to='tmp',
+                            values_to='value',
+                        ) %>%
+                        separate_wider_delim(
+                            tmp,
+                            delim='-',
+                            names=c('loop.metric', 'loop.stat')
+                        ) %>%
+                        pivot_wider(
+                            names_from=loop.stat,
+                            values_from=value
                         )
                     },
             .progress=TRUE
@@ -713,8 +710,8 @@ join_expr_and_IDR2D_results <- function(
     samples.avail <- unique(expression.df$SampleID)
     idr2d.results.df %>% 
     filter(
-           SampleID.P1 %in% samples.avail,
-           SampleID.P2 %in% samples.avail
+           SampleID.Numerator %in% samples.avail,
+           SampleID.Denominator %in% samples.avail
     ) %>% 
     inner_join(
         expression.df,
@@ -736,7 +733,7 @@ calc_expr_loop_ztest <- function(
         expression.df,
         by=
             join_by(
-                SampleID.P1 == SampleID,
+                SampleID.Numerator == SampleID,
                 chr,
                 between(y$start, x$anchor.left, x$anchor.right),
                 between(y$end,   x$anchor.left, x$anchor.right)
@@ -744,10 +741,10 @@ calc_expr_loop_ztest <- function(
     ) %>% 
     inner_join(
         expression.df,
-        suffix=c('.P1', '.P2'),
+        suffix=c('.Numerator', '.Denominator'),
         by=
             join_by(
-                SampleID.P2 == SampleID,
+                SampleID.Denominator == SampleID,
                 chr,
                 start, end,
                 symbol, EnsemblID
@@ -755,29 +752,29 @@ calc_expr_loop_ztest <- function(
     ) %>%
     # for each gene compute pvalue if mean expression is different between conditions
     add_column(
-        n.rna.replicates.P1=6,
-        n.rna.replicates.P2=6
+        n.rna.replicates.Numerator=6,
+        n.rna.replicates.Denominator=6
     ) %>% 
     mutate(
-        TPM.se.P1=TPM.sd.P1**2 / n.rna.replicates.P1,
-        TPM.se.P2=TPM.sd.P2**2 / n.rna.replicates.P2,
-        expr.Z=(TPM.mean.P2 - TPM.mean.P1) / sqrt(TPM.se.P1 + TPM.se.P2),
+        TPM.se.Numerator=TPM.sd.Numerator**2 / n.rna.replicates.Numerator,
+        TPM.se.Denominator=TPM.sd.Denominator**2 / n.rna.replicates.Denominator,
+        expr.Z=(TPM.mean.Denominator - TPM.mean.Numerator) / sqrt(TPM.se.Numerator + TPM.se.Denominator),
         expr.p=2 * (1 - pnorm(abs(expr.Z)))
     ) %>%
     # adjust p-values genome-wide
     group_by(
-        weight, resolution, kernel,
+        normalization, resolution, kernel,
         resolve.method, metric,
-        SampleID.P1, SampleID.P2
+        SampleID.Numerator, SampleID.Denominator
     ) %>% 
     mutate(expr.p.adjust=p.adjust(expr.p, method='BH')) %>% 
     ungroup() %>% 
     select(
         -c(
-            n.rna.replicates.P1, n.rna.replicates.P2,
-            TPM.se.P1, TPM.se.P2,
-            # TPM.sd.P1, TPM.sd.P2,
-            # TPM.mean.P1, TPM.mean.P2,
+            n.rna.replicates.Numerator, n.rna.replicates.Denominator,
+            TPM.se.Numerator, TPM.se.Denominator,
+            # TPM.sd.Numerator, TPM.sd.Denominator,
+            # TPM.mean.Numerator, TPM.mean.Denominator,
             expr.Z, expr.p
         )
     )
