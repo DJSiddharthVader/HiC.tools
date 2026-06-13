@@ -401,7 +401,7 @@ compute_features_fisher_tests <- function(
     # Calculate enrichment stat for test
     bins.overlap      <- contingency.table[1,1]
     bins.w.feature    <- bins.overlap + contingency.table[1,2]
-    bins.w.FGE       <- bins.overlap + contingency.table[2,1]
+    bins.w.FGE        <- bins.overlap + contingency.table[2,1]
     bins.total        <- sum(contingency.table)
     # Calculate enrichment stat for test
     expected          <- bins.w.FGE * (bins.w.feature / bins.total)

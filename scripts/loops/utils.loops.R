@@ -1,6 +1,8 @@
 library(stringi)
 library(furrr)
 library(idr2d)
+# library(twosamples)
+library(broom)
 # library(plyranges)
 
 ###################################################
@@ -123,6 +125,8 @@ load_cooltools_dots <- function(
 
 load_all_cooltools_dots <- function(resolutions=NULL){
     list_all_cooltools_dots_results(resolutions=resolutions) %>% 
+    filter(normalization == 'balanced') %>% 
+        # head(3) %>% 
     mutate(
         loops=
             # pmap(
@@ -149,16 +153,11 @@ load_all_cooltools_dots <- function(resolutions=NULL){
     pivot_wider(
         names_from='metric',
         values_from='value'
-    )
-}
-
-post_process_cooltools_dots_results <- function(results.df) {
-    results.df %>%
+    ) %>% 
     dplyr::rename(
         'chr'=chrom1,
         'anchor.left'=start1,
         'anchor.right'=start2,
-        'normalization'=weight,
         'enrichment'=value,
         'qvalue'=qval
     ) %>% 
@@ -180,9 +179,7 @@ filter_loop_results <- function(
     results.df,
     q.thresh=0.1){
     results.df %>% 
-    filter(kernel == 'donut') %>% 
     filter(type == 'cis') %>% 
-    filter(normalization == 'balanced') %>% 
     filter(kernel == 'donut') %>% 
     filter(qvalue < q.thresh)
 }

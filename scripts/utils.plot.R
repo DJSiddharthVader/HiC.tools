@@ -449,7 +449,7 @@ post_process_plot <- function(
     # Add extra elements
     {
         if (!is.null(plot.elements)) {
-            reduce(
+            purrr::reduce(
                 .x=plot.elements,
                 .f=function(x, y) { x + y },
                 .init=.
