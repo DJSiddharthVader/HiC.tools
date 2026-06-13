@@ -641,9 +641,9 @@ make_nested_plot_tabs <- function(
 ###################################################
 plot_barplot <- function(
     plot.df,
-    x.var='',
-    y.var='',
-    fill.var='', 
+    x.var=NULL,
+    y.var=NULL,
+    fill.var=NULL, 
     label.var=NULL,
     label.color='black',
     label.size=3,
@@ -708,9 +708,10 @@ plot_barplot <- function(
 
 plot_boxplot <- function(
     plot.df,
-    x.var='',
-    y.var='',
-    fill.var=NULL, 
+    x.var=NULL,
+    y.var=NULL,
+    fill.var=NULL,
+    outliers=FALSE,
     outlier.size=1,
     ...){
     # Set fill group if specified
@@ -734,10 +735,26 @@ plot_boxplot <- function(
             )
         }
     } %>% 
-    # make it a boxplot 
-    { 
-        . + geom_boxplot(outlier.size=outlier.size) 
-    } %>% 
+    { . + geom_boxplot(outliers=TRUE, outlier.size=outlier.size) } %>% 
+    # { . + geom_boxplot(outliers=FALSE) } %>% 
+    # {
+    #     if (outliers) {
+    #         {.} + 
+    #         geom_jitter(
+    #             data=
+    #                 .@data %>% 
+    #                 filter(
+    #                     !!sym(fill.var) < quantile(!!sym(fill.var), 0.25) - 1.5 * IQR(!!sym(fill.var)) | 
+    #                     !!sym(fill.var) > quantile(!!sym(fill.var), 0.75) + 1.5 * IQR(!!sym(fill.var))
+    #                 ) %>% 
+    #                 ungroup(), 
+    #             show.legend=FALSE,
+    #             size=outlier.size
+    #         )
+    #     } else {
+    #         .
+    #     }
+    # } %>% 
     # Handle faceting + scaling + theme options
     post_process_plot(...)
 }
@@ -745,34 +762,34 @@ plot_boxplot <- function(
 plot_density <- function(
     plot.df,
     x.var='',
-    y.var='',
-    fill.var=NULL, 
-    alpha=0.7,
+    color.var=NULL, 
+    alpha=0.2,
+    binwidth=500,
     ...){
     # Set fill group if specified
     {
-        if (is.null(fill.var)) {
+        # if (!is.null(fill.var)) {
+        if (!is.null(color.var)) {
             ggplot(
                 plot.df,
                 aes(
-                    x=.data[[x.var]],
-                    y=.data[[y.var]],
+                    fill=.data[[color.var]],
+                    # color=.data[[color.var]],
+                    x=.data[[x.var]]
                 )
             )
         } else {
             ggplot(
                 plot.df,
-                aes(
-                    x=.data[[x.var]],
-                    y=.data[[y.var]],
-                    # group=.data[[fill.var]],
-                    fill=.data[[fill.var]]
-                )
+                aes(x=.data[[x.var]])
             )
         }
     } %>% 
     # make it a boxplot 
-    { . + geom_density_ridges(alpha=alpha) } %>% 
+    { . + geom_density(alpha=alpha) } %>% 
+    # { . + geom_density_ridges(alpha=alpha) } %>% 
+    # { . + geom_freqpoly(binwidth=binwidth, alpha=alpha) } %>% 
+    # { . + geom_histogram(binwidth=binwidth, alpha=alpha) } %>% 
     # Handle faceting + scaling + theme options
     post_process_plot(...)
 }
@@ -784,27 +801,21 @@ plot_histogram <- function(
     alpha=0.7,
     binwidth=0.05,
     ...){
-    # Set fill group if specified
+    { 
+        ggplot(
+            plot.df,
+            aes(x=.data[[x.var]])
+        ) 
+    } %>%
     {
-        if (is.null(fill.var)) {
-            ggplot(
-                plot.df,
-                aes(x=.data[[x.var]])
-            )
+        if (!is.null(fill.var)) {
+            . + aes(fill=.data[[fill.var]])
         } else {
-            ggplot(
-                plot.df,
-                aes(
-                    x=.data[[x.var]],
-                    group=.data[[fill.var]],
-                    fill=.data[[fill.var]]
-                )
-            )
+            .
         }
     } %>% 
-    # make it a boxplot 
-    { 
-        . + 
+    {
+        . +
         geom_histogram(
             position="identity",
             alpha=alpha,
@@ -828,30 +839,19 @@ plot_violin <- function(
     position='dodge',
     adjust=0.5,
     ...){
-    # Set fill group if specified
-    {
-        if (is.null(fill.var)) {
-            ggplot(
-                plot.df,
-                aes(
-                    x=.data[[x.var]],
-                    y=.data[[y.var]]
-                )
-            )
-        } else {
-            ggplot(
-                plot.df,
-                aes(
-                    x=.data[[x.var]],
-                    y=.data[[y.var]],
-                    fill=.data[[fill.var]]
-                )
-            )
-        }
-    } %>% 
     # make it a violin plot
     { 
-        . + 
+        ggplot(
+            plot.df,
+            aes(
+                x=.data[[x.var]],
+                y=.data[[y.var]],
+                fill=.data[[fill.var]],
+            )
+        )
+    } %>%
+    {
+        .+
         geom_violin(
             quantile.color=quantile.color,
             quantile.linetype=draw.quantiles,
@@ -918,8 +918,8 @@ plot_jitter <- function(
     plot.df,
     x.var='',
     y.var='',
-    color.var=NULL, 
-    shape.var=NULL,
+    color.var=NA, 
+    shape.var=NA,
     regression_fnc=NULL,
     add_regression_SE=TRUE,
     alpha=0.5,
@@ -927,18 +927,19 @@ plot_jitter <- function(
     scales='fixed',
     ...){
     # Set fill group if specified
-    {
-        if (!is.null(color.var) && !is.null(shape.var)) {
+    # make it a scatter plot
+    { 
+        if (!is.na(color.var) & !is.na(shape.var)) {
             ggplot(
                 plot.df,
                 aes(
                     x=.data[[x.var]],
                     y=.data[[y.var]],
-                    shape=.data[[shape.var]],
-                    color=.data[[color.var]]
+                    color=.data[[color.var]],
+                    shape=.data[[shape.var]]
                 )
             )
-        } else if (!is.null(color.var) &&  is.null(shape.var)) {
+        } else if (!is.na(color.var)) {
             ggplot(
                 plot.df,
                 aes(
@@ -947,7 +948,7 @@ plot_jitter <- function(
                     color=.data[[color.var]]
                 )
             )
-        } else if ( is.null(color.var) && !is.null(shape.var)) {
+        } else if (!is.na(shape.var)) {
             ggplot(
                 plot.df,
                 aes(
@@ -966,9 +967,8 @@ plot_jitter <- function(
             )
         }
     } %>% 
-    # make it a scatter plot
-    { 
-        . + 
+    {
+        . +
         geom_jitter(
             alpha=alpha,
             size=size
@@ -1009,24 +1009,32 @@ plot_lineplot <- function(
         ggplot(
             plot.df,
             aes(
-                x=.data[[x.var]],
-                y=.data[[y.var]],
                 group=.data[[group.var]],
-                color=.data[[color.var]],
-                linetype=.data[[linetype.var]],
-                shape=.data[[linetype.var]]
+                x=.data[[x.var]],
+                y=.data[[y.var]]
             )
         )
     } %>% 
-    # make it a scatter plot
-    { 
-        . + 
-        geom_point(
-            alpha=alpha,
-            size=size
-        ) +
-        geom_line()
+    {
+        if (!is.null(color.var)) {
+            . + aes(color=.data[[color.var]])
+            # . + aes(color=.data[[color.var]], fill=.data[[color.var]])
+        } else {
+            .
+        }
     } %>% 
+    {
+        if (!is.null(linetype.var)) {
+            . + 
+            aes(
+                linetype=.data[[linetype.var]],
+                shape=.data[[linetype.var]]
+            )
+        } else {
+            .
+        }
+    } %>% 
+    { . + geom_line() } %>% 
     # Handle faceting + scaling + theme options
     post_process_plot(
         scales=scales,
@@ -1038,35 +1046,19 @@ plot_pointdensity <- function(
     plot.df,
     x.var='',
     y.var='',
-    shape.var=NULL,
     adjust=0.5,
     size=0.5,
     scales='fixed',
     ...){
-    # Set fill group if specified
-    {
-        if (!is.null(shape.var)) {
-            ggplot(
-                plot.df,
-                aes(
-                    x=.data[[x.var]],
-                    y=.data[[y.var]],
-                    shape=.data[[shape.var]]
-                )
-            )
-        } else {
-            ggplot(
-                plot.df,
-                aes(
-                    x=.data[[x.var]],
-                    y=.data[[y.var]]
-                )
-            )
-        }
-    } %>% 
     # make it a scatter plot
     { 
-        . + 
+        ggplot(
+            plot.df,
+            aes(
+                x=.data[[x.var]],
+                y=.data[[y.var]]
+            )
+        ) +
         geom_pointdensity(
             adjust=adjust,
             size=size
@@ -1086,10 +1078,6 @@ plot_contours <- function(
     plot.df,
     x.var='',
     y.var='',
-    z.var='', 
-    alpha=0.5,
-    size=0.5,
-    bins=10,
     scales='fixed',
     ...){
     # Set fill group if specified
@@ -1098,8 +1086,7 @@ plot_contours <- function(
             plot.df,
             aes(
                 x=.data[[x.var]],
-                y=.data[[y.var]],
-                z=.data[[z.var]]
+                y=.data[[y.var]]
             )
         )
     } %>% 
