@@ -586,6 +586,25 @@ join_loop_and_IDR2D_resilts <- function() {
 ###################################################
 # Valency Analysis
 ###################################################
+calculate_loop_valency <- function(df) {
+    df %>%
+    pivot_longer(
+        starts_with('anchor.'),
+        names_to='anchor.side',
+        names_prefix='anchor.',
+        values_to='anchor.position'
+    ) %>% 
+    group_by(anchor.position) %>% 
+    dplyr::summarize(
+        valency=dplyr::n(),
+        across(
+            .cols=c(count, length, enrichment, log10.qvalue),
+            .fns=list('mean'=mean, 'min'=min, 'max'=max, 'median'=median, 'var'=var, 'total'=sum),
+            .names="metric_{.col}_{.fn}"
+        )
+    )
+}
+
 calculate_all_loop_valency <- function(
     loops.df,
     ...){
@@ -595,43 +614,9 @@ calculate_all_loop_valency <- function(
         valency.results=
             pmap(
                 .l=list(loops),
-                .f=
-                    function(df) {
-                        df %>%
-                        pivot_longer(
-                            starts_with('anchor.'),
-                            names_to='anchor.side',
-                            names_prefix='anchor.',
-                            values_to='anchor.position'
-                        ) %>% 
-                        group_by(anchor.position) %>% 
-                        dplyr::summarize(
-                            across(
-                                .cols=c(count, length, enrichment, log10.qvalue),
-                                .fns=list('mean'=mean, 'min'=min, 'max'=max, 'median'=median, 'var'=var),
-                                .names="{.col}-{.fn}"
-                            ),
-                            valency=dplyr::n()
-                        ) %>% 
-                        pivot_longer(
-                            -c(
-                               anchor.position, valency
-                            ),
-                            names_to='tmp',
-                            values_to='value',
-                        ) %>%
-                        separate_wider_delim(
-                            tmp,
-                            delim='-',
-                            names=c('loop.metric', 'loop.stat')
-                        ) %>%
-                        pivot_wider(
-                            names_from=loop.stat,
-                            values_from=value
-                        )
-                    },
-            .progress=TRUE
-        )
+                .f=calculate_loop_valency,
+                .progress=TRUE
+            )
     ) %>%
     unnest(valency.results) %>%
     select(-c(loops))
