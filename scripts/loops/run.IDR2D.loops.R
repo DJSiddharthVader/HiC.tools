@@ -120,3 +120,21 @@ nested.loops.df %>%
             )
     )
 
+###################################################
+# Combine generated results into single files for downstream analyses
+###################################################
+# combine all IDR2D results generated with pre-specified hyper-params into a single file
+check_cached_results(
+    results_file=FILTERED_IDR2D_RESULTS_FILE,
+    force_redo=parsed.args$force_redo,
+    # force_redo=TRUE,
+    results_fnc=load_all_IDR2D_results
+)
+# count loops by differential status across all conditions + hyper-params, combine into a single file
+check_cached_results(
+    results_file=ALL_IDR2D_COUNTS_RESULTS_FILE,
+    force_redo=parsed.args$force_redo,
+    # force_redo=TRUE,
+    results_fnc=count_all_IDR2D_results
+)
+

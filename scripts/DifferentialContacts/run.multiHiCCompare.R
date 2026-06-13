@@ -57,4 +57,26 @@ comparisons.df %>%
         group1_colname='Sample.Group.P1',
         group2_colname='Sample.Group.P2'
     )
+# load all significant pixels into a single file
+check_cached_results(
+    results_file=FILTERED_MULTIHICCOMPARE_RESULTS_FILE,
+    # force_redo=TRUE,
+    results_fnc=load_all_multiHiCCompare_results,
+    sample_group_priority_fnc=SAMPLE_GROUP_PRIORITY_FNC,
+    sample.group.comparisons=ALL_SAMPLE_GROUP_COMPARISONS,
+    # resolutions=c(100, 50, 25, 10) * 1e3,
+    resolutions=c(100, 50, 25) * 1e3,
+    # resolutions=c(100, 50) * 1e3,
+    gw.fdr.threshold=0.1,
+    fdr.threshold=0.1,
+    nom.threshold=0.05
+)
+# bin all pixels by p.adj.gw and save counts to a single file 
+check_cached_results(
+    results_file=MULTIHICCOMPARE_SIG_RESULTS_FILE,
+    # force_redo=TRUE,
+    results_fnc=count_contacts_by_significance,
+    sample.group.comparisons=ALL_SAMPLE_GROUP_COMPARISONS,
+    resolutions=c(100, 50, 25) * 1e3
+)
 
