@@ -12,6 +12,7 @@ library(TADCompare)
 ################################################################################
 convert_boundaries_to_TADs <- function(
     bins.df,
+    resolution,
     include.tails=FALSE,
     start.col.name='start',
     end.col.name='end',
@@ -35,7 +36,7 @@ convert_boundaries_to_TADs <- function(
     } %>% 
     tibble(boundaries=.) %>%
     rename(!!start.col.name := boundaries) %>% 
-    mutate(!!end.col.name := lead(!!sym(start.col.name))) %>% 
+    mutate(!!end.col.name := lead(!!sym(start.col.name)) - resolution) %>% 
     filter(!is.na(start), !is.na(end))
 }
 
@@ -125,56 +126,11 @@ generate_all_TAD_Calling_cmds <- function(
     }
 }
 
-load_all_TAD_score_results <- function(
-    scores.dfs.,
-    resolutions=NULL){
-    scores.dfs %>% 
-    bind_rows() %>% 
-    {
-        if (!is.null(resolutions)) {
-            filter(., resolution %in% resolutions)
-        } else {
-            .
-        }
-    }
-}
-
-load_all_TAD_results <- function(
-    TAD.dfs.,
-    resolutions=NULL){
-    # Bind evertything together
-    TAD.results.dfs %>% 
-    bind_rows() %>% 
-    {
-        if (!is.null(resolutions)) {
-            filter(., resolution %in% resolutions)
-        } else {
-            .
-        }
-    }
-}
-
-post_process_all_TAD_results <- function(results.df){
-    results.df %>% 
-    filter(TAD.length < 10 * 1e6) %>% 
-    mutate(
-        TAD.size.band=
-            case_when(
-                length > 5e6 ~ '>  5Mb',
-                length > 2e6 ~ '>  2Mb',
-                length > 1e6 ~ '>  1Mb',
-                length > 5e5 ~ '>  500Kb',
-                TRUE         ~ '<= 500Kb'
-            ) %>%
-            factor(levels=c('<= 500Kb', '>  500Kb', '>  1Mb', '>  2Mb', '>  5Mb'))
-    )
-}
-
 pivot_all_TADs_to_boundaries <- function(results.df){
     # Pivot so the bins that start and end at the boundary position are both included
     results.df %>% 
     dplyr::select(-starts_with('TAD.inner.')) %>% 
-    mutate(TAD.index=row_number()) %>% 
+    # mutate(TAD.index=row_number()) %>% 
     dplyr::rename(
         "start.boundary"=start,
         "end.boundary"=end,
@@ -196,9 +152,10 @@ pivot_all_TADs_to_boundaries <- function(results.df){
         values_from=value
     ) %>% 
     dplyr::rename(
-        "boundary.start"=boundary,
+        "start"=boundary,
         "boundary.score"=score
-    )
+    ) %>%
+    mutate(end=start + resolution)
 }
 
 ################################################################################
@@ -314,6 +271,7 @@ load_cooltools_insulation_TADs <- function(
                 pmap(
                     .l=.,
                     .f=convert_boundaries_to_TADs,
+                    resolution=resolution,
                     boundary.indicator.col='is.boundary',
                     .progress=FALSE
                 )
@@ -365,7 +323,7 @@ load_cooltools_insulation_TADs <- function(
 
 load_all_cooltools_insulation_TADs <- function(){
     list_all_cooltools_insulation_results_files() %>% 
-        # {.} -> tmp
+        # head(5) %>% 
     mutate(
         insulation=
             # pmap(
@@ -377,14 +335,16 @@ load_all_cooltools_insulation_TADs <- function(){
     ) %>%
     unnest(insulation) %>% 
     mutate(
-        window.size.bins=window.size / resolution,
-        # window.size=scale_numbers(window.size, force_numeric=TRUE),
+        window.size=scale_numbers(window.size, force_numeric=TRUE),
+        window.size.bins=window.size / resolution
     ) %>% 
     unite(
         'TAD.params',
-        window.size.bins, mfvp, threshold,
         sep='#',
-        remove=TRUE
+        remove=TRUE,
+        window.size.bins,
+        mfvp,
+        threshold
     ) %>% 
     select(
         -c(
@@ -460,7 +420,7 @@ load_cooltools_insulation_scores <- function(
 
 load_all_cooltools_insulation_scores <- function(){
     list_all_cooltools_insulation_results_files() %>% 
-        head(5) %>% 
+        # head(5) %>% 
         # {.} -> tmp
     mutate(
         insulation=
@@ -524,22 +484,22 @@ list_all_hiTAD_results_files <- function(){
     HITAD_TAD_RESULTS_DIR %>% 
     parse_results_filelist(suffix='.tsv') %>%
     # hiTAD only expects balanced matrices as input 
-    add_column(TAD.method='hiTAD') %>% 
     separate_wider_delim(
         filename,
         delim='-',
-        names=c('MatrixID', 'feature.type')
+        names=c('SampleID', 'feature.type')
     ) %>% 
     pivot_wider(
         names_from=feature.type,
         names_glue="{feature.type}.filepath",
         values_from=filepath
     ) %>% 
-    convert_MatrixID_to_SampleID_and_SampleGroup()
+    convert_SampleID_to_SampleGroup() %>% 
+    add_column(TAD.method='hiTAD')
 }
 
 load_hiTAD_TADs <- function(
-    TAD.filepath,
+    TADs.filepath,
     DI.filepath,
     resolution,
     ...){
@@ -561,7 +521,7 @@ load_hiTAD_TADs <- function(
     # load actual TAboundaries
     TADs <- 
         read_tsv(
-            TAD.filepath,
+            TADs.filepath,
             show_col_types=FALSE,
             progress=FALSE,
             col_names=
@@ -606,7 +566,7 @@ load_all_hiTAD_TADs <- function(){
 }
 
 load_hiTAD_DIs <- function(
-    TAD.filepath,
+    TADs.filepath,
     DI.filepath,
     resolution,
     ...) {
@@ -625,7 +585,7 @@ load_hiTAD_DIs <- function(
         )
     TADs <- 
         read_tsv(
-            TAD.filepath,
+            TADs.filepath,
             show_col_types=FALSE,
             progress=FALSE,
             col_names=
@@ -828,21 +788,21 @@ run_all_ConsensusTADs <- function(
     )
 }
 
-list_all_ConsensusTAD_TADs <- function(){
+list_all_ConsensusTAD_results <- function(){
     CONSENSUSTAD_TAD_RESULTS_DIR %>% 
     parse_results_filelist(
         filename.column='Sample.Group',
         suffix='-ConsensusTADs.tsv'
     ) %>%
-    add_column(method='ConsensusTAD')
+    add_column(TAD.method='ConsensusTAD')
 }
 
 load_ConsensusTAD_TADs <- function(
     filepath,
     resolution,
     ...){
-    # row_index=1; paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row_index]]', sep='', collapse='; ')
-    # row.index=51; filepath=tmp$filepath[[row_index]]; z.thresh=tmp$z.thresh[[row_index]]; window.size=tmp$window.size[[row_index]]; gap.thresh=tmp$gap.thresh[[row_index]]; resolution=tmp$resolution[[row_index]]; region=tmp$region[[row_index]]; Sample.Group=tmp$Sample.Group[[row_index]]; method=tmp$method[[row_index]]
+    # paste('row_index=1;', paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row_index]]', sep='', collapse='; '))
+    # row_index=1; filepath=tmp$filepath[[row_index]]; resolution=tmp$resolution[[row_index]]; normalization=tmp$normalization[[row_index]]; z.thresh=tmp$z.thresh[[row_index]]; window.size=tmp$window.size[[row_index]]; gap.thresh=tmp$gap.thresh[[row_index]]; region=tmp$region[[row_index]]; Sample.Group=tmp$Sample.Group[[row_index]]; TAD.method=tmp$TAD.method[[row_index]]
     # Load all the bin-wise + sample-wise scores TAD scores
     scores.df <- 
         filepath %>% 
@@ -882,32 +842,31 @@ load_ConsensusTAD_TADs <- function(
                 pmap(
                     .l=.,
                     .f=convert_boundaries_to_TADs,
+                    resolution=resolution,
                     .progress=FALSE
                 )
         ) %>% 
         unnest(TADs) %>%
         select(start, end)
-    # scores.df %>% nrow()
-    # TADs.df %>% nrow()
     # Now map score data for each TAD together and compute summary stats
-    TADs.df %>% 
+    scores.df %>% 
     # Map scores to TADs
-    left_join(
-        scores.df,
-        suffix=c('.TAD', '.bin'),
+    right_join(
+        TADs.df,
+        suffix=c('.bin', '.TAD'),
         by=
             join_by(
-                within(y$bin.start, y$bin.end, x$start, x$end)
+                within(x$bin.start, x$bin.end, y$start, y$end)
             )
     ) %>% 
     # for each TAD compute summary stats over the bin-wise scores
-    add_column(TAD.metric='Consensus.Score') %>% 
     group_by(start, end) %>% 
-    compute_TAD_stats(resolution=resolution)
+    compute_TAD_stats(resolution=resolution) %>% 
+    add_column(TAD.metric='consensus.score')
 }
 
 load_all_ConsensusTAD_TADs <- function(){
-    list_all_ConsensusTAD_TADs() %>% 
+    list_all_ConsensusTAD_results() %>% 
     mutate(
         TADs=
             # pmap(
@@ -918,6 +877,64 @@ load_all_ConsensusTAD_TADs <- function(){
             )
     ) %>%
     unnest(TADs) %>% 
+    unite(
+        'TAD.params',
+        sep='#',
+        z.thresh,
+        window.size,
+        gap.thresh
+    ) %>% 
+    dplyr::rename('chr'=region) %>% 
+    select(-c(filepath))
+}
+
+load_ConsensusTAD_scores <- function(
+    filepath,
+    resolution,
+    ...){
+    # paste('row_index=1;', paste(colnames(tmp), '=tmp$', colnames(tmp), '[[row_index]]', sep='', collapse='; '))
+    # Load all the bin-wise + sample-wise scores TAD scores
+    filepath %>% 
+    read_tsv(
+        show_col_types=FALSE,
+        progress=FALSE,
+    ) %>%
+    # to uniquely identify rows (boundaries) for pivoting
+    mutate(
+        idx=row_number(),
+        across(ends_with('.score'), as.numeric)
+    ) %>% 
+    # has 1 column for every sample's individual TAD score + consensus score
+    pivot_longer(
+        ends_with('.score'),
+        names_to='SampleID',
+        values_to='score'
+    ) %>%
+    # only keep consensus score for each bin
+    filter(SampleID == 'consensus.score') %>%
+    # filter(!is.na(score)) %>% 
+    pivot_wider(
+        names_from=SampleID,
+        values_from=score
+    ) %>%
+    dplyr::rename('bin.score'=consensus.score) %>% 
+    mutate(bin.end=bin.start + resolution) %>% 
+    select(-c(idx)) %>% 
+    add_column(TAD.metric='consensus.score')
+}
+
+load_all_ConsensusTAD_scores <- function(){
+    list_all_ConsensusTAD_results() %>% 
+    mutate(
+        scores=
+            # pmap(
+            future_pmap(
+                .,
+                load_ConsensusTAD_scores,
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(scores) %>% 
     unite(
         'TAD.params',
         sep='#',

@@ -4,12 +4,14 @@
 library(here)
 here::i_am('scripts/TADs/calculate.TAD.MoCs.R')
 BASE_DIR <- here()
-source(file.path(BASE_DIR,   'scripts/constants.R'))
-source(file.path(BASE_DIR,   'scripts/locations.R'))
-source(file.path(SCRIPT_DIR, 'utils.data.R'))
-source(file.path(SCRIPT_DIR, 'TADs/utils.Comparing.TADs.R'))
-library(tidyverse)
-library(magrittr)
+suppressPackageStartupMessages({
+    source(file.path(BASE_DIR,   'scripts/constants.R'))
+    source(file.path(BASE_DIR,   'scripts/locations.R'))
+    source(file.path(SCRIPT_DIR, 'utils.data.R'))
+    source(file.path(SCRIPT_DIR, 'TADs/utils.Comparing.TADs.R'))
+    library(tidyverse)
+    library(magrittr)
+})
 
 ################################################################################
 # Load TADs

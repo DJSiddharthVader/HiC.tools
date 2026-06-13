@@ -1,4 +1,48 @@
-## Generating TAD Results
+# Generating TAD Results
+
+## Commands to Run
+
+Commands to generate TAD + TAD Comparison data
+```bash
+# generate commands to run shell tools for TAD calling
+mamba activate r
+Rscript ./scripts/TADs/make.TAD.calling.cmds.R -t $(nproc)
+# now run those generated commands with GNU parallel
+mamba activate TADs
+parallel -j 1 --eta --bar :::: ./results/TADs/all.TAD.calling.cmds.txt
+# Generate Consensus TAD results from set of individual matrices with spectralTAD
+mamba activate r
+Rscript ./scripts/TADs/run.ConsensusTADs.R
+# Coallate TAD results into single, structured output files
+mamba activate r
+Rscript ./scripts/TADs/coallate.all.TAD.results.R
+# Compute TAD MoCs for all sets of TADs
+mamba activate r
+Rscript ./scripst/TADs/calculate.TAD.MoCs.R
+# Run TADCompare to generated differential TAD results
+# requires 120Gb for the largest matrix comparison (i.e. chr1 @5Kb)
+mamba activate r
+Rscript ./scripts/TADs/run.TADCompare.R -t $(nproc)
+# Run TADCompare to generated differential TAD results
+mamba activate r
+Rscript ./scripts/TADs/coallate.all.TADCompare.results.R
+```
+
+## Output File Descriptions
+
+The TAD results files are as follows:
+```bash
+./results/TADs/
+├── results_TADs/                # Nested directory structure of individually generated results
+├── all.ConsensusTAD.TADs.tsv    # combined file with all TADs called by ConsensusTAD
+├── all.hiTAD.TADs.tsv           # combined file with all TADs called by hiTAD
+├── all.cooltools.TADs.tsv       # combined file with all TADs called by cooltools
+├── all.all.TADs.tsv             # combined file with all TADs called by all methods
+├── all.all.TAD.MoCs.tsv         # Computed Measure of Concordance of TADs for all pairs of conditions
+├── results_TADCompare/
+├── all.TADCompare.results.tsv
+└── all.TADCompare.n.results.tsv
+```
 
 ### TADs
 
@@ -82,6 +126,7 @@ Columns are:
 
 ### TADCompare 
 
+For 2 different TAD annotation sets (start/end pairs) of the same region (e.g. chr16) we can calculate the similarity of the 2 sets by computing the Measure of Concordance as defined in [this paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-018-1596-9#Sec21). 
 We also compare TADs called using the r package TADCompare. It calcuatles a bin-wise spectral decomposition-based "boundary score" and comapre these scores around each TAD boundary used as input. The TAD Boundaries come from the called TADs above. The results include 
 Gap.Score is a directionally specific z-score, the sign will line up with the "Enriched.Condition" column i.e. -ve => enriched in denominator and vice versa. 
 Columns are:
@@ -108,40 +153,5 @@ Columns are:
 
 ### Generate TAD Results
 
-Commands to generate TAD + TAD Comparison data
-```bash
-# generate commands to run shell tools for TAD calling
-mamba activtte r
-Rscript ./scripts/TADs/make.TAD.calling.cmds.R -t $(nproc)
-# now run those generated commands with GNU parallel
-mamba activtte TADs
-parallel -j 1 --eta --bar :::: ./results/TADs/all.TAD.calling.cmds.txt
-# Generate Consensus TAD results from set of individual matrices with spectralTAD
-mamba activtte r
-Rscript ./scripts/TADs/run.ConsensusTADs.R
-# Coallate TAD results into single, structured output files
-mamba activtte r
-Rscript ./scripts/TADs/coallate.all.TAD.results.R
-# Compute TAD MoCs for all sets of TADs
-mamba activtte r
-Rscript ./scripst/TADs/calculate.TAD.MoCs.R
-# Run TADCompare to generated differential TAD results
-# requires 120Gb for the largest matrix comparison (i.e. chr1 @5Kb)
-mamba activtte r
-Rscript ./scripts/TADs/run.TADCompare.R -t $(nproc)
-```
-
-Ultimately these commands will generate the followig output files
-```bash
-./results/TADs/
-├── results_TADs/                # Nested directory structure of individually generated results
-├── all.ConsensusTAD.TADs.tsv    # combined file with all TADs called by ConsensusTAD
-├── all.hiTAD.TADs.tsv           # combined file with all TADs called by hiTAD
-├── all.cooltools.TADs.tsv       # combined file with all TADs called by cooltools
-├── all.all.TADs.tsv             # combined file with all TADs called by all methods
-├── all.all.TAD.MoCs.tsv         # Computed Measure of Concordance of TADs for all pairs of conditions
-├── results_TADCompare/
-├── all.TADCompare.results.tsv
-└── all.TADCompare.n.results.tsv
-```
+We also compare TADs called from merged matrices using `TADCompare`, since each merged matrix represents a biological condition (e.g. 16p.iN.WT) it is an expliciit differential analysis 
 
