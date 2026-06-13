@@ -37,7 +37,6 @@ hyper.params.df <-
     cross_join(tibble(resolution=parsed.args$resolutions)) %>% 
     add_column(threads=parsed.args$threads)
 # parsed.args$force.redo=TRUE
-# parsed.args$force.redo=FALSE
 
 ################################################################################
 # Generate cmds to call TADs with specified params
@@ -45,7 +44,7 @@ hyper.params.df <-
 # Now generate commands to run cooltools eigs-cis to calculate + orient PC1 from the contact matrix
 # We can bin the PC1 data to define compartment type + strength (i.e. Weak A, Strong B etc.)
 hyper.params.df %>% 
-    generate_all_compartment_calling_cmds(
+    generate_all_cooltools_calling_cmds(
         cmds.output.filepath=file.path(COMPARTMENTS_DIR, 'all.compartment.calling.cmds.txt'),
         merge_status='merged',
         force_redo=parsed.args$force.redo

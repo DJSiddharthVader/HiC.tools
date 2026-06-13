@@ -48,7 +48,7 @@ generate_cooltools_calling_cmd <- function(
     )
 }
 
-generate_all_compartment_calling_cmds <- function(
+generate_all_cooltools_calling_cmds <- function(
     hyper.params.df,
     cmds.output.filepath=NULL,
     merge_status='merged',
@@ -118,9 +118,10 @@ quantize_compartment_scores <- function(
     ) %>%
     # ungroup() %>%
     mutate(
-        comparment.switch=
+        compartment.switch=
             case_when(
                 is.na(compartment.category) & is.na(lead(compartment.category)) ~ NA,
+                compartment.category == lead(compartment.category) ~ 'no.switch',
                 .default=glue('{compartment.category}->{lead(compartment.category, n=1L)}'),
             ),
         bin.label=
@@ -138,6 +139,7 @@ quantize_compartment_scores <- function(
                 compartment.strength.lvl <  lag(compartment.strength.lvl)       ~ 'weaker',
                 compartment.strength.lvl >  lag(compartment.strength.lvl)       ~ 'stronger',
                 compartment.category     != lead(compartment.category)          ~ 'switch',
+                compartment.category == lead(compartment.category)             ~ 'no.switch',
                 is.na(compartment.category) | is.na(lead(compartment.category)) ~ NA
             )
     )
@@ -172,12 +174,20 @@ load_cooltools_compartment_results <- function(
 load_all_cooltools_compartment_results <- function(
     resolutions=NULL,
     n.compartment.lvls.list=c(5)){
+    # check_cached_results(
+    #     results_file=ALL_COMPARTMENTS_RESULTS_FILE,
+    #     force_redo=TRUE,
+    #     results_fnc=load_all_cooltools_compartment_results,
+    #     resolutions=NULL,
+    #     n.compartment.lvls.list=c(5)
+    # )
     # force_redo=parsed.args$force.redo; resolutions=parsed.args$resolutions; n.compartment.lvls.list=c(5, 10)
     COMPARTMENTS_RESULTS_DIR %>%
     parse_results_filelist(
-        filepath.column.name='MatrixID',
+        filename.column.name='MatrixID',
         suffix='-.cis.vecs.tsv'
     ) %>%  
+    convert_MatrixID_to_SampleID_and_SampleGroup() %>% 
     {
         if (!is.null(resolutions)) {
             filter(., resolution %in% resolutions)
@@ -202,27 +212,61 @@ post_process_cooltools_compartment_results <- function(results.df){
     results.df
 }
 
+merge_bins_into_compartments <- function(binwise.df){
+    binwise.df %>% 
+    dplyr::rename('seqnames'=chr) %>% 
+    nest(
+        compartments=
+            -c(
+                resolution, 
+                normalization, track.type, score.source,
+                SampleID, compartment.category
+            )
+    ) %>% 
+    mutate(
+        compartments=
+            pmap(
+                .l=.,
+                .f=
+                    function(compartments, ...) {
+                        compartments %>% 
+                        as_granges() %>% 
+                        reduce_ranges(total.score=sum(score)) %>% 
+                        as_tibble() %>% 
+                        dplyr::rename('chr'=seqnames)
+                    }
+            )
+    ) %>% 
+    unnest(compartments) %>% 
+    select(-c(strand))
+}
+
 ###################################################
 # Generate Saddle Plot Data
 ###################################################
 generate_saddle_data_calculation_cmds <- function(
-    threads,
     normalization,
     resolution,
     contact.type,
+    n.bins,
+    qrange,
+    track.col.name,
+    expected.col.name,
     MatrixID,
     mcool.filepath,
     track.filepath,
-    track.col.name,
     expected.path,
-    expected.col.name,
     output_dir,
     ...){
     output_dir <- 
         file.path(
             output_dir,
             glue("normalization_{normalization}"),
-            glue("resolution_{resolution}")
+            glue("resolution_{resolution}"),
+            glue("contat.type_{contact.type}"),
+            glue("n.bins_{n.bins}"),
+            glue("expectation.metric_{expected.col.name}"),
+            glue("saddle.metric_{track.col.name}")
         )
     # Create filepaths
     mcool.uri     <- glue("{mcool.filepath}::resolutions/{resolution}")
@@ -237,10 +281,10 @@ generate_saddle_data_calculation_cmds <- function(
             .unmatched="error"
         )
     mkdir.cmd       <- glue("mkdir -p {output_dir}")
-    saddle.cmd <- glue("cooltools saddle --strength {weight_flag} -t {contact.type} -n-bins {n.bins} -o {output.prefix} {mcool.uri} {track.uri} {expected.path}")
+    saddle.cmd <- glue("cooltools saddle --qrange {qrange} --strength {weight_flag} -t {contact.type} --n-bins {n.bins} -o {output.prefix} {mcool.uri} {track.uri} {expected.path}")
     # Paste  all commands together in one line to run in bash
     tibble_row(
-        output.filepath=glue("{output.prefix}signals.tsv")
+        output.filepath=glue("{output.prefix}signals.tsv"),
         cmd=
             paste(
                 c(
@@ -257,23 +301,40 @@ generate_all_saddle_data_calculation_cmds <- function(
     merge_status='merged',
     force_redo=FALSE,
     ...){
+    # merge_status='merged'; force_redo=FALSE;
     # list all binwise eigenvector results files
-    COMPARTMENTS_RESULTS_DIR %>%
-    parse_results_filelist(suffix='.cis.vecs.tsv') %>% 
-    dplyr::rename('track.filepath'=filepath) %>% 
+    compartment.results.files.df <- 
+        COMPARTMENTS_RESULTS_DIR %>%
+        parse_results_filelist(
+            filename.column.name='MatrixID',
+            suffix='.cis.vecs.tsv'
+        ) %>% 
+        convert_MatrixID_to_SampleID_and_SampleGroup() %>% 
+        dplyr::rename('track.filepath'=filepath)
     # list all distance expected contact files
-    inner_join(
+    distance.expectation.results.files.df <- 
         DISTANCE_EXPECTED_CONTACTS_DIR %>% 
-        parse_results_filelist(suffix='-expected.tsv') %>% 
-        dplyr::rename('expected.path'=filepath),
-        by=join_by(normalization, resolution)
+        parse_results_filelist(
+            filename.column.name='MatrixID',
+            suffix='-expected.tsv'
+        ) %>% 
+        convert_MatrixID_to_SampleID_and_SampleGroup() %>% 
+        dplyr::rename('expected.path'=filepath)
+    # Contact matrix files
+    matrix.files.df <- 
+        list_all_mcool_files(merge_status=merge_status) %>%
+        dplyr::rename('mcool.filepath'=filepath)
+    # Map all inputs together by matching param valuies
+    compartment.results.files.df %>% 
+    inner_join(
+        matrix.files.df,
+        by=join_by(isMerged, Sample.Group, SampleID)
+    ) %>% 
+    inner_join(
+        distance.expectation.results.files.df,
+        by=join_by(isMerged, Sample.Group, SampleID, normalization, resolution)
     ) %>% 
     # list contacts matrices for all samples to generate compartments for
-    inner_join(
-        list_all_mcool_files(merge_status=merge_status) %>%
-        dplyr::rename('mcool.filepath'=filepath),
-        by=join_by(resolution)
-    ) %>% 
     # Map any other hyper-params to sets of related files
     inner_join(
         hyper.params.df,

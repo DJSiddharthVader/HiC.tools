@@ -27,11 +27,14 @@ hyper.params.df <-
     bind_rows(
         # cooltools params
         expand_grid(
-            # track.type=c('genecov'),
             normalization=c('balanced'),
-            contact.type=c('cis'),
-            n.bins=c(10, 50, 100)
             # normalization=c('balanced', 'raw'),
+            contact.type=c('cis'),
+            track.col.name=c('E1'),  # which track score to use for binning 
+            expected.col.name=c('balanced.avg.smoothed'),
+            qrange=c('0.02 0.98'),  # remove bins with outlier scores 
+            n.bins=c(50)
+            # n.bins=c(10, 50, 100)
         )
     ) %>%  
     cross_join(tibble(resolution=parsed.args$resolutions)) %>% 
@@ -46,7 +49,7 @@ hyper.params.df <-
 # Now generate commands to run cooltools eigs-cis to calculate + orient PC1 from the contact matrix
 # We can bin the PC1 data to define compartment type + strength (i.e. Weak A, Strong B etc.)
 hyper.params.df %>% 
-    generate_all_saddle_stats_cmds(
+    generate_all_saddle_data_calculation_cmds(
         merge_status='merged',
         force_redo=parsed.args$force.redo
     ) %>% 
