@@ -252,7 +252,6 @@ add_faceting <- function(
     facet.ncol=NULL,
     ...){
     # Facet as specified
-    facet.formula <- 
     if (!is.null(facet.col) & !is.null(facet.row)) {
         figure <- 
             figure +
@@ -636,6 +635,18 @@ make_nested_plot_tabs <- function(
     cat(nl.delim)
 }
 
+plot_saving_wrapper <- function(
+    plot.df,
+    plot.fnc,
+    results_file,
+    width=8, 
+    height=6,
+    ...){
+    dir.create(dirname(results_file), showWarnings=FALSE, recursive=TRUE)
+    plot.df %>% 
+    plot.fnc(...) %>%
+    ggsave(results_file, plot=., width=width, height=height, unit='in')
+}
 ###################################################
 # Basic Plots
 ###################################################
@@ -650,7 +661,6 @@ plot_barplot <- function(
     position='dodge',
     legend.cols=NA,
     ...){
-    # Set fill group if specified
     {
         if (is.null(fill.var)) {
             ggplot(
@@ -714,7 +724,7 @@ plot_boxplot <- function(
     outliers=FALSE,
     outlier.size=1,
     ...){
-    # Set fill group if specified
+    # x.var='Comparison'; y.var='value'; fill.var='Edit.Numerator'; outliers=TRUE; outlier.size=1;
     {
         if (is.null(fill.var)) {
             ggplot(
@@ -792,6 +802,40 @@ plot_density <- function(
     # { . + geom_histogram(binwidth=binwidth, alpha=alpha) } %>% 
     # Handle faceting + scaling + theme options
     post_process_plot(...)
+}
+
+plot_ridges <- function(
+    plot.df,
+    x.var='',
+    y.var='',
+    fill.var=NULL,
+    alpha=0.5,
+    scales='fixed',
+    ...){
+    {
+        ggplot(
+            plot.df,
+            aes(
+                x=.data[[x.var]],
+                y=.data[[y.var]],
+            )
+        )
+    } %>% 
+    {
+        if (!is.null(fill.var)) {
+            . + aes(fill=.data[[fill.var]])
+        } else {
+            .
+        }
+    } %>% 
+    {
+        . + geom_density_ridges(alpha=alpha)
+    } %>% 
+    # Handle faceting + scaling + theme options
+    post_process_plot(
+        scales=scales,
+        ...
+    )
 }
 
 plot_histogram <- function(
@@ -1004,7 +1048,8 @@ plot_lineplot <- function(
     size=0.5,
     scales='fixed',
     ...){
-    # Set fill group if specified
+    # x.var='start'; x.scale.mode='mb'; y.var='nesting.lvl'; group.var='Sample.Group'; color.var='Genotype'; shape.var='Genotype'; facet.row='Edit';
+    # make it a lineplot plot
     {
         ggplot(
             plot.df,
@@ -1092,12 +1137,114 @@ plot_contours <- function(
     } %>% 
     # make it a scatter plot
     { 
-        . + geom_contour_filled(bins=bins)
+        . + geom_density_2d_filled(contour_var='ndensity')
     } %>% 
     # Handle faceting + scaling + theme options
     post_process_plot(
         scales=scales,
         ...
     )
+}
+
+plot_rect_series <- function(
+    plot.df,
+    x.var='',
+    y.var='',
+    width.var='',
+    height.var='',
+    # xmin.var='',
+    # xmax.var='',
+    # ymin.var='',
+    # ymax.var='',
+    color.var=NULL,
+    fill.var=NULL,
+    alpha=0.5,
+    scales='fixed',
+    ...){
+    {
+        ggplot(
+            plot.df,
+            aes(
+                x=.data[[x.var]],
+                y=.data[[y.var]],
+                width=.data[[width.var]],
+                height=.data[[height.var]]
+                # xmin=.data[[xmin.var]],
+                # xmax=.data[[xmax.var]],
+                # ymin=.data[[ymin.var]],
+                # ymax=.data[[ymax.var]]
+            )
+        )
+    } %>% 
+    {
+        if (!is.null(color.var)) {
+            . + aes(color=.data[[color.var]])
+        } else {
+            .
+        }
+    } %>% 
+    {
+        if (!is.null(fill.var)) {
+            . + aes(fill=.data[[fill.var]])
+        } else {
+            .
+        }
+    } %>% 
+    {
+        . +
+        geom_rect(alpha=alpha)
+    } %>% 
+    # Handle faceting + scaling + theme options
+    post_process_plot(
+        scales=scales,
+        ...
+    )
+}
+
+plot_paired_boxplot <- function(
+    plot.df,
+    x.var='',
+    y.var='',
+    group.var='',
+    line.color.var='',
+    pt.size=1,
+    ...){
+    # x.var='Comparison'; y.var='value'; fill.var='Edit.Numerator'; outliers=TRUE; outlier.size=1;
+    {
+        ggplot(
+            plot.df,
+            aes(
+                x=.data[[x.var]],
+                y=.data[[y.var]],
+                group.var=.data[[x.var]],
+            )
+        )
+    } %>% 
+    { 
+        . + 
+        geom_boxplot(
+            aes(fill=.data[[x.var]]),
+            outliers=FALSE
+        ) +
+        geom_line(
+            aes(color=.data[[line.color.var]])
+        ) +
+        # Add the summary line for the mean
+        geom_jitter(
+            aes(fill=.data[[x.var]]),
+            shape=21,
+            size=pt.size
+        ) +
+        stat_summary(
+            aes(group = 1), # Group all points together for the summary
+            fun = "mean",
+            geom = "line",
+            color = "red",
+            linewidth = 1.2,
+            linetype = "dashed"
+        )
+    } %>% 
+    # Handle faceting + scaling + theme options
+    post_process_plot(legend.position='none', ...)
 }
 
