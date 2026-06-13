@@ -532,33 +532,33 @@ post_process_counts_by_significance <- function(results.df){
 plot_upset <- function(
     plot.df,
     make.binary=FALSE,
-    category_col='Comparison',
+    categories.col='Comparison',
+    fill.column='RGD.status',
     ...){
-    # make.binary=FALSE; category_col='Comparison';
+    # make.binary=TRUE; categories.col='Comparison'; fill.column='region';
     total.interactions <- nrow(plot.df)
-    category_prefix <- fixed(glue('{category_col}.'))
-    if (make.binary) {
-        # plot.df <-
-        tmp <- 
+    category.prefix <- glue('{categories.col}___')
+    plot.df <- 
+        if (make.binary) {
             plot.df %>%
             add_column(is.category=TRUE) %>%
             pivot_wider(
-                names_from=category_col,
-                names_prefix=category_prefix,
-                values_from=is.category,
-                values_fill=list(FALSE)
+                names_from=categories.col,
+                names_prefix=category.prefix,
+                # values_fill=FALSE,
+                values_from=is.category
             )
-        tmp %>%  head(2) %>% t()
-    } 
+        } else {
+            plot.df
+        }
     upset(
         plot.df,
-        plot.df %>%
-            dplyr::select(starts_with(category_prefix)) %>%
-            colnames(),
+        plot.df %>% dplyr::select(starts_with(category.prefix)) %>% colnames(),
         width_ratio=0.3,
         mode='exclusive_intersection',
-        name=category_col,
-        labeller=function(x) str_remove(x, category_prefix),
+        name=categories.col,
+        labeller=function(x) str_remove(x, fixed(category.prefix)),
+        sort_intersections_by=c('degree', 'cardinality'),
         base_annotations=
             list(
                 'Common DIRs across Comparisons'=
@@ -576,13 +576,13 @@ plot_upset <- function(
                         vjust=1, hjust=1
                     ) + 
                     ylab('Common DIRs across Comparisons')
-                
             ),
         annotations=
             list(
-                'Chrs'=
+                'chrs'=
                     (
-                        ggplot(mapping=aes(fill=chr)) +
+                        ggplot(mapping=aes(fill=.data[[fill.column]])) +
+                        # ggplot(mapping=aes(fill=region)) +
                         geom_bar(stat='count', position='fill') + 
                         scale_y_continuous(labels=scales::percent_format()) +
                         ylab('Chrs')
@@ -594,7 +594,8 @@ plot_upset <- function(
                     position='right',
                     geom=
                         geom_bar(
-                            aes(fill=chr, x=group),
+                            aes(fill=.data[[fill.column]]),
+                            # aes(fill=region),
                             width=0.8
                         )
                 ) +
@@ -606,3 +607,86 @@ plot_upset <- function(
     )
 }
 
+plot_anchor_upset <- function(
+    plot.df,
+    make.binary=FALSE,
+    categories.col='Comparison',
+    fill.column='RGD.status',
+    ...){
+    # make.binary=TRUE; categories.col='Comparison'; fill.column='region';
+    total.interactions <- nrow(plot.df)
+    category.prefix <- glue('{categories.col}___')
+    plot.df <- 
+        if (make.binary) {
+            plot.df %>%
+            add_column(is.category=TRUE) %>%
+            pivot_wider(
+                names_from=categories.col,
+                names_prefix=category.prefix,
+                # values_fill=FALSE,
+                values_from=is.category
+            )
+        } else {
+            plot.df
+        }
+    upset(
+        plot.df,
+        plot.df %>% dplyr::select(starts_with(category.prefix)) %>% colnames(),
+        width_ratio=0.3,
+        mode='exclusive_intersection',
+        name=categories.col,
+        labeller=function(x) str_remove(x, fixed(category.prefix)),
+        sort_intersections_by=c('degree', 'cardinality'),
+        base_annotations=
+            list(
+                'Common DIRs across Comparisons'=
+                    intersection_size(
+                        text_colors=
+                            c(
+                                on_background='black',
+                                on_bar='black'
+                            )
+                    ) +
+                    annotate(
+                        geom='text',
+                        x=Inf, y=Inf,
+                        label=paste('Total DIRs:', total.interactions),
+                        vjust=1, hjust=1
+                    ) + 
+                    ylab('Common DIRs across Comparisons')
+            ),
+        annotations=
+            list(
+                'chrs'=
+                    (
+                        ggplot(mapping=aes(fill=.data[[fill.column]])) +
+                        # ggplot(mapping=aes(fill=region)) +
+                        geom_bar(stat='count', position='fill') + 
+                        scale_y_continuous(labels=scales::percent_format()) +
+                        ylab('Chrs')
+                    ),
+                'DIR Anchor Valency'=
+                    (
+                        ggplot(mapping=aes(y=anchor.valency)) +
+                        geom_boxplot() +
+                        ylab('# of DIRs anchor is a part of')
+                    )
+            ),
+        set_sizes=
+            (
+                upset_set_size(
+                    position='right',
+                    geom=
+                        geom_bar(
+                            aes(fill=.data[[fill.column]]),
+                            # aes(fill=region),
+                            width=0.8
+                        )
+                ) +
+                scale_x_continuous(labels=scales::percent_format()) +
+                labs(x='Detected DIRs') +
+                make_ggtheme(axis.text.x=element_text(angle=45, hjust=1))
+            ),
+        guides='over' # moves legends over the set sizes
+    )
+}
