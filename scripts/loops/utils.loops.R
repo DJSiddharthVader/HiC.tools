@@ -623,14 +623,93 @@ calculate_all_loop_valency <- function(
 }
 
 ###################################################
-# Nesting Analysis
+# Loop Nesting Results
 ###################################################
-define_nested_loop_regions_and_compute_summary_stats <- function(
+# input data for calculating nesting per condition + stratified by differential loop status
+load_all_loop_data_for_nesting_analysis <- function(){
+    # get all loops per condition and pivot metrics columns
+    all.per.condition.loop.data.df <- 
+        load_per_condition_loops() %>%
+        mutate(log10.qvalue=-log10(qvalue)) %>% 
+        select(-c(length, count)) %>% 
+        pivot_longer(
+            # c(length, count, enrichment, log10.qvalue),
+            c(enrichment, log10.qvalue),
+            names_to='loop.feature',
+            values_to='loop.value'
+        ) %>% 
+        select(
+            resolution, SampleID, 
+            FeatureID, chr, anchor.left, anchor.right,
+            loop.feature, loop.value
+        )
+    # load differential loop results and map stats to loops
+    all.between.condition.loop.data.df <- 
+        load_between_condition_loops() %>%
+        select(
+            resolution, IDR2D.Params, 
+            SampleID.Numerator, SampleID.Denominator,
+            FeatureID, chr, anchor.left, anchor.right,
+            loop.status
+        ) %>%
+        mutate(Comparison=glue('{SampleID.Numerator} vs {SampleID.Denominator}')) %>% 
+        # pivot so I can easily nest so that
+        # loops are per condition + have differential status per comparison
+        pivot_longer(
+            c(SampleID.Numerator, SampleID.Denominator),
+            names_to='Comparison.side',
+            names_prefix='SampleID.',
+            values_to='SampleID'
+        ) %>% 
+        filter(
+            (loop.status == 'Numerator.only'   & Comparison.side == 'Numerator'  ) |
+            (loop.status == 'Denominator.only' & Comparison.side == 'Denominator') |
+            (!loop.status %in% c('Numerator.only', 'Denominator.only'))
+        ) %>% 
+        # add condition specific individual loop data for loop per comparison
+        inner_join(
+            all.per.condition.loop.data.df %>% 
+                select(-c(chr, anchor.left, anchor.right)),
+            relationship='many-to-many',
+            by=
+                join_by(
+                    resolution, 
+                    FeatureID,
+                    SampleID
+                )
+        )
+    # bind together since they are analyzed the same way, produces separate output files per differential loop status
+    # and marginalzied over all loops
+    all.per.condition.loop.data.df %>% 
+    add_column(
+        loop.status='all',
+        Comparison.side='None',
+        Comparison='None'
+    ) %>% 
+    bind_rows(all.between.condition.loop.data.df) %>% 
+    # change end to be end of last bin, not start, since we are treating loops as segments to calc nesting
+    # anchor.right is the bin start, so change it to bin end to capture that bin in each loop
+    mutate(anchor.right=anchor.right + resolution) %>% 
+    dplyr::rename(
+        'start'=anchor.left,
+        'end'=anchor.right
+    ) %>% 
+    nest(
+        loops.df=
+            c(
+                FeatureID,
+                chr, start, end, 
+                loop.feature, loop.value, 
+            )
+    )
+}
+# compute all nesting stats i.e. summary stats over loops per bin, squashed into segments of continuous bins
+compute_nesting_stats_per_bin <- function(
     loops.df,
     bins.df,
-    resolution,
     ...){
     # paste('row.index=1', paste0(colnames(tmp), "=tmp$", colnames(tmp), "[[row.index]]", collapse='; '), 'tmp %>% head(row.index) %>% tail(1) %>% t()', sep='; ')
+    # row.index=1; resolution=tmp$resolution[[row.index]]; SampleID=tmp$SampleID[[row.index]]; loop.status=tmp$loop.status[[row.index]]; Comparison.side=tmp$Comparison.side[[row.index]]; Comparison=tmp$Comparison[[row.index]]; IDR2D.Params=tmp$IDR2D.Params[[row.index]]; loops.df=tmp$loops.df[[row.index]]; bins.df=tmp$bins.df[[row.index]]; results_file=tmp$results_file[[row.index]]; tmp %>% head(row.index) %>% tail(1) %>% t()
     # compute summary stats across all loops overlapping each bin
     # then collapse run of contiguous bins together (i.e. all bins within the exact same set of loops)
     bins.df %>%
@@ -646,15 +725,10 @@ define_nested_loop_regions_and_compute_summary_stats <- function(
     ) %>%
     as_tibble() %>% 
     select(-c(strand, width)) %>% 
-    # pivot so each loop feature is on its own row
-    pivot_longer(
-        -c(seqnames, start, end, FeatureID),
-        names_to='loop.feature',
-        values_to='loop.value'
-    ) %>%
-    # for each bin + loop feature 
+    dplyr::rename('chr'=seqnames) %>% 
+    # for each genomic bin + loop feature 
     group_by(
-        seqnames, start, end,
+        chr, start, end,
         loop.feature
     ) %>%
     # calculate loop feature summary statistics + count nesting lvl (how many loops overlap each bin)
@@ -665,80 +739,106 @@ define_nested_loop_regions_and_compute_summary_stats <- function(
             .fn=
                 list(
                     'var'=var,
-                    'mean'=mean,
                     'min'=min,
+                    'mean'=mean,
                     'max'=max,
-                    'sum'=sum
+                    'total'=sum
                 ),
             .names="metric_{.fn}"
         )
     ) %>%
     ungroup() %>% 
+    # pivot so now each row is a single nested segment and all the stats are separate columns
     pivot_wider(
         names_from=loop.feature,
         names_glue='{.value}_{loop.feature}',
         values_from=starts_with('metric_')
-    ) %>% 
+    )
+}
+
+compute_loop_nesting_results <- function(
+    loops.df,
+    bins.df,
+    ...){
+    # For each genomic bin count how many loops overlap that bin
+    # and summary stats of loop feature (e.g. pvalue) for those overlappign loops
+    compute_nesting_stats_per_bin(
+        loops.df,
+        bins.df
+    ) %>%
     # Now collapse all sets of contiguous bins at the same nesting lvl into segments
     # so each row is a segment (start-end) instead of a single bin
-    # all bins squashed into the same segment are this way overlapped by the same set of loops
-    # so all summary stats per nesting segment are the same
-    group_by(
-        across(
-            c(
-                starts_with('metric_'), 
-                'nesting.lvl',
-                'seqnames'
-            )
-        )
-    ) %>%
-    # Take the leftmost start and righmost end for all groups of contiguous bins (i.e. segments) that
-    # by definition have the same loop nesting stats, since they are covered by the same set of loops
+    # all bins squashed into the same segment are this way are overlapped by 
+    # the same set of loops they all have the same summary stats
+    group_by(across(c(starts_with('metric_'), 'nesting.lvl', 'chr'))) %>% 
+    # Take the leftmost start and righmost end across all bins
+    # per group as the segment start/end and just save the segment coords
     summarize(
         start=min(start),
         end=max(end)
     ) %>%
-    ungroup() %>%
-    dplyr::rename('chr'=seqnames) %>% 
-    arrange(chr, start) %>% 
+    ungroup() %>% 
+    arrange(chr, start, end) %>% 
     relocate(chr, start, end, nesting.lvl)
 }
 
 compute_all_loop_nesting_results <- function(
-    all.loops.df,
-    all.bins.df){
-    all.loops.df %>%
+    all.loop.data.df,
+    all.bins.df,
+    force_redo=FALSE){
+    # for every set of loops join the set of all genomic bins at the same resolution
+    all.loop.data.df %>%
     left_join(
         all.bins.df,
         by=join_by(resolution)
     ) %>% 
+    # set up output filepath for each set of results
+    mutate(
+        # Comparison=str_replace(Comparison, ' ', '_'),
+        # loop.status_=str_replace(loop.status, ' ', '_'),
+        results_file=
+            file.path(
+                ALL_LOOP_NESTING_RESULTS_DIR,
+                glue('resolution_{resolution}'),
+                glue('IDR2D.Params_{IDR2D.Params}'),
+                glue('Comparison_{Comparison}'),
+                glue('Comparison.side_{Comparison.side}'),
+                glue('loop.status_{loop.status}'),
+                glue('{SampleID}-loop.nesting.results.tsv')
+            )
+    ) %>% 
+        {.} -> tmp; tmp
+        tmp %>% head(3) %>% 
+    # compute and save all nested segments for each set of loop data
+    future_pmap(
+    # pmap(
+        .l=.,
+        .f=check_cached_results,
+        results_fnc=compute_loop_nesting_results,
+        force_redo=force_redo,
+        .progress=TRUE
+    )
+}
+# list and load all nesting results
+list_all_loop_nesting_results <- function(){
+    ALL_LOOP_NESTING_RESULTS_DIR %>% 
+    parse_results_filelist(
+        filename.column.name='SampleID',
+        suffix='-loop.nesting.results.tsv'
+    )
+}
+
+load_all_loop_nesting_results <- function(){
+    list_all_loop_nesting_results() %>%
     mutate(
         nesting.results=
-            future_pmap(
-            # pmap(
-                .l=.,
-                .f=define_nested_loop_regions_and_compute_summary_stats,
-                .progress=TRUE
-            )
+            pmap(
+                 .l=list(filepath),
+                 .f=read_tsv,
+                 show_col_types=FALSE
+             )
     ) %>%
-    unnest(nesting.results) %>% 
-    select(-c(loops.df, bins.df))
-    # mutate(
-    #     results_file=
-    #         file.path(
-    #             ALL_LOOP_NESTING_RESULTS_DIR,
-    #             glue('resolution_{resolution}'),
-    #             glue("normalization_{normalization}"),
-    #             glue("kernel_{kernel}"),
-    #             glue('{SampleID}-loop.nesting.results.tsv'),
-    #         )
-    # ) %>% 
-    # future_pmap(
-    #     .l=.,
-    #     .f=check_cached_results,
-    #     results_fnc=define_nested_loop_regions_and_compute_summary_stats,
-    #     .progress=TRUE
-    # )
+    unnest(nesting.results)
 }
 
 post_process_loop_nesting_result <- function(results.df){
@@ -754,88 +854,160 @@ post_process_loop_nesting_result <- function(results.df){
     separate_wider_delim(
         tmp,
         delim='_',
-        names=c(NA, 'stat', 'loop.feature')
+        names=c(NA, 'loop.stat', 'loop.feature')
     )
 }
 
 ###################################################
-# Expression Integration Analysis
+# Loop Nesting Correlation Analysis
 ###################################################
-join_expr_and_IDR2D_results <- function(
-    idr2d.results.df,
-    expression.df,
-    ...){
-    # samples.avail <- expression.df %>% colnames() %>% grep('16p.', ., value=TRUE)
-    samples.avail <- unique(expression.df$SampleID)
-    idr2d.results.df %>% 
-    filter(
-           SampleID.Numerator %in% samples.avail,
-           SampleID.Denominator %in% samples.avail
-    ) %>% 
-    inner_join(
-        expression.df,
-        by=
-            join_by(
-                chr,
-                between(y$start, x$anchor.left, x$anchor.right),
-                between(y$end,   x$anchor.left, x$anchor.right)
+# compute rolling correlation of nesting stats across bins between a pair of conditions
+compute_nesting_stat_rolling_correlations <- function(
+    comparison.df,
+    window.size){
+    comparison.df %>%
+    group_by(loop.feature) %>% 
+    arrange(chr, start, end) %>% 
+    cross_join(tibble(corr.metric=c('pearson', 'spearman', 'kendall'))) %>% 
+    mutate(
+        rolling.corr=
+            cor(
+                lead(loop.value.Numerator,   n=window.size),
+                lead(loop.value.Denominator, n=window.size),
+                method=corr.metric
             )
+    ) %>%
+    pivot_longer(everthing(), names_to='corr.stat', values_to='corr.value')
+}
+
+compute_nesting_correlation_results <- function(
+    loops.df.Numerator,
+    loops.df.Denominator,
+    bins.df,
+    window.size,
+    ...){
+    # paste('row.index=1;', paste0(colnames(tmp), "=tmp$", colnames(tmp), "[[row.index]]", collapse='; '), ';t(head(tmp, 1))')
+    # row.index=1; resolution=tmp$resolution[[row.index]]; SampleID.Numerator=tmp$SampleID.Numerator[[row.index]]; loop.status=tmp$loop.status[[row.index]]; Comparison.side=tmp$Comparison.side[[row.index]]; Comparison=tmp$Comparison[[row.index]]; IDR2D.Params=tmp$IDR2D.Params[[row.index]]; loops.df.Numerator=tmp$loops.df.Numerator[[row.index]]; SampleID.Denominator=tmp$SampleID.Denominator[[row.index]]; loops.df.Denominator=tmp$loops.df.Denominator[[row.index]]; bins.df=tmp$bins.df[[row.index]]; window.size=tmp$window.size[[row.index]]; results_file=tmp$results_file[[row.index]] ;t(head(tmp, 1))
+    # for each bin get nesting stats for numerator + denominator paired together
+    comparison.df <- 
+        # for each genomic bin, compute summary stats over all loops overlapping said bin 
+        compute_nesting_stats_per_bin(
+            loops.df.Numerator,
+            bins.df
+        ) %>% 
+        pivot_longer(
+            c(starts_with('metric_'), nesting.lvl),
+            names_to='loop.feature',
+            values_to='loop.value'
+        ) %>% 
+        # join numerator and denominator nesting stats 
+        full_join(
+            # for each genomic bin, compute summary stats over all loops overlapping said bin 
+            compute_nesting_stats_per_bin(
+                loops.df.Denominator,
+                bins.df
+            ) %>% 
+            pivot_longer(
+                c(starts_with('metric_'), nesting.lvl),
+                names_to='loop.feature',
+                values_to='loop.value'
+            ),
+            suffix=c('.Numerator', '.Denominator'),
+            by=join_by(chr, start, end, loop.feature)
+        ) %>%
+        # set nesting stats to 0 if any bin is only overlapped by loops in either numerator or denominator
+        filter(grepl(paste('nesting.lvl', 'mean', 'max', 'total', sep='|'), loop.feature)) %>% 
+        mutate(
+            across(
+                c(loop.value.Numerator, loop.value.Denominator),
+                ~ ifelse(is.na(.x), 0, .x)
+            )
+        )
+    # compute correlation of each metric across all bins per chr
+    per.chr.stats <- 
+        comparison.df %>% 
+        group_by(chr, loop.feature) %>% 
+        compute_nesting_stat_rolling_correlations(window.size=window.size)
+    # compute correlation of each metric genome-wide
+    gw.stats <- 
+        comparison.df %>% 
+        group_by(loop.feature) %>% 
+        compute_nesting_stat_rolling_correlations(window.size=window.size)
+    # combine results
+    bind_rows(
+        per.chr.stats,
+        gw.stats %>% add_column(chr='GW')
     )
 }
 
-calc_expr_loop_ztest <- function(
-    idr2d.results.df,
-    expression.df,
-    ...){
-    idr2d.results.df %>% 
+compute_all_loop_nesting_correlation_results <- function(
+    all.loop.data.df,
+    all.bins.df,
+    window.sizes,
+    force_redo=FALSE){
+    all.loop.data.df %>%
     inner_join(
-        expression.df,
-        by=
-            join_by(
-                SampleID.Numerator == SampleID,
-                chr,
-                between(y$start, x$anchor.left, x$anchor.right),
-                between(y$end,   x$anchor.left, x$anchor.right)
-            )
-    ) %>% 
-    inner_join(
-        expression.df,
+        .,
+        {.},
         suffix=c('.Numerator', '.Denominator'),
         by=
             join_by(
-                SampleID.Denominator == SampleID,
-                chr,
-                start, end,
-                symbol, EnsemblID
+                resolution,
+                IDR2D.Params,
+                Comparison,
+                Comparison.side,
+                loop.status
             )
     ) %>%
-    # for each gene compute pvalue if mean expression is different between conditions
-    add_column(
-        n.rna.replicates.Numerator=6,
-        n.rna.replicates.Denominator=6
+    inner_join(
+        ALL_SAMPLE_MERGED_MATRIX_COMPARISONS,
+        by=colnames(ALL_SAMPLE_MERGED_MATRIX_COMPARISONS)
     ) %>% 
+    left_join(
+        all.bins.df,
+        by=join_by(resolution)
+    ) %>% 
+    cross_join(tibble(window.size=window.sizes)) %>% 
     mutate(
-        TPM.se.Numerator=TPM.sd.Numerator**2 / n.rna.replicates.Numerator,
-        TPM.se.Denominator=TPM.sd.Denominator**2 / n.rna.replicates.Denominator,
-        expr.Z=(TPM.mean.Denominator - TPM.mean.Numerator) / sqrt(TPM.se.Numerator + TPM.se.Denominator),
-        expr.p=2 * (1 - pnorm(abs(expr.Z)))
-    ) %>%
-    # adjust p-values genome-wide
-    group_by(
-        normalization, resolution, kernel,
-        resolve.method, metric,
-        SampleID.Numerator, SampleID.Denominator
+        results_file=
+            file.path(
+                ALL_LOOP_NESTING_CORR_RESULTS_DIR,
+                glue('resolution_{resolution}'),
+                glue('window.size_{window.size}'),
+                glue('IDR2D.Params_{IDR2D.Params}'),
+                glue('loop.status_{loop.status}'),
+                glue('{Comparison}-loop.nesting.correlation.results.tsv')
+            )
     ) %>% 
-    mutate(expr.p.adjust=p.adjust(expr.p, method='BH')) %>% 
-    ungroup() %>% 
-    select(
-        -c(
-            n.rna.replicates.Numerator, n.rna.replicates.Denominator,
-            TPM.se.Numerator, TPM.se.Denominator,
-            # TPM.sd.Numerator, TPM.sd.Denominator,
-            # TPM.mean.Numerator, TPM.mean.Denominator,
-            expr.Z, expr.p
-        )
+        {.} -> tmp; tmp
+        tmp %>% head(1) %>% 
+    future_pmap(
+        .l=.,
+        .f=check_cached_results,
+        force_redo=force_redo,
+        results_fnc=compute_nesting_correlation_results,
+        .progress=TRUE
     )
+}
+# list and load all nesting results
+list_all_loop_nesting_correlation_results <- function(){
+    ALL_LOOP_NESTING_CORR_RESULTS_DIR %>% 
+    parse_results_filelist(
+        filename.column.name='Comparison',
+        suffix='-loop.nesting.correlation.results.tsv'
+    )
+}
+
+load_all_loop_nesting_correlation_results <- function(){
+    list_all_loop_nesting_correlation_results() %>%
+    mutate(
+        nesting.results=
+            pmap(
+                 .l=.,
+                 .f=read_tsv,
+                 show_col_types=FALSE
+             )
+    ) %>%
+    unnest(nesting.results)
 }
 

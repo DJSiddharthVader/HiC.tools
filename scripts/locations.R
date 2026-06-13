@@ -64,18 +64,19 @@ TADCOMPARE_COUNTS_RESULTS_FILE   <- file.path(TAD_DIR, 'all.TADCompare.counts.re
 ################################################################################
 # Loop Annotations
 ################################################################################
-LOOPS_DIR                               <- file.path(RESULTS_DIR, 'loops')
-LOOP_RESULTS_DIR                        <- file.path(LOOPS_DIR, 'results_loops')
-ALL_COOLTOOLS_LOOPS_RESULTS_FILE        <- file.path(LOOPS_DIR, 'all.cooltools.loops.tsv')
-# FILTERED_COOLTOOLS_LOOPS_RESULTS_FILE   <- file.path(LOOPS_DIR, 'filtered.cooltools.loops.tsv')
-# LOOP_BED_FILES_DIR                      <- file.path(LOOPS_DIR, 'BED.files')
+LOOPS_DIR                          <- file.path(RESULTS_DIR, 'loops')
+LOOP_RESULTS_DIR                   <- file.path(LOOPS_DIR, 'results_loops')
+ALL_LOOP_RESULTS_FILE              <- file.path(LOOPS_DIR, 'all.loops.tsv')
 # IDR2D Analysis
-LOOPS_IDR2D_DIR                         <- file.path(LOOPS_DIR, 'results_IDR2D')
-ALL_IDR2D_RESULTS_FILE                  <- file.path(LOOPS_DIR, 'all.cooltools.IDR2D.results.tsv')
+LOOPS_IDR2D_DIR                    <- file.path(LOOPS_DIR, 'results_IDR2D')
+FILTERED_IDR2D_RESULTS_FILE        <- file.path(LOOPS_DIR, 'filtered.IDR2D.results.tsv')
+ALL_IDR2D_COUNTS_RESULTS_FILE      <- file.path(LOOPS_DIR, 'all.IDR2D.counts.tsv')
 # Nesting analysis
-ALL_LOOP_VALENCY_RESULTS_FILE           <- file.path(LOOPS_DIR, 'all.cooltools.valency.results.tsv')
-ALL_LOOP_NESTING_RESULTS_DIR            <- file.path(LOOPS_DIR, 'results_nesting')
-ALL_LOOP_NESTING_RESULTS_FILE           <- file.path(LOOPS_DIR, 'all.cooltools.nesting.results.tsv')
+ALL_LOOP_VALENCY_RESULTS_FILE      <- file.path(LOOPS_DIR, 'all.valency.results.tsv')
+ALL_LOOP_NESTING_RESULTS_DIR       <- file.path(LOOPS_DIR, 'results_nesting')
+ALL_LOOP_NESTING_RESULTS_FILE      <- file.path(LOOPS_DIR, 'all.nesting.results.tsv')
+ALL_LOOP_NESTING_CORR_RESULTS_DIR  <- file.path(LOOPS_DIR, 'results_nesting.correlations')
+ALL_LOOP_NESTING_CORR_RESULTS_FILE <- file.path(LOOPS_DIR, 'all.nesting.correlations.tsv')
 
 ################################################################################
 # Compartment Annotations
