@@ -534,6 +534,46 @@ build_name_from_metadata <- function(
     mutate( "{name.str}" := glue(value.glue.str))
 }
 
+convert_SampleID_to_SampleGroup <- function(
+    df,
+    info.colname=NULL,
+    include.metadata=FALSE,
+    keep_id=FALSE,
+    include_merged_col=FALSE,
+    delim='.',
+    sep='',
+    prefix='',
+    suffix='',
+    ...) {
+    # info.colname=NULL; include.metadata=FALSE; include_merged_col=FALSE; keep_id=FALSE; delim='.'; sep=''; prefix=''; suffix=''
+    df %>% 
+    parse_metadata_from_names(
+        info.format='SampleID',
+        info.colname=info.colname,
+        include_merged_col=include_merged_col,
+        keep_id=keep_id,
+        delim=delim,
+        prefix='SampleMetadata',
+        suffix=NULL
+    ) %>% 
+    build_name_from_metadata(
+        info.format='Sample.Group',
+        delim=delim,
+        sep=sep,
+        in.prefix='SampleMetadata',
+        in.suffix=NULL,
+        out.prefix=prefix,
+        out.suffix=suffix
+    ) %>%
+    {
+        if (!include.metadata) {
+            select(., -starts_with('SampleMetadata.'))
+        } else {
+            dplyr::rename_with(., ~str_remove(.x, '^SampleMetadata.', ''))
+        }
+    }
+}
+
 convert_MatrixID_to_SampleID_and_SampleGroup <- function(
     df,
     info.colname=NULL,

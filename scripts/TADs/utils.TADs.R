@@ -251,9 +251,12 @@ generate_cooltools_calling_cmd <- function(
 
 list_all_cooltools_insulation_results_files <- function(){
     COOLTOOLS_TAD_RESULTS_DIR %>% 
-    parse_results_filelist(suffix='-TAD.tsv') %>%
-    add_column(TAD.method='cooltools') %>% 
-    convert_MatrixID_to_SampleID_and_SampleGroup()
+    parse_results_filelist(
+        filename.column.name='SampleID',
+        suffix='-TADs.tsv'
+    ) %>%
+    convert_SampleID_to_SampleGroup() %>% 
+    add_column(TAD.method='cooltools')
 }
 
 load_cooltools_insulation_TADs <- function(

@@ -24,10 +24,14 @@ nested.TADs.df <-
     #     chr, start, end,
     #     TAD.length, TAD.start.score, TAD.end.score, starts_with('TAD.inner.')
     # ) %>% 
+    convert_SampleID_to_SampleGroup() %>% 
+    select(-c(SampleID)) %>% 
     nest(
         TADs=
             -c(
-                SampleID,
+                Sample.Group,
+                # SampleID,
+                isMerged,
                 resolution,
                 TAD.method, TAD.params, TAD.metric,
                 chr
@@ -56,6 +60,7 @@ check_cached_results(
         ),
     pair_grouping_cols=
         c(
+            'isMerged',
             'resolution',
             'TAD.method', 'TAD.params', 'TAD.metric',
             'chr'
