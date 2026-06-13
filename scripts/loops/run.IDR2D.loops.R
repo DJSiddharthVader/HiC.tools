@@ -9,7 +9,6 @@ suppressPackageStartupMessages({
     source(file.path(BASE_DIR,   'scripts/constants.R'))
     source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
-    source(file.path(SCRIPT_DIR, 'utils.plot.R'))
     source(file.path(SCRIPT_DIR, 'loops/utils.loops.R'))
     library(magrittr)
     library(tidyverse)
@@ -19,8 +18,8 @@ parsed.args <-
     handle_CLI_args(
         args=c('threads', 'force'),
         has.positional=FALSE
-message(glue('using {parsed.args$threads} core to parallelize'))
     )
+message(glue('using {parsed.args$threads} core to parallelize'))
 plan(multisession, workers=parsed.args$threads)
 
 ###################################################
@@ -28,7 +27,7 @@ plan(multisession, workers=parsed.args$threads)
 ###################################################
 # Prepare loops for comparison between conditions 
 # each row is 1 nested set of loop calls per condition + context
-nested.loops.df <- 
+all.loops.df <- 
     # load loop results
     check_cached_results(
         results_file=ALL_COOLTOOLS_LOOPS_RESULTS_FILE,
@@ -38,19 +37,18 @@ nested.loops.df <-
     # Filter and clean up loops
     post_process_cooltools_dots_results() %>% 
     filter_loop_results() %>% 
-    standardize_data_cols() %>% 
+    standardize_data_cols(skip.resolution=TRUE) %>% 
     # prep columns for input to IDR2D
-    mutate(resolution=scale_numbers(resolution, force_numeric=TRUE)) %>% 
     dplyr::rename(
-        'start.A'=anchor.left,
-        'start.B'=anchor.right
+        'start_A'=anchor.left,
+        'start_B'=anchor.right
     ) %>% 
     mutate(
         log10.qvalue=-log10(qvalue),
-        end.A=start.A + resolution,
-        end.B=start.B + resolution,
-        chr.A=chr,
-        chr.B=chr
+        end_A=start_A + resolution,
+        end_B=start_B + resolution,
+        chr_A=chr,
+        chr_B=chr
     ) %>% 
     select(-c(qvalue)) %>% 
     # nest so one set of loop calls per row (SampleID + res + chr + weight)
@@ -58,8 +56,8 @@ nested.loops.df <-
         loops=
             c(
                 FeatureID,
-                chr.A, start.A, end.A,
-                chr.B, start.B, end.B, 
+                chr_A, start_A, end_A,
+                chr_B, start_B, end_B, 
                 count, length, enrichment, log10.qvalue
             )
     )
@@ -101,7 +99,7 @@ comparisons.df <-
     rename_with(~ str_replace(.x, 'Sample.Group', 'SampleID')) %>% 
     mutate(across(everything(), ~ str_replace(.x, '$', '.Merged.Merged')))
 # run IDR2D on all comparisons of sample groups + param sets
-nested.loops.df %>% 
+all.loops.df %>% 
     run_all_IDR2D_analysis(
         hyper.params.df=hyper.params.df,
         force.redo=parsed.args$force.redo,

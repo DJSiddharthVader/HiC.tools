@@ -218,14 +218,14 @@ tidy_IDR2D_results <- function(
     results,
     metric_colname,
     ...){
-    # all loops from rep1
-    reproducible.loops.Numerator <- 
+    # all loops from numerator
+    tidy.loops.Numerator <- 
         tidy_IDR2D_sided_results(
             results$rep1_df,
             metric_colname
         )
-    # all loops from rep2
-    reproducible.loops.Denominator <- 
+    # all loops from denominator
+    tidy.loops.Denominator <- 
         tidy_IDR2D_sided_results(
             results$rep2_df,
             metric_colname
@@ -237,32 +237,35 @@ tidy_IDR2D_results <- function(
                 ~ -.x
             )
         )
-    # combine all loop results from both replicates
-    # loops detected in both
+    # loops detected in both condtions with IDR stats
+    tidy.common.loops <- 
+        bind_rows(
+            tidy.loops.Numerator,
+            tidy.loops.Denominator
+        ) %>%
+        filter(!is.na(IDR)) %>% 
+        distinct()
+    # Bind all loops together into a single df
+    # create column indicating which loops are reproduced or exclusive between conditions
     bind_rows(
-        reproducible.loops.Numerator %>% filter(!is.na(IDR)),
-        reproducible.loops.Denominator %>% filter(!is.na(IDR)),
-    ) %>% 
-    # loops detected in exactly one of the replicates
-    bind_rows(
-        reproducible.loops.Numerator %>% 
-            filter(is.na(IDR)) %>%
-            add_column(loop.type='Numerator.only'),
-        reproducible.loops.Denominator %>%
-            filter(is.na(IDR)) %>%
-            add_column(loop.type='Denominator.only'),
+        tidy.common.loops %>% 
+        add_column(loop.type='detected.in.both'),
+        # loops only detected in the numerator
+        anti_join(
+            tidy.loops.Numerator,
+            tidy.common.loops
+        ) %>% 
+        mutate(IDR=1) %>% 
+        add_column(loop.type='Numerator.only'),
+        # loops only detected in the denominator
+        anti_join(
+            tidy.loops.Denominator,
+            tidy.common.loops
+        ) %>% 
+        mutate(IDR=1) %>% 
+        add_column(loop.type='Denominator.only'),
     ) %>%
-    distinct(pick(-c('loop.type')), .keep_all=TRUE) %>% 
-    # create column indicating which loops are reproduced between conditions
-    mutate(
-        loop.type=
-            case_when(
-                is.na(loop.type) & !is.na(IDR) ~ 'detected.in.both',
-                loop.type == 'Numerator.only'         ~ loop.type,
-                loop.type == 'Denominator.only'         ~ loop.type,
-                TRUE                           ~ NA
-            )
-    )
+    arrange(chr, anchor.left, anchor.right)
 }
 
 run_IDR2D_analysis <- function(
@@ -273,24 +276,24 @@ run_IDR2D_analysis <- function(
     ambiguity_resolution_method,
     max_gap,
     ...){
-    # paste0(colnames(tmp), "=tmp$", colnames(tmp), "[[row_index]]", collapse='; ')
+    # paste('row.index=1;', paste0(colnames(tmp), "=tmp$", colnames(tmp), "[[row.index]]", collapse='; '), ';t(head(tmp, 1))')
     loops.Numerator <- 
         loops.Numerator %>% 
-        mutate(across(c(chr.A, chr.B), as.character)) %>% 
-        mutate(across(c(start.A, start.B, end.A, end.B), as.integer)) %>% 
+        mutate(across(c(chr_A, chr_B), as.character)) %>% 
+        mutate(across(c(start_A, start_B, end_A, end_B), as.integer)) %>% 
         select(
-            chr.A, start.A, end.A,
-            chr.B, start.B, end.B, 
+            chr_A, start_A, end_A,
+            chr_B, start_B, end_B, 
             !!sym(metric_colname)
         ) %>%
         as.data.frame()
     loops.Denominator <-  
         loops.Denominator %>% 
-        mutate(across(c(chr.A, chr.B), as.character)) %>% 
-        mutate(across(c(start.A, start.B, end.A, end.B), as.integer)) %>% 
+        mutate(across(c(chr_A, chr_B), as.character)) %>% 
+        mutate(across(c(start_A, start_B, end_A, end_B), as.integer)) %>% 
         select(
-            chr.A, start.A, end.A,
-            chr.B, start.B, end.B, 
+            chr_A, start_A, end_A,
+            chr_B, start_B, end_B, 
             !!sym(metric_colname)
         ) %>%
         as.data.frame()
@@ -311,22 +314,21 @@ run_IDR2D_analysis <- function(
 }
 
 run_all_IDR2D_analysis <- function(
-    nested.loops.df,
+    all.loop.data.df,
     hyper.params.df,
     force.redo,
     sample.group.comparisons,
     pair_grouping_cols,
     ...){
-    # force.redo=parsed.args$force.redo; sample.group.comparisons=ALL_SAMPLE_GROUP_COMPARISONS %>% rename( 'SampleID.Numerator'=Sample.Group.Numerator, 'SampleID.Denominator'=Sample.Group.Denominator); suffixes=c('.Numerator', '.Denominator'); pair_grouping_cols=c('kernel', 'type', 'normalization', 'resolution', 'chr'); sampleID_col='SampleID'; SampleID.fields=c(NA, 'Celltype', 'Genotype')
-    # list + format metadata for all specified sample groups to compare
+    # force.redo=TRUE; sample.group.comparisons=comparisons.df; pair_grouping_cols=c('isMerged', 'method', 'kernel', 'type', 'normalization', 'resolution', 'chr')
     sample.group.comparisons %>% 
     left_join(
-        nested.loops.df,
+        all.loop.data.df,
         relationship='many-to-many',
         by=join_by(SampleID.Numerator == SampleID),
     ) %>% 
     left_join(
-        nested.loops.df %>% 
+        all.loop.data.df %>% 
         dplyr::rename('SampleID.Denominator'=SampleID),
         relationship='many-to-many',
         suffix=c('.Numerator', '.Denominator'),
@@ -339,6 +341,7 @@ run_all_IDR2D_analysis <- function(
         output_dir=
             file.path(
                 LOOPS_IDR2D_DIR,
+                glue('method_{method}'),
                 glue('kernel_{kernel}'),
                 glue('type_{type}'),
                 glue('normalization_{normalization}'),
@@ -383,8 +386,6 @@ run_all_IDR2D_analysis <- function(
             )
         )
     } %>%
-        # {.} -> tmp; tmp
-        # tmp %>% 
     future_pmap(
         .l=.,
         .f=check_cached_results,
@@ -422,11 +423,24 @@ load_IDR2D_results <- function(filepath, ...){
     read_tsv(
         show_col_types=FALSE,
         progress=FALSE
-    )
+    ) %>% 
+    mutate(
+        loop.status=
+            case_when(
+                loop.type == 'detected.in.both' & IDR >= 0.1 & IDR <= 1 ~ 'Irreproducible',
+                loop.type == 'detected.in.both' & IDR < 0.1             ~ 'IDR < 0.1',
+                loop.type == 'Numerator.only'                           ~ 'Numerator.only',
+                loop.type == 'Denominator.only'                         ~ 'Denominator.only',
+                TRUE                                                    ~ NA
+            )
+    ) %>%
+    select(-c(loop.type))
 }
 
 load_all_IDR2D_results <- function(resolutions=NULL){
     list_all_IDR2D_results(resolutions=resolutions) %>% 
+    mutate(max.gap.bins=max.gap / resolution) %>% 
+    filter_loop_IDR2D_results() %>% 
     mutate(
         idr2d=
             # pmap(
@@ -437,52 +451,30 @@ load_all_IDR2D_results <- function(resolutions=NULL){
             )
     ) %>%
     unnest(idr2d) %>% 
-    select(-c(filepath))
-}
-
-post_process_IDR2D_results <- function(results.df){
-    results.df %>% 
-    mutate(
-        max.gap.bins.int=max.gap / resolution,
-        max.gap=
-            fct_reorder(
-                glue('{scale_numbers(max.gap, force_chr=TRUE)}'),
-                max.gap.bins.int
-            ),
-        max.gap.bins=
-            fct_reorder(
-                glue('{max.gap.bins.int} bins'),
-                max.gap.bins.int
-            ),
-        loop.status=
-            case_when(
-                loop.type == 'Numerator.only'   ~ 'Numerator.only',
-                loop.type == 'Denominator.only' ~ 'Denominator.only',
-                IDR < 0.1                       ~ 'IDR < 0.1',
-                IDR >= 0.1 & IDR <= 1           ~ 'Irreproducible',
-                TRUE                            ~ NA
-            ) %>%
-            factor(
-                levels=
-                    c(
-                        'IDR < 0.1',
-                        'Irreproducible',
-                        'Numerator.only',
-                        'Denominator.only'
-                    )
-            )
-    ) %>%
-    select(
-        -c(
-            loop.type,
-            region
+    select(-c(filepath, max.gap, region)) %>% 
+    unite(
+        FeatureID,
+        sep='#',
+        remove=FALSE,
+        c(
+            method, type,
+            normalization,
+            kernel,
+            chr, anchor.left, anchor.right
         )
-    ) %>%
+    ) %>% 
+    unite(
+        IDR2D.Params,
+        sep='#',
+        remove=FALSE,
+        c(metric, resolve.method, max.gap.bins)
+    ) %>% 
     relocate(
-        type, normalization, kernel,
         resolution,
-        # metric, resolve.method, max.gap, max.gap.bins, max.gap.bins.int
-        metric, resolve.method, max.gap,
+        metric, resolve.method, max.gap.bins,
+        IDR2D.Params,
+        method, type, normalization, kernel,
+        FeatureID,
         chr, anchor.left, anchor.right,
         diff.value, diff.rank, IDR, loop.status
     )
@@ -490,12 +482,105 @@ post_process_IDR2D_results <- function(results.df){
 
 filter_loop_IDR2D_results <- function(results.df){
     results.df %>% 
-    filter(kernel == 'donut') %>% 
     filter(type == 'cis') %>% 
     filter(normalization == 'balanced') %>% 
     filter(metric == 'log10.qvalue') %>% 
     filter(resolve.method == 'value') %>%
-    filter(max.gap.bins.int == 5)
+    filter(max.gap.bins == 5)
+}
+
+post_process_IDR2D_results <- function(results.df){
+    results.df %>% 
+    mutate(
+        # max.gap.bins.int=max.gap / resolution,
+        max.gap.bins=
+            fct_reorder(
+                glue('{max.gap.bins} bins'),
+                max.gap.bins
+            ),
+        loop.status=
+            factor(
+                loop.status,
+                levels=
+                    c(
+                        'Irreproducible',
+                        'IDR < 0.1',
+                        'Numerator.only',
+                        'Denominator.only'
+                    )
+            )
+    )
+}
+
+count_all_IDR2D_results <- function(resolutions=NULL){
+    list_all_IDR2D_results(resolutions=resolutions) %>% 
+    mutate(
+        idr2d=
+            # pmap(
+            future_pmap(
+                .l=.,
+                .f=
+                    function(filepath, ...){ 
+                        filepath %>% 
+                        load_IDR2D_results() %>% 
+                        count(chr, loop.status)
+                    },
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(idr2d) %>% 
+    mutate(max.gap.bins=max.gap / resolution) %>% 
+    select(-c(filepath, max.gap, region))
+}
+
+join_loop_and_IDR2D_resilts <- function() {
+    # Load all loop data to quantify nesting with
+    all.loop.data.df <- 
+        load_per_condition_loops() %>%
+        mutate(log10.qvalue=-log10(qvalue)) %>% 
+        pivot_longer(
+            c(count, enrichment, log10.qvalue),
+            names_to='loop.feature',
+            values_to='loop.value'
+        ) %>% 
+        select(
+            resolution, SampleID, 
+            FeatureID,
+            loop.feature, loop.value
+        )
+    # load differential loop results and map stats to loops
+    load_between_condition_loops() %>%
+    select(
+        resolution, IDR2D.Params, 
+        SampleID.Numerator, SampleID.Denominator,
+        FeatureID, chr, anchor.left, anchor.right,
+        loop.status
+    ) %>%
+    mutate(Comparison=glue('{SampleID.Numerator} vs {SampleID.Denominator}')) %>% 
+    # pivot so I can easily nest so that
+    # loops are per condition + have differential status per comparison
+    pivot_longer(
+        c(SampleID.Numerator, SampleID.Denominator),
+        names_to='Comparison.side',
+        names_prefix='SampleID.',
+        values_to='SampleID'
+    ) %>% 
+    filter(
+        (loop.status == 'Numerator.only'   & Comparison.side == 'Numerator'  ) |
+        (loop.status == 'Denominator.only' & Comparison.side == 'Denominator') |
+        (!loop.status %in% c('Numerator.only', 'Denominator.only'))
+    ) %>% 
+    # add condition specific individual loop data for loop per comparison
+    inner_join(
+        all.loop.data.df,
+        relationship='many-to-many',
+        by=
+            join_by(
+                resolution, 
+                FeatureID,
+                SampleID
+            )
+    )
 }
 
 ###################################################
