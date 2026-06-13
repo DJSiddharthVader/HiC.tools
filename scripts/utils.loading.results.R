@@ -14,8 +14,7 @@ load_per_condition_TADs <- function(){
             TAD.method, TAD.params, TAD.metric,
             chr, start, end
         )
-    ) %>% 
-    add_column(HiF.type='TAD')
+    )
 }
 
 load_per_condition_TAD_Boundaries <- function(){
@@ -34,33 +33,27 @@ load_per_condition_TAD_Boundaries <- function(){
             TAD.method, TAD.params, TAD.metric,
             chr, start, end
         )
-    ) %>% 
-    add_column(HiF.type='TAD.Boundary')
+    )
 }
 
 load_per_condition_loops <- function(force_redo=FALSE){
     check_cached_results(
-        results_file=ALL_COOLTOOLS_LOOPS_RESULTS_FILE,
+        results_file=ALL_LOOP_RESULTS_FILE,
         force_redo=force_redo,
         results_fnc=load_all_cooltools_dots
     ) %>%
     # Filter and clean up loops
-    post_process_cooltools_dots_results() %>%
-    filter_loop_results() %>% 
-    add_column(HiF.type='loop')
+    filter_loop_results()
 }
 
 load_per_condition_loop_anchors <- function(){
     ALL_LOOP_VALENCY_RESULTS_FILE %>% 
-    read_tsv(show_col_types=FALSE) %>% 
-    add_column(HiF.type='loops.anchor')
+    read_tsv(show_col_types=FALSE)
 }
 
 load_per_condition_loop_nesting <- function(){
-    stop('Not Implemented')
     ALL_LOOP_NESTING_RESULTS_FILE %>% 
-    read_tsv(show_col_types=FALSE) %>% 
-    add_column(HiF.type='loops.nesting')
+    read_tsv(show_col_types=FALSE)
 }
 
 load_per_condition_compartment_regions <- function(){
@@ -78,8 +71,7 @@ load_per_condition_compartment_regions <- function(){
             score.source,
             chr, start, end
         )
-    ) %>% 
-    add_column(HiF.type='compartment.region')
+    )
 }
 
 load_per_condition_compartment_switches <- function(){
@@ -100,8 +92,7 @@ load_per_condition_compartment_switches <- function(){
             score.source,
             chr, start, end
         )
-    ) %>% 
-    add_column(HiF.type='compartment.switch')
+    )
 }
 
 load_specific_per_condition_HiFs <- function(HiF.name){
@@ -116,7 +107,8 @@ load_specific_per_condition_HiFs <- function(HiF.name){
         # HiF.name == '' ~ list(load_per_condition_()),
         .unmatched='error'
     ) %>% 
-    {.[[1]]}
+    {.[[1]]} %>% 
+    add_column(HiF.type=HiF.name)
 }
 
 combine_all_per_condition_HiFs <- function(
@@ -232,7 +224,9 @@ load_between_condition_TAD_Boundaries <- function(force_redo=FALSE){
         results_file=TADCOMPARE_RESULTS_FILE,
         force_redo=force_redo,
         # force_redo=TRUE,
-        results_fnc=load_all_TADCompare_results
+        results_fnc=load_all_TADCompare_results,
+        gw.fdr.threshold=0.1,
+        nom.threshold=0.05,
     ) %>% 
     # only keep comparisons for called boundaries
     # filter(isBoundary) %>%
@@ -248,20 +242,21 @@ load_between_condition_TAD_Boundaries <- function(force_redo=FALSE){
             TAD.method, TAD.params,
             chr, start, end
         )
-    ) %>% 
-    add_column(HiF.type='TAD.Boundary')
+    )
 }
 
 load_between_condition_loops <- function(force_redo=FALSE){
     check_cached_results(
-        results_file=ALL_IDR2D_RESULTS_FILE,
+        results_file=FILTERED_IDR2D_RESULTS_FILE,
         force_redo=force_redo,
         # force_redo=TRUE,
         results_fnc=load_all_IDR2D_results
     ) %>% 
-    post_process_IDR2D_results() %>% 
-    filter_loop_IDR2D_results() %>% 
-    add_column(HiF.type='loops')
+    # filter_loop_IDR2D_results() %>% 
+    post_process_IDR2D_results()
+}
+
+load_between_condition_loop_nesting <- function(){
 }
 
 load_between_condition_DIRs <- function(){
@@ -278,8 +273,7 @@ load_between_condition_DIRs <- function(){
         fdr.threshold=0.1,
         nom.threshold=0.05
     ) %>% 
-    post_process_multiHiCCompare_results() %>% 
-    add_column(HiF.type='DIRs')
+    post_process_multiHiCCompare_results()
 }
 
 load_between_condition_DIR_anchors <- function(){
@@ -290,8 +284,7 @@ load_between_condition_DIR_anchors <- function(){
         c(region1 , region2),
         names_to='bin.pair.side',
         values_to='start'
-    ) %>% 
-    add_column(HiF.type='DIR.anchor')
+    )
 }       
 
 load_specific_between_condition_HiFs <- function(diff.HiF.name){
@@ -306,7 +299,8 @@ load_specific_between_condition_HiFs <- function(diff.HiF.name){
         # HiF.name == '' ~ list(load_per_condition_()),
         .unmatched='error'
     ) %>% 
-    {.[[1]]}
+    {.[[1]]} %>% 
+    add_column(HiF.type=diff.HiF.name)
 }
 
 combine_all_between_condition_HiFs <- function(

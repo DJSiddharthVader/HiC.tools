@@ -9,6 +9,7 @@ suppressPackageStartupMessages({
     source(file.path(BASE_DIR,   'scripts/constants.R'))
     source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
+    source(file.path(SCRIPT_DIR, 'utils.loading.results.R'))
     source(file.path(SCRIPT_DIR, 'loops/utils.loops.R'))
     library(magrittr)
     library(tidyverse)
@@ -29,14 +30,7 @@ plan(multisession, workers=parsed.args$threads)
 # each row is 1 nested set of loop calls per condition + context
 all.loops.df <- 
     # load loop results
-    check_cached_results(
-        results_file=ALL_COOLTOOLS_LOOPS_RESULTS_FILE,
-        # force_redo=TRUE,
-        results_fnc=load_all_cooltools_dots
-    ) %>%
-    # Filter and clean up loops
-    post_process_cooltools_dots_results() %>% 
-    filter_loop_results() %>% 
+    load_per_condition_loops() %>% 
     standardize_data_cols(skip.resolution=TRUE) %>% 
     # prep columns for input to IDR2D
     dplyr::rename(
