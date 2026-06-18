@@ -432,18 +432,6 @@ load_all_multiHiCCompare_results <- function(
         )
     )
 }
-
-post_process_multiHiCCompare_results <- function(results.df){
-    results.df %>% 
-    filter(A.min == 5) %>% 
-    filter(zero.p == 0.8) %>% 
-    select(
-        -c(
-            A.min, zero.p,
-            # logCPM,
-            p.value, p.adj,
-            log.p.value, log.p.adj
-        )
     )
 }
 

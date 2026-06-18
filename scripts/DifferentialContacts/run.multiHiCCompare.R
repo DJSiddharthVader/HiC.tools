@@ -44,7 +44,21 @@ data('hg38_cyto')
 # List all separate sets of individual replicates to compare + parameters to run multiHiCComapre
 comparisons.df <- 
     ALL_SAMPLE_GROUP_COMPARISONS %>% 
-    list_all_sample_group_comparisons(merging='both')
+    list_all_sample_group_comparisons(merge_status='both') %>% 
+    mutate(
+        samples.df=
+            pmap(
+                .l=.,
+                .f=
+                    function(samples.df.Numerator, samples.df.Denominator, ...){
+                        bind_rows(
+                            samples.df.Numerator,
+                            samples.df.Denominator
+                        )
+                    }
+            )
+    ) %>% 
+    select(-c(starts_with('samples.df.')))
 # Run  multiHiCCompare on everything
 comparisons.df %>% 
     run_all_multiHiCCompare(    
@@ -53,9 +67,7 @@ comparisons.df %>%
         covariates.df=NULL,
         chromosomes=CHROMOSOMES,
         force_redo=parsed.args$force.redo,
-        sample_group_priority_fnc=SAMPLE_GROUP_PRIORITY_FNC,
-        group1_colname='Sample.Group.P1',
-        group2_colname='Sample.Group.P2'
+        sample_group_priority_fnc=SAMPLE_GROUP_PRIORITY_FNC
     )
 # load all significant pixels into a single file
 check_cached_results(
