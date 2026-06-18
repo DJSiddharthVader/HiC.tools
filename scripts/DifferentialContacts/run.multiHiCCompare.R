@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
     source(file.path(BASE_DIR,   'scripts/constants.R'))
     source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
+    source(file.path(SCRIPT_DIR, 'utils.loading.results.R'))
     source(file.path(SCRIPT_DIR, 'DifferentialContacts/utils.multiHiCCompare.R'))
     library(magrittr)
     library(tidyverse)
