@@ -18,12 +18,8 @@ load_per_condition_TADs <- function(){
 }
 
 load_per_condition_TAD_Boundaries <- function(){
-    ALL_TAD_BOUNDARIES_FILE %>% 
-    read_tsv(show_col_types=FALSE) %>% 
-    filter(
-        TAD.method == 'hiTAD' | 
-        (TAD.method != 'hiTAD' & boundary.side == 'start')
-    ) %>% 
+    load_per_condition_TADs() %>% 
+    mutate(end=start + resolution) %>% 
     unite(
         FeatureID,
         sep='#',
@@ -33,6 +29,13 @@ load_per_condition_TAD_Boundaries <- function(){
             TAD.method, TAD.params, TAD.metric,
             chr, start, end
         )
+    ) %>% 
+    select(
+        resolution,
+        TAD.method,
+        SampleID, Sample.Group,
+        FeatureID, chr, start, end,
+        TAD.length, TAD.start.score
     )
 }
 
@@ -43,17 +46,51 @@ load_per_condition_loops <- function(force_redo=FALSE){
         results_fnc=load_all_cooltools_dots
     ) %>%
     # Filter and clean up loops
-    filter_loop_results()
+    filter_loop_results() %>% 
+    unite(
+        FeatureID,
+        sep='#',
+        remove=FALSE,
+        c(
+            method, type,
+            normalization,
+            kernel,
+            chr, anchor.left, anchor.right
+        )
+    )
 }
 
 load_per_condition_loop_anchors <- function(){
     ALL_LOOP_VALENCY_RESULTS_FILE %>% 
-    read_tsv(show_col_types=FALSE)
+    read_tsv(show_col_types=FALSE) %>% 
+    unite(
+        FeatureID,
+        sep='#',
+        remove=FALSE,
+        c(
+            method, type,
+            normalization,
+            kernel,
+            chr, anchor.position
+        )
+    )
 }
 
 load_per_condition_loop_nesting <- function(){
     ALL_LOOP_NESTING_RESULTS_FILE %>% 
-    read_tsv(show_col_types=FALSE)
+    read_tsv(show_col_types=FALSE) %>% 
+    unite(
+        FeatureID,
+        sep='#',
+        remove=FALSE,
+        c(
+            method, type,
+            normalization,
+            kernel,
+            Comparison, Comparison.side, loop.status,
+            chr, start, end
+        )
+    )
 }
 
 load_per_condition_compartment_regions <- function(){
@@ -100,8 +137,8 @@ load_specific_per_condition_HiFs <- function(HiF.name){
         HiF.name == 'TAD'                ~ list(load_per_condition_TADs()),
         HiF.name == 'TAD.Boundary'       ~ list(load_per_condition_TAD_Boundaries()),
         HiF.name == 'loop'               ~ list(load_per_condition_loops()),
-        # HiF.name == 'loop.anchor'        ~ list(load_per_condition_loop_anchors()),
-        # HiF.name == 'loop.nesting'       ~ list(load_per_condition_loop_nesting()),
+        HiF.name == 'loop.anchor'        ~ list(load_per_condition_loop_anchors()),
+        HiF.name == 'loop.nesting'       ~ list(load_per_condition_loop_nesting()),
         HiF.name == 'compartment.region' ~ list(load_per_condition_compartment_regions()),
         HiF.name == 'compartment.switch' ~ list(load_per_condition_compartment_switches()),
         # HiF.name == '' ~ list(load_per_condition_()),
@@ -253,10 +290,18 @@ load_between_condition_loops <- function(force_redo=FALSE){
         results_fnc=load_all_IDR2D_results
     ) %>% 
     # filter_loop_IDR2D_results() %>% 
-    post_process_IDR2D_results()
-}
-
-load_between_condition_loop_nesting <- function(){
+    post_process_IDR2D_results() %>% 
+    unite(
+        FeatureID,
+        sep='#',
+        remove=FALSE,
+        c(
+            method, type,
+            normalization,
+            kernel,
+            chr, anchor.left, anchor.right
+        )
+    )
 }
 
 load_between_condition_DIRs <- function(){
@@ -273,17 +318,34 @@ load_between_condition_DIRs <- function(){
         fdr.threshold=0.1,
         nom.threshold=0.05
     ) %>% 
-    post_process_multiHiCCompare_results()
+    # Create a unique ID for each bin tested, to check overlaps across experiments
+    unite(
+        FeatureID,
+        sep='#',
+        remove=FALSE,
+        c(
+            zero.p, A.min, merged,
+            chr, region1, region2
+        )
+    )
 }
 
 load_between_condition_DIR_anchors <- function(){
     FILTERED_MULTIHICCOMPARE_RESULTS_FILE %>% 
     read_tsv(show_col_types=FALSE) %>% 
-    post_process_multiHiCCompare_results() %>% 
     pivot_longer(
         c(region1 , region2),
         names_to='bin.pair.side',
         values_to='start'
+    ) %>% 
+    unite(
+        FeatureID,
+        sep='#',
+        remove=FALSE,
+        c(
+            zero.p, A.min, merged,
+            chr, start, bin.pair.side
+        )
     )
 }       
 

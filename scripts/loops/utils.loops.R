@@ -161,17 +161,6 @@ load_all_cooltools_dots <- function(resolutions=NULL){
         'enrichment'=value,
         'qvalue'=qval
     ) %>% 
-    unite(
-        FeatureID,
-        sep='#',
-        remove=FALSE,
-        c(
-            method, type,
-            normalization,
-            kernel,
-            chr, anchor.left, anchor.right
-        )
-    ) %>% 
     select(-c(ends_with(c('1', '2')), cstart1 ,cstart2, c_label, c_size ,region, filepath))
 }
 
@@ -273,7 +262,7 @@ run_IDR2D_analysis <- function(
     ambiguity_resolution_method,
     max_gap,
     ...){
-    # paste('row.index=1;', paste0(colnames(tmp), "=tmp$", colnames(tmp), "[[row.index]]", collapse='; '), ';t(head(tmp, 1))')
+    # paste('row.index=1;', paste0(colnames(tmp2), "=tmp2$", colnames(tmp2), "[[row.index]]", collapse='; '), ';t(head(tmp2, 1))')
     loops.Numerator <- 
         loops.Numerator %>% 
         mutate(across(c(chr_A, chr_B), as.character)) %>% 
@@ -449,17 +438,6 @@ load_all_IDR2D_results <- function(resolutions=NULL){
     ) %>%
     unnest(idr2d) %>% 
     select(-c(filepath, max.gap, region)) %>% 
-    unite(
-        FeatureID,
-        sep='#',
-        remove=FALSE,
-        c(
-            method, type,
-            normalization,
-            kernel,
-            chr, anchor.left, anchor.right
-        )
-    ) %>% 
     unite(
         IDR2D.Params,
         sep='#',

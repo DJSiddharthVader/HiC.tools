@@ -105,4 +105,3 @@ GENOMIC_REGIONS <-
         region.UCSC=glue("{region.chr}:{region.start}-{region.end}"),
         region.dist=region.end - region.start
     )
-LOOP_QVALUE_THRESHOLD <- 0.1

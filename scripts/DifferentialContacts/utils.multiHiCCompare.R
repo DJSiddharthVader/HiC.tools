@@ -223,8 +223,8 @@ run_all_multiHiCCompare <- function(
     force_redo=FALSE,
     covariates.df=NULL,
     chromosomes=CHROMOSOMES,
-    group1_colname='Sample.Group.P1',
-    group2_colname='Sample.Group.P2',
+    group1_colname='Sample.Group.Numerator',
+    group2_colname='Sample.Group.Denominator',
     ...){
     # sample_group_priority_fnc=SAMPLE_GROUP_PRIORITY_FNC; force_redo=FALSE; covariates.df=NULL; chromosomes=c('chr15', 'chr16'); group1_colname='Sample.Group.P1'; group2_colname='Sample.Group.P2'
     comparisons.df %>% 
@@ -420,18 +420,6 @@ load_all_multiHiCCompare_results <- function(
             .f=~ -log10(.x),
             .names='log.{.col}'
         )
-    ) %>% 
-    # Create a unique ID for each bin tested, to check overlaps across experiments
-    unite(
-        FeatureID,
-        sep='#',
-        remove=FALSE,
-        c(
-            zero.p, A.min, merged,
-            chr, region1, region2
-        )
-    )
-}
     )
 }
 

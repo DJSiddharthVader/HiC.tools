@@ -2,6 +2,7 @@
 # Dependencies
 ################################################################################
 library(furrr)
+library(plyranges)
 library(TADCompare)
 
 ################################################################################
@@ -104,7 +105,7 @@ load_all_TAD_results_for_TADCompare <- function(){
             resolution,
             Sample.Group,
             SampleID,
-            TAD.method, TAD.params, TAD.metric,
+            TAD.method, TAD.params, TAD.feature,
             chr, start, end, TAD.length
         ) %>% 
         mutate(chr.copy=chr) %>% 
@@ -137,7 +138,7 @@ load_all_TAD_results_for_TADCompare <- function(){
     #         resolution,
     #         TAD.method,
     #         TAD.params,
-    #         TAD.metric
+    #         TAD.feature
     #     )
     # ) %>% 
     # dplyr::select(-c(TAD.set.index)) %>% 
