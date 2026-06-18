@@ -656,6 +656,70 @@ load_chr_sizes <- function(){
 }
 
 ###############################################################################################################
+# Reciprocal Genomic Disorder Regions 
+###############################################################################################################
+load_RGD_regions <- function(as.granges=TRUE){
+    RGD_REGIONS_FILE %>%
+    read_tsv(show_col_types=FALSE, comment='# ') %>% 
+    select(
+        RGD,
+        Critical_Region.UCSC
+    ) %>%
+    separate_wider_delim(
+        Critical_Region.UCSC,
+        delim=':',
+        names=c('chr', 'range')
+    ) %>%
+    separate_wider_delim(
+        range,
+        delim='-',
+        names=c('start', 'end')
+    ) %>%
+    filter(!is.na(chr)) %>%
+    mutate(across(c(start, end), as.integer)) %>% 
+    {
+        if (as.granges) {
+            dplyr::rename(., 'seqnames'=chr) %>% 
+            as_granges()
+        } else {
+            .
+        }
+    }
+}
+
+is_region_colocalized_with_RGD <- function(
+    regions.df,
+    strategy='within',
+    ...){
+    rgd.regions.df <- load_RGD_regions(as.granges=TRUE)
+    regions.df %>% 
+    dplyr::rename('seqnames'=chr) %>% 
+    as_granges() %>% 
+    {
+        if (strategy == 'within') {
+            join_overlap_left_within(
+                .,
+                rgd.regions.df
+            )
+        } else if (strategy == 'overlaps') {
+            join_overlap_left(
+                .,
+                rgd.regions.df
+            )
+        } else {
+            stop(glue('Invalid strategy for deciding co-localization: {strategy}'))
+        }
+    } %>%
+    as_tibble() %>% 
+    dplyr::rename(
+        'RGD.status'=RGD,
+        'chr'=seqnames
+    ) %>% 
+    mutate(RGD.binary=ifelse(is.na(RGD.status), NA, 'Within RGD')) %>% 
+    select(-c(width, strand))
+}
+
+###############################################################################################################
 # Load mcool files
 ###############################################################################################################
 list_all_mcool_files <- function(
