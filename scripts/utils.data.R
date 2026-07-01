@@ -652,6 +652,55 @@ load_chr_sizes <- function(){
     read_tsv(
         show_col_types=FALSE,
         col_names=c('chr', 'chr.size.bp')
+    ) %>% 
+    standardize_data_cols(skip.resolution=FALSE)
+}
+
+calculate_cum_chr_sizes <- function(chr.sizes.df){
+    # chr.sizes.df <- load_chr_sizes()
+    chr.sizes.df %>% 
+    mutate(idx=as.integer(chr) - 1) %>%
+    mutate(
+        cum.size=
+            pmap(
+                .l=.,
+                .f=
+                    function(idx, chr.sizes.df, ...){ 
+                        chr.sizes.df %>% 
+                        head(idx) %>% 
+                        summarize(cum.chr.size.bp=sum(chr.size.bp))
+                    },
+                chr.sizes.df=chr.sizes.df,
+                .progress=TRUE
+            )
+    ) %>%
+    unnest(cum.size) %>%
+    select(chr, chr.size.bp, cum.chr.size.bp)
+}
+
+calculate_position_frac <- function(
+    regions.df,
+    cum.chr.sizes.df,
+    position.cols=c('start', 'end')){
+    total.genome.size <- 
+        cum.chr.sizes.df %>%
+        pull(cum.chr.size.bp) %>%
+        max()
+    regions.df %>%
+    left_join(cum.chr.sizes.df, by=join_by(chr)) %>% 
+    mutate(
+        across(
+            .cols=all_of(position.cols),
+            .fns=
+                list(
+                    'genome.pos'=~ .x + cum.chr.size.bp,
+                    'chr.pct'=~ .x / chr.size.bp,
+                    'genome.pct'=~ (.x + cum.chr.size.bp) / total.genome.size
+                ),
+            .names="{.col}.{.fn}"
+        )
+    ) %>%
+    select(-c(chr.size.bp, cum.chr.size.bp))
     )
 }
 
