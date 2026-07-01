@@ -615,15 +615,12 @@ compute_nesting_stats_per_bin <- function(
     select(-c(strand, width)) %>% 
     dplyr::rename('chr'=seqnames) %>% 
     # for each genomic bin + loop feature 
-    group_by(
-        chr, start, end,
-        loop.feature
-    ) %>%
+    group_by(chr, start, end) %>%
     # calculate loop feature summary statistics + count nesting lvl (how many loops overlap each bin)
     summarize(
         nesting.lvl=n(),
         across(
-            .cols=c(loop.value),
+            .cols=c(value),
             .fn=
                 list(
                     'var'=var,
@@ -632,33 +629,23 @@ compute_nesting_stats_per_bin <- function(
                     'max'=max,
                     'total'=sum
                 ),
-            .names="metric_{.fn}"
+            .names="stat_{.fn}"
         )
     ) %>%
-    ungroup() %>% 
-    # pivot so now each row is a single nested segment and all the stats are separate columns
-    pivot_wider(
-        names_from=loop.feature,
-        names_glue='{.value}_{loop.feature}',
-        values_from=starts_with('metric_')
-    )
+    ungroup()
 }
 
-compute_loop_nesting_results <- function(
-    loops.df,
-    bins.df,
+squash_binwise_nesting_data_into_segments <- function(
+    filepath,
     ...){
-    # For each genomic bin count how many loops overlap that bin
-    # and summary stats of loop feature (e.g. pvalue) for those overlappign loops
-    compute_nesting_stats_per_bin(
-        loops.df,
-        bins.df
-    ) %>%
+    # filepath with binwise nesting results
+    filepath %>%
+    read_tsv(show_col_types=FALSE) %>% 
     # Now collapse all sets of contiguous bins at the same nesting lvl into segments
     # so each row is a segment (start-end) instead of a single bin
     # all bins squashed into the same segment are this way are overlapped by 
     # the same set of loops they all have the same summary stats
-    group_by(across(c(starts_with('metric_'), 'nesting.lvl', 'chr'))) %>% 
+    group_by(across(-c(start, end))) %>% 
     # Take the leftmost start and righmost end across all bins
     # per group as the segment start/end and just save the segment coords
     summarize(
@@ -667,46 +654,45 @@ compute_loop_nesting_results <- function(
     ) %>%
     ungroup() %>% 
     arrange(chr, start, end) %>% 
-    relocate(chr, start, end, nesting.lvl)
+    relocate(chr, start, end)
 }
 
-compute_all_loop_nesting_results <- function(
-    all.loop.data.df,
-    all.bins.df,
-    force_redo=FALSE){
-    # for every set of loops join the set of all genomic bins at the same resolution
-    all.loop.data.df %>%
-    left_join(
-        all.bins.df,
-        by=join_by(resolution)
-    ) %>% 
-    # set up output filepath for each set of results
+squash_all_binwise_nesting_data_into_segments <- function(
+    results.files.df,
+    ...){
+    results.files.df %>% 
     mutate(
-        # Comparison=str_replace(Comparison, ' ', '_'),
-        # loop.status_=str_replace(loop.status, ' ', '_'),
-        results_file=
-            file.path(
-                ALL_LOOP_NESTING_RESULTS_DIR,
-                glue('resolution_{resolution}'),
-                glue('IDR2D.Params_{IDR2D.Params}'),
-                glue('Comparison_{Comparison}'),
-                glue('Comparison.side_{Comparison.side}'),
-                glue('loop.status_{loop.status}'),
-                glue('{SampleID}-loop.nesting.results.tsv')
+        segments=
+            future_pmap(
+                 .l=.,
+                 .f=squash_binwise_nesting_data_into_segments,
+                 .progress=TRUE
             )
     ) %>% 
-        # tmp %>% head(3) %>% 
-    # compute and save all nested segments for each set of loop data
-    future_pmap(
-    # pmap(
-        .l=.,
-        .f=check_cached_results,
-        results_fnc=compute_loop_nesting_results,
-        force_redo=force_redo,
-        .progress=TRUE
-    )
-}
-
+    unnest(segments) %>% 
+    pivot_longer(
+        starts_with('stat_'),
+        names_to='stat',
+        # names_prefix='stat_',
+        values_to='value'
+    ) %>% 
+    unite(
+        'feature_stat',
+        sep='_',
+        c(stat, feature)
+    ) %>% 
+    pivot_wider(
+        names_from=feature_stat,
+        values_from=value
+    ) %>% 
+    pivot_longer(
+        c(nesting.lvl, starts_with('stat_')),
+        names_to='feature',
+        names_prefix='stat_',
+        values_to='value'
+    ) %>% 
+    filter(!is.na(value)) %>% 
+    select(-c(filepath))
 list_all_loop_nesting_results <- function(){
     ALL_LOOP_NESTING_RESULTS_DIR %>% 
     parse_results_filelist(
@@ -728,20 +714,8 @@ load_all_loop_nesting_results <- function(){
     unnest(nesting.results)
 }
 
-post_process_loop_nesting_result <- function(results.df){
-    results.df %>% 
-    filter(kernel == 'donut') %>% 
-    filter(normalization == 'balanced') %>% 
-    mutate(length=end - start) %>% 
     pivot_longer(
-        starts_with('metric_'),
-        names_to='tmp2',
         values_to='value'
-    ) %>% 
-    separate_wider_delim(
-        tmp2,
-        delim='_',
-        names=c(NA, 'loop.stat', 'loop.feature')
     )
 }
 
