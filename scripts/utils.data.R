@@ -719,6 +719,12 @@ is_region_colocalized_with_RGD <- function(
     select(-c(width, strand))
 }
 
+################################################
+# Calculate MoC comparing two sets of regions (TAD or compartments)
+################################################
+calculate_MoC <- function(
+    regions.df.P1,
+    regions.df.P2,
 ###############################################################################################################
 # Load mcool files
 ###############################################################################################################
@@ -783,6 +789,30 @@ load_mcool_file <- function(
     type='df',
     include_ends=FALSE,
     ...){
+    # paste('row.index=1', paste0(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', collapse='; '), sep='; ')
+    # regions.df.P1, regions.df.P2 are both tibbles with 
+    # the following 3 columns: chr/seqnames start, end
+    # MoC nor to granges objects for finding overlapping regions
+    granges.P1 <- 
+        regions.df.P1 %>%
+        mutate(length=end - start) %>% 
+        # mutate(idx=row_number()) %>% 
+        { if ('chr' %in% colnames(.)) { dplyr::rename(., 'seqnames'=chr) } else { . } } %>% 
+        as_granges()
+    granges.P2 <- 
+        regions.df.P2 %>%
+        mutate(length=end - start) %>% 
+        # mutate(idx=row_number()) %>% 
+        { if ('chr' %in% colnames(.)) { dplyr::rename(., 'seqnames'=chr) } else { . } } %>% 
+        as_granges()
+    # granges.P1; granges.P2
+    # Now find all overlapping pairs of regions between P1, P2, 
+    # and return only the overlaps
+    join_overlap_intersect(
+        granges.P1,
+        granges.P2,
+        minoverlap=resolution,
+        suffix=c('.P1', '.P2')
     if (normalization %in% c('weight', 'balanced', 'ICE')){
         normalization <- "weight"
     } else {
@@ -801,6 +831,24 @@ load_mcool_file <- function(
         join=TRUE,
         query_type='UCSC'
     ) %>% 
+    as_tibble() %>%
+    # mutate(width=width-1) %>% 
+    dplyr::rename('chr'=seqnames) %>% 
+    # https://link.springer.com/article/10.1186/s13059-018-1596-9#Sec9
+    # "Assessment of TAD calller performance"
+    # # F_ij^2 / (P_i * Q_j) 
+    mutate(width=width-1) %>% 
+    mutate(moc.inner=((width**2) / (length.P1 * length.P2))) %>% 
+    summarize(
+        n.Overlaps=n(),
+        MoC=sum(moc.inner) # (-1 + sum_ij moc.inner_ij) / sqrt(|P1| + |P2| - 1)
+    ) %>%
+    add_column(
+        n.regions.P1=nrow(regions.df.P1),
+        n.regions.P2=nrow(regions.df.P2)
+    ) %>% 
+    # mutate(MoC=(MoC - 1) / (sqrt(n.regions.P1 * n.regions.P2) - 1))
+    mutate(MoC=(MoC) / (sqrt(n.regions.P1 * n.regions.P2)))
     # format column names
     {
         if (type == 'df') {
@@ -852,6 +900,8 @@ load_mcool_file <- function(
     }
 }
 
+calculate_all_MoCs <- function(
+    region.comparisons.df,
 load_mcool_files <- function(
     hic.params.df,
     merge_status='merged',
@@ -860,6 +910,8 @@ load_mcool_files <- function(
     range2s=NULL,
     progress=TRUE,
     ...){
+    region.comparisons.df %>% 
+    # Finally compute all MoCs for all listed pairs of annotations
     # hic.params.df=expand.grid(resolution=c(100) * 1e3, normalization='NONE'); pattern='.mcool'; regions.df=NULL; range1s=NULL; range2s=NULL; progress=TRUE; keep_metadata_columns=FALSE;
     # Define all genomic regions to load contacts 
     regions.df <- 
@@ -898,13 +950,21 @@ load_mcool_files <- function(
     cross_join(hic.params.df) %>% 
     # Load contacts if specified or just return sample metadata + filepaths + regions
     mutate(
+        MoCs=
+            # pmap(
+            future_pmap(
         .,
         contacts=
             purrr::pmap(
                 .l=.,
+                .f=calculate_MoC,
+                .progress=TRUE
                 .f=load_mcool_file,
                 .progress=progress
             )
+    ) %>%
+    select(-c(regions.df.P1, regions.df.P2)) %>%
+    unnest(MoCs)
     ) %>% 
     select(-c(filepath, range1, range2)) %>% 
     unnest(contacts)
