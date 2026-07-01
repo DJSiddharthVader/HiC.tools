@@ -4,7 +4,8 @@ library(idr2d)
 library(broom)
 library(twosamples)
 library(infer)
-# library(plyranges)
+library(lsa) # for cosine distance
+library(plyranges)
 
 ######################################################################
 # cooltools dots
@@ -500,57 +501,6 @@ count_all_IDR2D_results <- function(resolutions=NULL){
     select(-c(filepath, max.gap, region))
 }
 
-join_loop_and_IDR2D_resilts <- function() {
-    # Load all loop data to quantify nesting with
-    all.loop.data.df <- 
-        load_per_condition_loops() %>%
-        mutate(log10.qvalue=-log10(qvalue)) %>% 
-        pivot_longer(
-            c(count, enrichment, log10.qvalue),
-            names_to='loop.feature',
-            values_to='loop.value'
-        ) %>% 
-        select(
-            resolution, SampleID, 
-            FeatureID,
-            loop.feature, loop.value
-        )
-    # load differential loop results and map stats to loops
-    load_between_condition_loops() %>%
-    select(
-        resolution, IDR2D.Params, 
-        SampleID.Numerator, SampleID.Denominator,
-        FeatureID, chr, anchor.left, anchor.right,
-        loop.status
-    ) %>%
-    mutate(Comparison=glue('{SampleID.Numerator} vs {SampleID.Denominator}')) %>% 
-    # pivot so I can easily nest so that
-    # loops are per condition + have differential status per comparison
-    pivot_longer(
-        c(SampleID.Numerator, SampleID.Denominator),
-        names_to='Comparison.side',
-        names_prefix='SampleID.',
-        values_to='SampleID'
-    ) %>% 
-    filter(
-        (loop.status == 'Numerator.only'   & Comparison.side == 'Numerator'  ) |
-        (loop.status == 'Denominator.only' & Comparison.side == 'Denominator') |
-        (!loop.status %in% c('Numerator.only', 'Denominator.only'))
-    ) %>% 
-    # add condition specific individual loop data for loop per comparison
-    inner_join(
-        all.loop.data.df,
-        relationship='many-to-many',
-        by=
-            join_by(
-                resolution, 
-                FeatureID,
-                SampleID
-            )
-    )
-}
-
-###################################################
 ######################################################################
 # Valency Analysis
 ######################################################################
@@ -693,25 +643,6 @@ squash_all_binwise_nesting_data_into_segments <- function(
     ) %>% 
     filter(!is.na(value)) %>% 
     select(-c(filepath))
-list_all_loop_nesting_results <- function(){
-    ALL_LOOP_NESTING_RESULTS_DIR %>% 
-    parse_results_filelist(
-        filename.column.name='SampleID',
-        suffix='-loop.nesting.results.tsv'
-    )
-}
-
-load_all_loop_nesting_results <- function(){
-    list_all_loop_nesting_results() %>%
-    mutate(
-        nesting.results=
-            pmap(
-                 .l=list(filepath),
-                 .f=read_tsv,
-                 show_col_types=FALSE
-             )
-    ) %>%
-    unnest(nesting.results)
 }
 
 ######################################################################
@@ -941,25 +872,54 @@ load_all_segmentwise_nesting_difference_results <- function(
     ) %>% 
     filter(!is.na(value)) %>% 
     select(-c(filepath))
-list_all_loop_nesting_correlation_results <- function(){
-    ALL_LOOP_NESTING_CORR_RESULTS_DIR %>% 
-    parse_results_filelist(
-        filename.column.name='Comparison',
-        suffix='-loop.nesting.correlation.results.tsv'
-    )
 }
 
-load_all_loop_nesting_correlation_results <- function(){
-    list_all_loop_nesting_correlation_results() %>%
-    mutate(
-        nesting.results=
-            pmap(
-                 .l=list(filepath),
-                 .f=read_tsv,
-                 show_col_types=FALSE
-             )
-    ) %>%
-    unnest(nesting.results) %>%
-    select(-c(filepath))
+######################################################################
+# List loop nesting resulst files
+######################################################################
+# Nesting analysis across loops stratified by differential status
+load_nesting_results <- function(results.type){
+    if (results.type == 'binwise.nesting'){
+        ALL_LOOP_NESTING_RESULTS_DIR %>%
+        parse_results_filelist(
+            filename.column.name='SampleID',
+            suffix='-binwise.nesting.stats.tsv'
+        )
+    } else if (results.type == 'nesting.differences'){
+        ALL_LOOP_NESTING_DIFFERENCE_DIR %>% 
+        parse_results_filelist(
+            filename.column.name='Comparison',
+            suffix='-nesting.difference.stats.tsv'
+        ) %>% 
+        separate_wider_delim(
+            Comparison,
+            delim='-',
+            names=c('SampleID.Numerator', 'SampleID.Denominator')
+        )
+    } else if (results.type == 'binwise.nesting.by.reproducibility'){
+        ALL_IDR2D_NESTING_RESULTS_DIR %>%
+        parse_results_filelist(
+            filename.column.name='Comparison',
+            suffix='-binwise.nesting.stats.tsv'
+        ) %>% 
+        separate_wider_delim(
+            Comparison,
+            delim='-',
+            names=c('SampleID.Numerator', 'SampleID.Denominator')
+        )
+    } else if (results.type == 'nesting.differences.by.reproducibility'){
+        ALL_IDR2D_NESTING_DIFFERENCE_DIR %>% 
+        parse_results_filelist(
+            filename.column.name='meta.comparison',
+            suffix='-nesting.difference.stats.tsv'
+        ) %>% 
+        separate_wider_delim(
+            meta.comparison,
+            delim='-',
+            names=c('Comparison.Numerator', 'Comparison.Denominator')
+        )
+    } else {
+        stop(glue('Invalid results.type: {results.type}'))
+    }
 }
 
