@@ -165,15 +165,6 @@ load_all_cooltools_dots <- function(resolutions=NULL){
     select(-c(ends_with(c('1', '2')), cstart1 ,cstart2, c_label, c_size ,region, filepath))
 }
 
-filter_loop_results <- function(
-    results.df,
-    q.thresh=0.1){
-    results.df %>% 
-    filter(type == 'cis') %>% 
-    filter(kernel == 'donut') %>% 
-    filter(qvalue < q.thresh)
-}
-
 ######################################################################
 # IDR2D Analysis
 ######################################################################

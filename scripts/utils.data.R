@@ -7,8 +7,9 @@ library(tictoc)
 library(glue)
 library(optparse)
 library(future)
+library(furrr)
 # library(HiCExperiment)
-# library(plyranges)
+library(plyranges)
 # library(hictkR)
 # for parsing from .cool/.mcool file names
 ALL.METADATA.FIELDS <- 
@@ -701,7 +702,6 @@ calculate_position_frac <- function(
         )
     ) %>%
     select(-c(chr.size.bp, cum.chr.size.bp))
-    )
 }
 
 ######################################################################
@@ -774,69 +774,7 @@ is_region_colocalized_with_RGD <- function(
 calculate_MoC <- function(
     regions.df.P1,
     regions.df.P2,
-###############################################################################################################
-# Load mcool files
-###############################################################################################################
-list_all_mcool_files <- function(
-    pattern='.mcool',
-    merge_status='merged',
-    only_use_included_samples=TRUE, 
-    rm_metadata_cols=TRUE,
-    ...){
-    # pattern='.mcool'; only_use_included_samples=TRUE; rm_metadata_cols=TRUE;
-    # List all .mcool files
-    MCOOL_DIR %>% 
-    list.files(
-        pattern=pattern,
-        recursive=TRUE,
-        full.names=TRUE
-    ) %>% 
-    tibble(filepath=.) %>% 
-    mutate(MatrixID=str_remove(basename(filepath), pattern)) %>% 
-    # parse sample metadata from filename
-    parse_metadata_from_names(
-        info.format='MatrixID',
-        include_merged_col=TRUE,
-        keep_id=FALSE
-    ) %>% 
-    build_name_from_metadata(info.format='SampleID') %>% 
-    build_name_from_metadata(info.format='Sample.Group') %>% 
-    build_name_from_metadata(info.format='MatrixID') %>% 
-    filter(ReadFilter == 'mapq_30') %>% 
-    {
-        case_when(
-            merge_status == 'both'       ~ list(.),
-            merge_status == 'merged'     ~ list(filter(., isMerged == 'Merged')),
-            merge_status == 'individual' ~ list(filter(., isMerged == 'Individual')),
-            .unmatched='error'
-        )
-    } %>% 
-    {.[[1]]} %>% 
-    {
-        if (only_use_included_samples){
-            filter_included_samples(df=.)
-        } else {
-            .
-        }
-    } %>% 
-    {
-        if (rm_metadata_cols){
-            select(., !all_of(intersect(colnames(.), ALL.METADATA.FIELDS)))
-        } else {
-            .
-        }
-    }
-}
-
-load_mcool_file <- function(
-    filepath,
     resolution,
-    normalization,
-    range1="",
-    range2="",
-    cis=TRUE,
-    type='df',
-    include_ends=FALSE,
     ...){
     # paste('row.index=1', paste0(colnames(tmp), '=tmp$', colnames(tmp), '[[row.index]]', collapse='; '), sep='; ')
     # regions.df.P1, regions.df.P2 are both tibbles with 
@@ -862,23 +800,6 @@ load_mcool_file <- function(
         granges.P2,
         minoverlap=resolution,
         suffix=c('.P1', '.P2')
-    if (normalization %in% c('weight', 'balanced', 'ICE')){
-        normalization <- "weight"
-    } else {
-        normalization <- "NONE"
-    }
-    if (range2 == "") {
-        range2 <- range1
-    }
-    filepath %>% 
-    File(resolution=resolution) %>% 
-    fetch(
-        range1=range1,
-        range2=range2,
-        normalization=normalization,
-        type=type,
-        join=TRUE,
-        query_type='UCSC'
     ) %>% 
     as_tibble() %>%
     # mutate(width=width-1) %>% 
@@ -898,125 +819,24 @@ load_mcool_file <- function(
     ) %>% 
     # mutate(MoC=(MoC - 1) / (sqrt(n.regions.P1 * n.regions.P2) - 1))
     mutate(MoC=(MoC) / (sqrt(n.regions.P1 * n.regions.P2)))
-    # format column names
-    {
-        if (type == 'df') {
-            if (cis) {
-                as_tibble(.) %>%
-                filter(chrom1 == chrom2) %>% 
-                {
-                    if (include_ends){
-                        dplyr::rename(
-                            .,
-                            'chr.A'=chrom1,
-                            'start.A'=start1,
-                            'end.A'=end1,
-                            'chr.B'=chrom2,
-                            'start.B'=start2,
-                            'end.B'=end2,
-                            'IF'=count
-                        )
-                    } else {
-                        select(
-                            .,
-                            -c(
-                                chrom2,
-                                end1,
-                                end2
-                            )
-                        ) %>% 
-                        dplyr::rename(
-                            'chr'=chrom1,
-                            'range1'=start1,
-                            'range2'=start2,
-                            'IF'=count
-                        )
-                    }
-                }
-            } else {
-                as_tibble(.) %>%
-                dplyr::rename(
-                    'chr1'=chrom1,
-                    'chr2'=chrom2,
-                    'range1'=start1,
-                    'range2'=start2,
-                    'IF'=count
-                )
-            }
-        } else {
-            as.matrix(.)
-        }
-    }
 }
 
 calculate_all_MoCs <- function(
     region.comparisons.df,
-load_mcool_files <- function(
-    hic.params.df,
-    merge_status='merged',
-    regions.df=NULL,
-    range1s=NULL,
-    range2s=NULL,
-    progress=TRUE,
     ...){
     region.comparisons.df %>% 
     # Finally compute all MoCs for all listed pairs of annotations
-    # hic.params.df=expand.grid(resolution=c(100) * 1e3, normalization='NONE'); pattern='.mcool'; regions.df=NULL; range1s=NULL; range2s=NULL; progress=TRUE; keep_metadata_columns=FALSE;
-    # Define all genomic regions to load contacts 
-    regions.df <- 
-        {
-            if (is.null(regions.df)) {
-                # Get the whole genome
-                if ((is.null(range1s)) & (is.null(range2s))) {
-                    tibble()
-                    # tibble(
-                    #     range1=CHROMOSOMES,
-                    #     range2=CHROMOSOMES
-                    # )
-                # get all contacts within all regions in range1s
-                } else if (is.null(range2s)) {
-                    tibble(
-                        range1=range1s,
-                        range2=range1s
-                    )
-                # get all contacts between all pairs of regions only (not intra-region contacts)
-                } else {
-                    expand_grid(
-                        range1=range1s,
-                        range2=range2s
-                    )
-                }
-            # Just load the specified regions (1 region per row: chr, start, end)
-            } else {
-                regions.df
-            }
-        }
-    # List all regions for all samples
-    list_all_mcool_files(merge_status=merge_status) %>% 
-    join_all_rows(regions.df) %>% 
-    # must contain 2 columns: resolution (int) and normalization (passed to load_mcool_file())
-    # all samples will be loaded per each pair of resolution+normalization listed i.e. per row in hic.params.df
-    cross_join(hic.params.df) %>% 
-    # Load contacts if specified or just return sample metadata + filepaths + regions
     mutate(
         MoCs=
             # pmap(
             future_pmap(
-        .,
-        contacts=
-            purrr::pmap(
                 .l=.,
                 .f=calculate_MoC,
                 .progress=TRUE
-                .f=load_mcool_file,
-                .progress=progress
             )
     ) %>%
     select(-c(regions.df.P1, regions.df.P2)) %>%
     unnest(MoCs)
-    ) %>% 
-    select(-c(filepath, range1, range2)) %>% 
-    unnest(contacts)
 }
 
 ######################################################################
