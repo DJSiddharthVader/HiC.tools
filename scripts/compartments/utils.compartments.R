@@ -1,6 +1,8 @@
 ######################################################################
 # Depdendencies
 ######################################################################
+library(lsa)
+library(broom)
 
 ######################################################################
 # Generate Cooltools Results
@@ -99,57 +101,64 @@ quantize_compartment_scores <- function(
     ...){
     # scores.df=tmp2$scores.df[[1]]; n.compartment.lvls=tmp2$n.compartment.lvls[[1]]
     scores.df %>%
+    # spearate annotation for each separate PC* being analyzed
     pivot_longer(
         -c(start, end),
         names_to='score.source',
         values_to='score'
     ) %>% 
-    mutate(compartment.category=ifelse(score > 0, 'A', 'B')) %>% 
     group_by(score.source) %>% 
+    arrange(start, end) %>% 
+    # remove bins with no PC* signal
+    # filter(!is.na(lag(score)) | !is.na(score) | !is.na(lead(score))) %>% 
+    filter(!is.na(score)) %>% 
     mutate(
-        # bin.abs.zscore=(abs.score - mean(abs.score, na.rm=TRUE)) / sd(abs.score, na.rm=TRUE),
-        compartment.strength.lvl=
+        # calculate PC1 difference between each bin and the next bin,
+        # more important/different switches should have larger differences?
+        score.change=lead(score) - score,
+        # binnify genomic bins by abs PC1 score
+        strength.lvl=
             cut(
                 x=abs(score),
                 breaks=n.compartment.lvls,
                 labels=seq(1, n.compartment.lvls)
             ) %>%
-            as.integer()
-    ) %>%
-    # ungroup() %>%
-    mutate(
-        compartment.switch=
+            as.integer(),
+        # difference in PC1 bin between adjacent genomic bins
+        strength.lvl.change=
             case_when(
-                is.na(compartment.category) & is.na(lead(compartment.category)) ~ NA,
-                compartment.category == lead(compartment.category) ~ 'no.switch',
-                .default=glue('{compartment.category}->{lead(compartment.category, n=1L)}'),
+                is.na(strength.lvl)       ~ NA,
+                is.na(lead(strength.lvl)) ~ 0 - strength.lvl,
+                is.na(lag(strength.lvl))  ~     strength.lvl,
+                .default=lead(strength.lvl) - strength.lvl
             ),
-        bin.label=
+        # classify each bin as A or B compartments by PC1 sign (already oriented by cooltools eigs-cis)
+        compartment=ifelse(score > 0, 'A', 'B'),
+        # note all bins where we shift from A->B or B->A compartments or no switch
+        compartment.change=
             case_when(
-                is.na(compartment.category) & is.na(compartment.strength.lvl) ~ NA,
-                .default=glue("{compartment.category}.{compartment.strength.lvl}")
+                is.na(compartment)       ~ NA,
+                is.na(lead(compartment)) ~ NA,
+                .default=glue('{compartment}->{lead(compartment)}')
             ),
-        bin.transition=
+        # integrate strength + switch annotations for downstream analyses
+        does.compartment.switch=compartment != lead(compartment),
+        compartment.switch.type=
             case_when(
-                is.na(bin.label) & is.na(lead(bin.label)) ~ NA,
-                .default=glue('{bin.label}->{lead(bin.label, n=1L)}'),
-            ),
-        transition.category=
-            case_when(
-                compartment.strength.lvl <  lag(compartment.strength.lvl)       ~ 'weaker',
-                compartment.strength.lvl >  lag(compartment.strength.lvl)       ~ 'stronger',
-                compartment.category     != lead(compartment.category)          ~ 'switch',
-                compartment.category == lead(compartment.category)             ~ 'no.switch',
-                is.na(compartment.category) | is.na(lead(compartment.category)) ~ NA
+                 is.na(does.compartment.switch)                     ~ NA,
+                 does.compartment.switch                            ~ 'switch',
+                 !does.compartment.switch & strength.lvl.change > 0 ~ 'stronger',
+                 !does.compartment.switch & strength.lvl.change < 0 ~ 'weaker',
+                 .default='no.switch'
             )
     )
 }
 
 load_cooltools_compartment_results <- function(
     filepath,
-    n.compartment.lvls.list,
+    # n.compartment.lvls.list,
+    n.compartment.lvls,
     ...){
-    # filepath=tmp$filepath[[1]]
     filepath %>%
     read_tsv(
         show_col_types=FALSE,
@@ -159,7 +168,8 @@ load_cooltools_compartment_results <- function(
     # select(chr, start, end, E1, E2, E3) %>% 
     select(chr, start, end, E1) %>% 
     nest(scores.df=-c(chr)) %>% 
-    cross_join(tibble(n.compartment.lvls=n.compartment.lvls.list)) %>% 
+    add_column(n.compartment.lvls=n.compartment.lvls) %>% 
+    # cross_join(tibble(n.compartment.lvls=n.compartment.lvls.list)) %>% 
     mutate(
         compartment.labels=
             pmap(
@@ -173,15 +183,7 @@ load_cooltools_compartment_results <- function(
 
 load_all_cooltools_compartment_results <- function(
     resolutions=NULL,
-    n.compartment.lvls.list=c(5)){
-    # check_cached_results(
-    #     results_file=ALL_COMPARTMENTS_RESULTS_FILE,
-    #     force_redo=TRUE,
-    #     results_fnc=load_all_cooltools_compartment_results,
-    #     resolutions=NULL,
-    #     n.compartment.lvls.list=c(5)
-    # )
-    # force_redo=parsed.args$force.redo; resolutions=parsed.args$resolutions; n.compartment.lvls.list=c(5, 10)
+    n.compartment.lvls=20){
     COMPARTMENTS_RESULTS_DIR %>%
     parse_results_filelist(
         filename.column.name='MatrixID',
@@ -198,47 +200,145 @@ load_all_cooltools_compartment_results <- function(
     mutate(
         compartments=
             future_pmap(
-                 .l=.,
-                 .f=load_cooltools_compartment_results,
-                 n.compartment.lvls.list=n.compartment.lvls.list,
-                 .progress=TRUE
+                .l=.,
+                .f=load_cooltools_compartment_results,
+                 n.compartment.lvls=n.compartment.lvls,
+                .progress=TRUE
             )
     ) %>%
     unnest(compartments) %>% 
+    unite(
+        'compartment.params',
+        sep='#',
+        c(
+            Comp.method,
+            track.type,
+            normalization,
+            score.source
+        ),
+        remove=FALSE
+    ) %>% 
     select(-c(filepath)) 
 }
 
-post_process_cooltools_compartment_results <- function(results.df){
-    results.df
+squash_bins_into_compartments <- function(compartments, ...){
+    compartments %>% 
+    {
+        if ('chr' %in% colnames(.)) {
+            dplyr::rename(., 'seqnames'=chr)
+        } else {
+            .
+        }
+    } %>% 
+    as_granges() %>% 
+    reduce_ranges(
+        score_var=var(score),
+        score_total=sum(score),
+        score_mean=mean(score),
+        score_median=median(score),
+        score_min=min(score),
+        socre_max=max(score),
+        n.bins=n()
+    ) %>% 
+    as_tibble() %>% 
+    dplyr::rename('chr'=seqnames)
 }
 
-merge_bins_into_compartments <- function(binwise.df){
+squash_all_bins_into_compartments <- function(
+    binwise.df,
+    ...){
     binwise.df %>% 
     dplyr::rename('seqnames'=chr) %>% 
     nest(
         compartments=
-            -c(
-                resolution, 
-                normalization, track.type, score.source,
-                SampleID, compartment.category
+            c(
+                seqnames, start, end,
+                score, score.change,
+                strength.lvl, strength.lvl.change,
+                # compartment,
+                compartment.change, 
+                does.compartment.switch, compartment.switch.type
             )
     ) %>% 
     mutate(
         compartments=
-            pmap(
+            future_pmap(
                 .l=.,
-                .f=
-                    function(compartments, ...) {
-                        compartments %>% 
-                        as_granges() %>% 
-                        reduce_ranges(total.score=sum(score)) %>% 
-                        as_tibble() %>% 
-                        dplyr::rename('chr'=seqnames)
-                    }
+                .f=squash_bins_into_compartments,
+                .progress=TRUE
             )
     ) %>% 
     unnest(compartments) %>% 
-    select(-c(strand))
+    select(-c(strand, width)) %>% 
+    mutate(length=end - start) %>% 
+    arrange(chr, start, end, compartment)
+}
+
+get_switches_and_context_from_all_bins <- function(
+    binwise.df,
+    bin.context=10,
+    ...){
+    # map each bin to its nearest switch (up or downstream) and 
+    # keep all bins +/- bin.context bins within a switch in either direction
+    binwise.df %>% 
+    dplyr::rename('seqnames'=chr) %>%
+    nest(
+        bins=
+            c(
+                seqnames, start, end,
+                score, score.change,
+                strength.lvl, strength.lvl.change,
+                compartment, compartment.change, 
+                does.compartment.switch, compartment.switch.type
+            )
+    ) %>% 
+    mutate(bins=pmap(.l=list(bins), as_granges)) %>% 
+        # {.} -> tmp2; tmp2
+        # bins=tmp2$bins[[1]]; resolution=tmp2$resolution[[1]]
+        # tmp2 %>% head(5) %>% 
+    mutate(
+        switch.and.context=
+            future_pmap(
+                bin.context=bin.context,
+                .progress=TRUE,
+                .l=.,
+                .f=
+                    function(bins, resolution, ...){
+                        switches <- 
+                            bins %>% 
+                            filter(does.compartment.switch) %>%
+                            select(!everything()) %>%
+                            mutate(switch.idx=row_number())
+                        bind_ranges(
+                            join_nearest_upstream(
+                                bins, 
+                                switches,
+                                distance=TRUE
+                            ) %>%
+                            mutate(side='upstream'),
+                            join_nearest_downstream(
+                                bins, 
+                                switches,
+                                distance=TRUE
+                            ) %>% 
+                            mutate(side='downstream')
+                        ) %>% 
+                        as_tibble() %>%
+                        filter((distance / resolution) <= bin.context) %>% 
+                        mutate(
+                            distance=
+                                case_when(
+                                    distance == 0        ~ 0,
+                                    side == 'upstream'   ~ 0 - (distance + 1),
+                                    side == 'downstream' ~      distance + 1
+                                )
+                        ) %>% 
+                        dplyr::rename('distance.to.nearest.switch'=distance)
+                    }
+            )
+    ) %>%
+    select(-c(bins)) %>% 
+    unnest(switch.and.context)
 }
 
 ######################################################################
@@ -370,5 +470,257 @@ generate_all_saddle_data_calculation_cmds <- function(
             .
         }
     }
+}
+
+######################################################################
+# Compare Compartment scores
+######################################################################
+calculate_binwise_difference_stats <- function(
+    segment.paired.binwise.data ,
+    alternative='two.sided',
+    # seed=9,
+    # reps=10000,
+    ...){
+    # segment.paired.binwise.data=tmp2$segment.paired.binwise.data[[5]]
+        # segment.paired.binwise.data
+    summary.stats <- 
+        segment.paired.binwise.data %>% 
+        # mutate(FC=score.Numerator / score.Denominator) %>% 
+        mutate(diff=score.Numerator - score.Denominator) %>% 
+        summarize(
+            n.bins=n(),
+            n.bins.diff.compartment=sum(!is.compartment.matched),
+            cosine.dist=  cosine(score.Numerator, score.Denominator)[[1]],
+            corr.pearson= cor(score.Numerator,    score.Denominator, method='pearson'),
+            corr.kendall= cor(score.Numerator,    score.Denominator, method='kendall'),
+            corr.spearman=cor(score.Numerator,    score.Denominator, method='spearman'),
+            n.bins.larger.in.numerator=sum(diff > 1),
+            across(
+                # .cols=c(FC), .names="score.FC_{.fn}"
+                .cols=c(diff), .names="diff_{.fn}",
+                .fns=
+                    list(
+                        'max'=max,
+                        'mean'=mean,
+                        'var'=var,
+                        'total'=sum
+                    )
+            )
+        )
+    test.results <- 
+        segment.paired.binwise.data %>% 
+        summarize(
+            test_KS=
+                ks.test(
+                    score.Numerator,
+                    score.Denominator,
+                    alternative=alternative
+                ) %>% tidy(),
+            test_Wilcox=
+                tryCatch( 
+                    {
+                        wilcox.test(
+                            score.Numerator,
+                            score.Denominator,
+                            paired=TRUE,
+                            alternative=alternative
+                        ) %>% 
+                        tidy()
+                    },
+                    error=function(e) { tibble_row() }
+                ),
+            test_Welch=
+                tryCatch( 
+                    {
+                        t.test(
+                            score.Numerator,
+                            score.Denominator,
+                            paired=TRUE,
+                            alternative=alternative
+                        ) %>% 
+                        tidy()
+                    },
+                    error=function(e) { tibble_row() }
+                ),
+            test_Sign=
+                binom.test(
+                    x=sum(score.Numerator > score.Denominator),
+                    n=n(),
+                    alternative=alternative
+                ) %>% tidy(),
+            test_Pearson=
+                tryCatch( 
+                    {
+                        cor.test(
+                            score.Numerator,
+                            score.Denominator,
+                            method='pearson',
+                            alternative=alternative
+                        ) %>% tidy()
+                    },
+                    error=function(e) { tibble_row() }
+                )
+        ) %>%
+        pivot_longer(
+            starts_with('test_'),
+            names_to='test.type',
+            names_prefix='test_',
+            values_to='test.results'
+        ) %>% 
+        unnest(test.results) %>%
+        select(test.type, p.value) %>% 
+        pivot_wider(names_from=test.type, names_prefix='p.value_', values_from=p.value)
+    # bind everything together in tidy format
+    bind_cols(
+        summary.stats,
+        test.results
+    ) %>%
+    pivot_longer(
+        -c(n.bins),
+        names_to='feature',
+        values_to='value'
+    )
+}
+
+calculate_binwise_difference_stats_per_segment <- function(
+    segments.Numerator,
+    segments.Denominator,
+    resolution,
+    ...){
+    # paste('row.index=1', paste0(colnames(segments.df), '=segments.df$', colnames(segments.df), '[[row.index]]', collapse='; '), sep='; ')
+    # group sets of adjacent bins into contiguous segments, each segment has a gap of >= 1 bin 
+    segments <- 
+        bind_ranges(
+            segments.Numerator,
+            segments.Denominator
+        ) %>% 
+        filter(!is.na(score)) %>% 
+        # squash all contiguous bins into segments (1 segment per row)
+        # to group bins for computing summary/correlation stats between conditions per segment
+        reduce_ranges() %>% 
+        # clean up column names
+        as_tibble() %>% 
+        unite('SegmentID', sep='#', c(seqnames, start, end), remove=FALSE) %>% 
+        as_granges()
+    join_overlap_left(
+        segments.Denominator,
+        segments.Numerator,
+        minoverlap=resolution,
+        suffix=c('.Numerator', '.Denominator')
+    ) %>%
+    join_overlap_inner_within(segments) %>% 
+    as_tibble() %>%
+    dplyr::rename('chr'=seqnames) %>%
+    mutate(is.compartment.matched=(compartment.Numerator == compartment.Denominator)) %>% 
+    select(
+        SegmentID,
+        compartment.Denominator, is.compartment.matched, 
+        chr, start, end,
+        score.Numerator, score.Denominator,
+    ) %>% 
+    nest(
+        segment.paired.binwise.data=
+            c(
+                is.compartment.matched, 
+                chr, start, end,
+                score.Numerator, score.Denominator,
+            )
+    ) %>% 
+    # only keep compartments annotaed in Denominator, longer than 1 bin
+    filter(!is.na(compartment.Denominator)) %>% 
+    filter(pmap(.l=list(segment.paired.binwise.data), .f=nrow) > 1) %>% 
+    # compute different/correlation stats per segment
+    mutate(
+        segment.comparisons=
+            # future_pmap(
+            pmap(
+                 # .progress=TRUE,
+                 .l=.,
+                 .f=calculate_binwise_difference_stats,
+                 .progress=FALSE
+            )
+    ) %>%
+    select(-c(segment.paired.binwise.data)) %>% 
+    unnest(segment.comparisons)
+}
+
+calculate_all_binwise_difference_stats <- function(
+    segments.df,
+    ...){
+    segments.df %>% 
+    mutate(
+        segment.test.results=
+            future_pmap(
+                .l=.,
+                .f=calculate_binwise_difference_stats_per_segment,
+                .progress=TRUE
+            )
+    ) %>% 
+    select(-c(starts_with('segments.'))) %>%
+    unnest(segment.test.results) %>%
+    select(-c(chr)) %>% 
+    separate_wider_delim(
+        SegmentID,
+        delim='#',
+        names=c('chr', 'start', 'end'),
+        cols_remove=FALSE
+    )
+}
+
+compute_switch_differences_between_conditions <- function(
+    switches.Numerator,
+    switches.Denominator,
+    ...){
+    # paste('row.index=1', paste0(colnames(switches.df), '=switches.df$', colnames(switches.df), '[[row.index]]', collapse='; '), sep='; ')
+    # row.index=1; Sample.Group.Numerator=switches.df$Sample.Group.Numerator[[row.index]]; Sample.Group.Denominator=switches.df$Sample.Group.Denominator[[row.index]]; resolution=switches.df$resolution[[row.index]]; compartment.params=switches.df$compartment.params[[row.index]]; chr=switches.df$chr[[row.index]]; switches.Numerator=switches.df$switches.Numerator[[row.index]]; switches.Denominator=switches.df$switches.Denominator[[row.index]]
+    # switches.df %>% head(row.index) %>% tail(1) %>% t()
+    # a swithc is a bin where the compartment changes in the next adjacent bin 
+    # i.e. A -> B or B -> A 
+    # map nearest numerator swithc to each denominator switch
+    join_nearest(
+        switches.Denominator,
+        switches.Numerator,
+        suffix=c('___Denominator', '___Numerator'),
+        distance=TRUE
+    ) %>%
+    as_tibble() %>% 
+    mutate(distance=ifelse(distance == 0, 0, distance+1)) %>% 
+    # pivot columns and compute difference in switch stats between switches 
+    pivot_longer(
+        ends_with(c('___Denominator', '___Numerator')),
+        names_to='feature',
+        values_to='value'
+    ) %>% 
+    separate_wider_delim(
+        feature,
+        delim='___',
+        names=c('feature', 'side')
+    ) %>%
+    pivot_wider(
+        names_from=side,
+        names_prefix='value.',
+        values_from=value
+    ) %>%
+    # FC as in fold-change for each feature
+    mutate(diff=value.Numerator - value.Denominator) %>%
+    mutate(FC=value.Numerator / value.Denominator) %>%
+    dplyr::rename('chr'=seqnames) %>% 
+    select(-c(width, strand, starts_with('value.')))
+}
+
+match_all_nearest_switches_between_conditions <- function(
+    switches.df,
+    ...){
+    switches.df %>% 
+    mutate(
+        switch.matches=
+            future_pmap(
+                .l=.,
+                .f=compute_switch_differences_between_conditions,
+                .progress=TRUE
+            )
+    ) %>% 
+    select(-c(starts_with('switches.'))) %>%
+    unnest(switch.matches)
 }
 
