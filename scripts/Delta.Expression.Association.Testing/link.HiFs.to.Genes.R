@@ -2,13 +2,12 @@
 # Dependencies
 ######################################################################
 library(here)
-# here::i_am('scripts/Delta.Expression.Association.Testing/link.HiFs.to.Genes.R')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     source(file.path(BASE_DIR,   'scripts/constants.R'))
     source(file.path(BASE_DIR,   'scripts/locations.R'))
     source(file.path(SCRIPT_DIR, 'utils.data.R'))
-    source(file.path(SCRIPT_DIR, 'Delta.Expression.Association.Testing/utils.HiFs.R'))
+    source(file.path(SCRIPT_DIR, 'utils.loading.results.R'))
     source(file.path(SCRIPT_DIR, 'Delta.Expression.Association.Testing/utils.association.R'))
     library(tidyverse)
     library(magrittr)
@@ -35,14 +34,24 @@ if (parsed.args$threads > 1){
 all.HiFs.df <- 
     c(
         # 'compartment.switches',
-        # 'compartment.region',
-        # 'loop.nesting',
+        'compartment.region',
+        'loop.nesting',
         # 'loop.anchor',
-        # 'loop',
-        'TAD.Boundary',
+        'loop',
+        # 'TAD.Boundary',
         'TAD'
     ) %>% 
     combine_all_per_condition_HiFs()
+# Combine all sets of differential HiC features
+all.differential.HiFs.df <- 
+    c(
+        'DIR',
+        'loop.nesting',
+        'loop',
+        # 'TAD.Boundary',
+        'TAD'
+    ) %>% 
+    combine_all_between_condition_HiFs()
 # load functional element annotations i.e. functinoal loci linked each linked to a specific gene defined by 
 # a specific functional mechanisms (association type/subtype) from a specific dataset (annotation source)
 # Direct gene associations
@@ -71,12 +80,25 @@ association.params.df <-
     # cross_join(tibble(resolution=parsed.args$resolutions))
 # DEG results for all genes
 deg.results.df <- 
-    prep_DESeq2_results_for_associations(force.redo=FALSE)
+    prep_DESeq2_results_for_associations(force.redo=FALSE) %>%
+        {.}
+    # pivot_longer(
+    #     ends_with('.DESeq2'),
+    #     names_to='feature',
+    #     values_to='value'
+    # ) %>%
+    # mutate(feature=str_remove(feature, '.DESeq2$'))
     # prep_DESeq2_results_for_associations(force.redo=TRUE)
 
 ######################################################################
 # Map HiFs ~ Genes using Gene positions + gene-associated functional loci
 ######################################################################
+# all.HiFs.df
+# all.differential.HiFs.df
+# all.indirect.gene.links.df
+# association.params.df
+# deg.results.df
+# all.direct.gene.links.df
 # Now join all the input data together via matching relevant params 
 # so now each row represents a specific set of HiF ~ Gene mappings (associations) to 
 # save to an output file and use for downstream statistical testing
@@ -104,6 +126,43 @@ all.HiFs.df %>%
             pmap_chr(
                 .l=.,
                 .f=make_per_condition_mapping_results_filepath,
+                .progress=FALSE
+            )
+    ) %>% 
+    # save mappings of HiFs to all associated genes + genes with 0 associated HiFs
+    future_pmap(
+        .l=.,
+        .f=check_cached_results,
+        results_fnc=associate_gene_links_to_HiFs,
+        force_redo=TRUE,
+        return_data=FALSE,
+        deg.results.df=deg.results.df,
+        .progress=TRUE
+    )
+# Now map HiFs to differential features
+all.differential.HiFs.df %>% 
+    inner_join(
+        association.params.df,
+        relationship='many-to-many',
+        by=
+            join_by(
+                HiF.type,
+                resolution
+            )
+    ) %>% 
+    # Compare all sets of HiFs against all sets of gene-associated functional loci 
+    cross_join(
+        bind_rows(
+            all.direct.gene.links.df,
+            all.indirect.gene.links.df
+        )
+    ) %>% 
+    # create output filepath using association metadata
+    mutate(
+        results_file=
+            pmap_chr(
+                .l=.,
+                .f=make_between_condition_mapping_results_filepath,
                 .progress=FALSE
             )
     ) %>% 

@@ -423,6 +423,7 @@ map_HiF_to_genes_with_associations_within <- function(
     # map all associations to each HiF they are inside, include all associations outside all HiFs
     associations.df %>% 
     mutate(association.status='Gene-link within HiF') %>%
+    # keep all gene-associations even if they overlap 0 HiFs 
     join_overlap_left(HiFs.df) %>% 
     as_tibble() %>% 
     mutate(
@@ -515,7 +516,7 @@ make_per_condition_mapping_results_filepath <- function(
     )
 }
 
-list_all_gene_association_HiF_mapping_results <- function(){
+list_all_per_condition_gene_association_HiF_mapping_results <- function(){
     HIF_GENE_ASSOCIATION_MAPPING_DIR %>%
     parse_results_filelist(
         suffix='-HiF.Gene.Associations.tsv',
@@ -532,7 +533,6 @@ list_all_gene_association_HiF_mapping_results <- function(){
     )
 }
 
-
 make_between_condition_mapping_results_filepath <- function(
     association.type,
     association.subtype,
@@ -540,8 +540,8 @@ make_between_condition_mapping_results_filepath <- function(
     association.strategy,
     resolution,
     HiF.type,
-    SampleID.Numerator,
-    SampleID.Denominator,
+    Numerator,
+    Denominator,
     ...){
     file.path(
         HIF_GENE_ASSOCIATION_MAPPING_DIR,
@@ -555,7 +555,29 @@ make_between_condition_mapping_results_filepath <- function(
         glue('HiF.type_{HiF.type}'),
         glue('HiF.scope_between.conditions'),
         # per pair of conditions that Hif is differential between
-        glue('{SampleID.Numerator}-{SampleID.Denominator}-HiF.Gene.Associations.tsv')
+        glue('{Numerator}-{Denominator}-differential.HiF.Gene.Associations.tsv')
+    )
+}
+
+list_all_bewteen_condition_gene_association_HiF_mapping_results <- function(){
+    HIF_GENE_ASSOCIATION_MAPPING_DIR %>%
+    parse_results_filelist(
+        suffix='-differential.HiF.Gene.Associations.tsv',
+        filename.column.name='Comparison'
+    ) %>%
+    separate_wider_delim(
+        Comparison,
+        delim='-',
+        names=c('SampleID.Numerator', 'SampleID.Denominator')
+    ) %>%
+    mutate(
+        gene.HiF.mappings.df=
+            pmap(
+                .l=list(filepath),
+                .f=read_tsv,
+                show_col_types=FALSE,
+                progress=FALSE
+            )
     )
 }
 
