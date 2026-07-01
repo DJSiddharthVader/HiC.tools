@@ -593,67 +593,6 @@ calculate_all_loop_valency <- function(
 ######################################################################
 # Loop Nesting Results
 ######################################################################
-load_per_condition_loop_data_for_nesting_analysis <- function(){
-    # get all loops per condition and pivot metrics columns
-    load_per_condition_loops() %>%
-    mutate(log10.qvalue=-log10(qvalue)) %>% 
-    select(-c(count)) %>% 
-    pivot_longer(
-        # c(count, enrichment, log10.qvalue),
-        c(enrichment, log10.qvalue),
-        names_to='loop.feature',
-        values_to='loop.value'
-    ) %>% 
-    select(
-        resolution, SampleID, 
-        FeatureID, chr, anchor.left, anchor.right,
-        loop.feature, loop.value
-    )
-}
-
-load_between_condition_loop_data_for_nesting_analysis <- function(all.per.condition.loop.data.df){
-    # load differential loop results and map stats to loops
-    load_between_condition_loops() %>%
-    select(
-        resolution, IDR2D.Params, 
-        SampleID.Numerator, SampleID.Denominator,
-        # FeatureID, chr, anchor.left, anchor.right,
-        FeatureID,
-        loop.status
-    ) %>%
-    mutate(Comparison=glue('{SampleID.Numerator} vs {SampleID.Denominator}')) %>% 
-    # pivot so I can easily nest so that
-    # loops are per condition + have differential status per comparison
-    pivot_longer(
-        c(SampleID.Numerator, SampleID.Denominator),
-        names_to='Comparison.side',
-        names_prefix='SampleID.',
-        values_to='SampleID'
-    ) %>% 
-    # this shouldnt be necessary, since onlu these rows should be presetn
-    filter(
-        (loop.status == 'Numerator.only'   & Comparison.side == 'Numerator'  ) |
-        (loop.status == 'Denominator.only' & Comparison.side == 'Denominator') |
-        (!loop.status %in% c('Numerator.only', 'Denominator.only'))
-    ) %>% 
-    # add condition specific individual loop data for loop per comparison
-    inner_join(
-        all.per.condition.loop.data.df,
-        relationship='many-to-many',
-        by=
-            join_by(
-                resolution, 
-                FeatureID,
-                SampleID
-            )
-    )
-}
-
-load_all_loop_data_for_nesting_analysis <- function(){
-    # Include all per-condition loops + loops stratified by differential loop status as separate sets
-    # do nesting analysis on each set of loops and save outputs to separate files
-}
-
 compute_nesting_stats_per_bin <- function(
     loops.df,
     bins.df,
