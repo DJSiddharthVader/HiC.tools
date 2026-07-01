@@ -1,11 +1,11 @@
-###################################################
+######################################################################
 # Dependencies
-###################################################
+######################################################################
 library(hictkR)
 
-###################################################
+######################################################################
 # Genome Binning
-###################################################
+######################################################################
 generate_genome_binning_cmds <- function(
      resolution,
      ...){
@@ -56,9 +56,9 @@ list_all_genome_bin_files <- function(){
     dplyr::rename('genomic.bins.filepath'=filepath)
 }
 
-###################################################
+######################################################################
 # Genome Phasing Tracks
-###################################################
+######################################################################
 generate_phasing_track_computation_cmds <- function(
     genomic.bins.filepath,
     track.type,
@@ -114,9 +114,9 @@ list_all_phasing_track_files <- function(){
     dplyr::rename('phasing.track.filepath'=filepath)
 }
 
-###################################################
+######################################################################
 # Generate Genome Marginal Coverage 
-###################################################
+######################################################################
 generate_distance_expectation_calculation_cmds <- function(
     threads,
     resolution,
@@ -196,9 +196,9 @@ list_all_distance_expectation_files <- function(){
     dplyr::rename('distance.expectation.filepath'=filepath)
 }
 
-###################################################
+######################################################################
 # Distance-Expectation Calculation
-###################################################
+######################################################################
 generate_marginal_coverage_calculation_cmds <- function(
     threads,
     resolution,
@@ -278,9 +278,9 @@ list_all_marginal_coverage_files <- function(){
     dplyr::rename('marginal.coverage.filepath'=filepath)
 }
 
-###################################################
+######################################################################
 # Load Genome Marginal Coverage
-###################################################
+######################################################################
 load_coverage_data <- function(
     filepath,
     ...){
@@ -355,9 +355,9 @@ post_process_coverage_summaries <- function(
     mutate(FlowcellID=ifelse(is.na(FlowcellID), 'Merged', FlowcellID))
 }
 
-###################################################
+######################################################################
 # Marginal Coverage Summary Stats
-###################################################
+######################################################################
 compute_summary_stats <- function(df){
     df %>% 
     summarize(

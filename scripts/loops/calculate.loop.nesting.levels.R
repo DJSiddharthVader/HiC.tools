@@ -1,6 +1,6 @@
-###################################################
+######################################################################
 # Depdendencies
-###################################################
+######################################################################
 library(here)
 # here::i_am('scripts/loops/calculate.loop.nesting.levels.R')
 BASE_DIR <- here()
@@ -25,9 +25,9 @@ parsed.args <-
 message(glue('using {parsed.args$threads} core to parallelize'))
 plan(multisession, workers=parsed.args$threads)
 
-###################################################
+######################################################################
 # Load loops data 
-###################################################
+######################################################################
 # load all per condition loop data with/without separation by differential status across comparisons
 all.loop.data.df <- 
     load_all_loop_data_for_nesting_analysis()
@@ -51,9 +51,9 @@ all.bins.df <-
     ) %>%
     select(-c(genomic.bins.filepath))
 
-###################################################
+######################################################################
 # Generate bedtools cmds to calculate loop nesting
-###################################################
+######################################################################
 # Use plyranges to map loops to bins and summarize contiguous bins sets into segments
 # bin.10      111111111122222222233333333333444444444455555555556666666666
 # bin 01      123456789012345678901234567890123456789012345678901234567890
@@ -78,9 +78,9 @@ all.bins.df <-
 #     # force_redo=TRUE
 # )
 
-###################################################
+######################################################################
 # Calculate rolling correlation of nesting data between conditions
-###################################################
+######################################################################
 # compute all between condition correlations of binwise nesting lvl data
 compute_all_loop_nesting_correlation_results(
     all.loops.df=all.loop.data.df,

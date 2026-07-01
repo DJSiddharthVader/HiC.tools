@@ -1,6 +1,6 @@
-################################################################################
+######################################################################
 # Dependencies
-################################################################################
+######################################################################
 library(here)
 # here::i_am('scripts/Delta.Expression.Association.Testing/coallate.all.gene.associated.functioal.loci.R')
 BASE_DIR <- here()
@@ -14,9 +14,9 @@ suppressPackageStartupMessages({
     library(magrittr)
 })
 
-################################################################################
+######################################################################
 # Load Association data i.e. functional associations between loci and Genes
-################################################################################
+######################################################################
 # ABC-based enhancers-promoter pairs
 enhancers.df <- 
     bind_rows(
@@ -77,9 +77,9 @@ TFBS.df <-
     add_column(association.source='GTRD') %>% 
     add_column(association.type='TFBS')
 
-################################################################################
+######################################################################
 # Combine all functional elements and add gene metadata for downstream analysis
-################################################################################
+######################################################################
 # gene.linked.functional.annotations=list(TFBS.df, eQTLs.df, enhancers.df)
 # gene.annotations.df=load_gene_annotations()
 # Now combine all annotations together

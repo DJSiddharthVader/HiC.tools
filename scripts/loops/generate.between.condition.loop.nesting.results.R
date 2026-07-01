@@ -1,6 +1,6 @@
-###################################################
+######################################################################
 # Depdendencies
-###################################################
+######################################################################
 library(here)
 BASE_DIR <- here()
 suppressPackageStartupMessages({
@@ -25,9 +25,9 @@ message(glue('using {parsed.args$threads} core to parallelize'))
 plan(multisession, workers=parsed.args$threads)
 options(future.globals.maxSize=3.3 * 1024**3)
 
-###################################################
+######################################################################
 # Compute nesting data for loops stratified by differential status
-###################################################
+######################################################################
 # Now load loops stratified by differential status within each comparison e.g
 # compute nesting from loops only detected in NIPBL.DEl when comparing NIPBL.DEL vs NIPBL.WT
 all.between.condition.loop.data.df <- 
@@ -124,9 +124,9 @@ check_cached_results(
     return_data=TRUE
 )
 
-###################################################
+######################################################################
 # calculate segment-wiose correlation of loop nesting between pairs of conditions (loop sets)
-###################################################
+######################################################################
 # First compute all the binwise nesting data for each condition
 # Now get all relevant pairs of conditions with matched binwise nesting data
 # compute correlation of nesting structure of bins between all pairs of conditions

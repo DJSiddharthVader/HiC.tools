@@ -1,6 +1,6 @@
-###################################################
+######################################################################
 # Depdendencies
-###################################################
+######################################################################
 library(here)
 # here::i_am('scripts/loops/run.IDR2D.loops.R')
 BASE_DIR <- here()
@@ -23,9 +23,9 @@ parsed.args <-
 message(glue('using {parsed.args$threads} core to parallelize'))
 plan(multisession, workers=parsed.args$threads)
 
-###################################################
+######################################################################
 # load loops to compare for each conditions
-###################################################
+######################################################################
 # Prepare loops for comparison between conditions 
 # each row is 1 nested set of loop calls per condition + context
 all.loops.df <- 
@@ -56,9 +56,9 @@ all.loops.df <-
             )
     )
 
-###################################################
+######################################################################
 # Run IDR2D across all params
-###################################################
+######################################################################
 # All IDR2D hyper-params to compute
 hyper.params.df <- 
     tribble(
@@ -112,9 +112,9 @@ all.loops.df %>%
             )
     )
 
-###################################################
+######################################################################
 # Combine generated results into single files for downstream analyses
-###################################################
+######################################################################
 # combine all IDR2D results generated with pre-specified hyper-params into a single file
 check_cached_results(
     results_file=FILTERED_IDR2D_RESULTS_FILE,

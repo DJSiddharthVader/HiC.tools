@@ -1,6 +1,6 @@
-###################################################
+######################################################################
 # Depdendencies
-###################################################
+######################################################################
 library(here)
 # here::i_am('scripts/loops/calculate.loop.valency.R')
 BASE_DIR <- here()
@@ -15,18 +15,18 @@ suppressPackageStartupMessages({
     library(tidyverse)
 })
 
-###################################################
+######################################################################
 # Set up all comparisons
-###################################################
+######################################################################
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force'),
         has.positional=FALSE
     )
 
-###################################################
+######################################################################
 # Calculate Loop Valency for each loop anchor
-###################################################
+######################################################################
 # 2 group comparison + no covariates -> use exact test
 message(glue('using {parsed.args$threads} core to parallelize'))
 plan(multisession, workers=parsed.args$threads)

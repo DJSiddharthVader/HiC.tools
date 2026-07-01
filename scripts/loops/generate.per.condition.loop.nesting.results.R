@@ -1,6 +1,6 @@
-###################################################
+######################################################################
 # Depdendencies
-###################################################
+######################################################################
 library(here)
 BASE_DIR <- here()
 suppressPackageStartupMessages({
@@ -27,9 +27,9 @@ plan(multisession, workers=parsed.args$threads)
 options(future.globals.maxSize=4.5 * 1024**3)
 # options(future.globals.maxSize=7.5 * 1024**3)
 
-###################################################
+######################################################################
 # Compute nesting data for all loops within each condition
-###################################################
+######################################################################
 # Load all loops called per condition + loop features
 all.per.condition.loop.data.df <- 
     # get all loops per condition and pivot metrics columns
@@ -121,9 +121,9 @@ check_cached_results(
     return_data=FALSE
 )
     
-###################################################
+######################################################################
 # calculate segment-wiose correlation of loop nesting between pairs of conditions (loop sets)
-###################################################
+######################################################################
 # First list all files with the binwise results
 # Now get all relevant pairs of conditions with matched binwise nesting data
 # compute correlation of nesting structure of bins between all pairs of conditions

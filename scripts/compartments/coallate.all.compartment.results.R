@@ -1,6 +1,6 @@
-################################################################################
+######################################################################
 # Dependencies
-################################################################################
+######################################################################
 library(here)
 here::i_am('scripts/compartments/coallate.all.compartment.results.R')
 BASE_DIR <- here()
@@ -15,9 +15,9 @@ suppressPackageStartupMessages({
     library(furrr)
 })
 
-################################################################################
+######################################################################
 # Handle arguments/parameters
-################################################################################
+######################################################################
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force', 'resolutions'),
@@ -27,9 +27,11 @@ parsed.args <-
 # parsed.args$resolutions=c(100, 50, 25) * 1e3
 # parsed.args$force.redo=TRUE
 
-################################################################################
+######################################################################
 # Combine + compartmentalize all PC1 data to define compartments
-################################################################################
+######################################################################
+# load all binwise PC1 data into a single file
+binwise.df <- 
 check_cached_results(
     results_file=ALL_COMPARTMENTS_RESULTS_FILE,
     results_fnc=load_all_cooltools_compartment_results,

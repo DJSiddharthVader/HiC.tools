@@ -1,6 +1,6 @@
-###################################################
+######################################################################
 # Depdendencies
-###################################################
+######################################################################
 library(here)
 here::i_am('scripts/distiller/make.distiller.configs.R')
 BASE_DIR <- here()
@@ -13,9 +13,9 @@ suppressPackageStartupMessages({
     library(purrr)
 })
 
-###################################################
+######################################################################
 # Make distiller configs for each sample
-###################################################
+######################################################################
 # Template config file
 DISTILLER_SAMPLE_CONFIGS_DIR <- file.path(BASE_DIR, 'sample.configs')
 DISTILLER_TEMPLATE_FILE      <- file.path(DISTILLER_SAMPLE_CONFIGS_DIR, 'template.distiller.yml') 

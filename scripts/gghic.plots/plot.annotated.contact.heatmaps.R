@@ -1,6 +1,6 @@
-###################################################
+######################################################################
 # Dependencies
-###################################################
+######################################################################
 library(here)
 # here::i_am('scritps/gghic.plots/plot.annotated.contact.heatmaps.R')
 here::i_am('scripts/gghic.plots/plot.annotated.contact.heatmaps.R')
@@ -21,9 +21,9 @@ suppressPackageStartupMessages({
     library(tidyverse)
 })
 
-###################################################
+######################################################################
 # Load Annotation data
-###################################################
+######################################################################
 tads.df   <- load_TADs_for_gghic()
 loops.df  <- load_loops_for_gghic()
 tracks.df <- NULL
@@ -35,9 +35,9 @@ tracks.df <- NULL
 #         resolutions=resolutions
 #     )
 
-###################################################
+######################################################################
 # Set up plotting params
-###################################################
+######################################################################
 # List of regions to plot annotated heatmaps for
 regions.df <- 
     GENOMIC_REGIONS %>%
@@ -63,9 +63,9 @@ samples.df <-
     dplyr::rename(cooler_path=filepath) %>% 
     mutate(SampleID=str_remove(SampleID, '.Merged.Merged'))
 
-###################################################
+######################################################################
 # Make all plots
-###################################################
+######################################################################
 # Match annotation data <-> SampleID <-> regions <-> plot params 
 set_up_gghic_plot_param_sets(
         samples.df=samples.df,

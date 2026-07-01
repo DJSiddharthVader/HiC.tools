@@ -1,6 +1,6 @@
-################################################################################
+######################################################################
 # Dependencies
-################################################################################
+######################################################################
 library(here)
 here::i_am('scripts/compartments/make.compartment.calling.cmds.R')
 BASE_DIR <- here()
@@ -14,9 +14,9 @@ suppressPackageStartupMessages({
     library(magrittr)
 })
 
-################################################################################
+######################################################################
 # Handle arguments/parameters
-################################################################################
+######################################################################
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force', 'resolutions'),
@@ -38,9 +38,9 @@ hyper.params.df <-
     add_column(threads=parsed.args$threads)
 # parsed.args$force.redo=TRUE
 
-################################################################################
+######################################################################
 # Generate cmds to call TADs with specified params
-################################################################################
+######################################################################
 # Now generate commands to run cooltools eigs-cis to calculate + orient PC1 from the contact matrix
 # We can bin the PC1 data to define compartment type + strength (i.e. Weak A, Strong B etc.)
 hyper.params.df %>% 

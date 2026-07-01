@@ -6,9 +6,9 @@ library(twosamples)
 library(infer)
 # library(plyranges)
 
-###################################################
+######################################################################
 # cooltools dots
-###################################################
+######################################################################
 generate_cooltools_dots_calling_cmds <- function(
     threads,
     normalization,
@@ -174,9 +174,9 @@ filter_loop_results <- function(
     filter(qvalue < q.thresh)
 }
 
-###################################################
+######################################################################
 # IDR2D Analysis
-###################################################
+######################################################################
 tidy_IDR2D_sided_results <- function(
     results.obj,
     metric_colname,
@@ -560,8 +560,9 @@ join_loop_and_IDR2D_resilts <- function() {
 }
 
 ###################################################
+######################################################################
 # Valency Analysis
-###################################################
+######################################################################
 calculate_loop_valency <- function(df) {
     df %>%
     pivot_longer(
@@ -598,9 +599,9 @@ calculate_all_loop_valency <- function(
     select(-c(loops))
 }
 
-###################################################
+######################################################################
 # Loop Nesting Results
-###################################################
+######################################################################
 load_per_condition_loop_data_for_nesting_analysis <- function(){
     # get all loops per condition and pivot metrics columns
     load_per_condition_loops() %>%

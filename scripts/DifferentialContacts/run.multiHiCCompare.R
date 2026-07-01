@@ -1,6 +1,6 @@
-###################################################
+######################################################################
 # Depdendencies
-###################################################
+######################################################################
 library(here)
 # here::i_am('scripts/DifferentialContacts/run.multiHiCCompare.R')
 BASE_DIR <- here()
@@ -17,9 +17,9 @@ suppressPackageStartupMessages({
     library(tidyverse)
 })
 
-###################################################
+######################################################################
 # Set up all comparisons
-###################################################
+######################################################################
 # All combinations of multiHiCCompare hyper-params to test
 parsed.args <- 
     handle_CLI_args(
@@ -30,9 +30,9 @@ message(glue('using {parsed.args$threads} core to parallelize'))
 register(MulticoreParam(workers=parsed.args$threads * 2 / 4), default=TRUE)
 plan(multisession,      workers=parsed.args$threads * 2 / 4)
 
-###################################################
+######################################################################
 # Generate DAC results for each comparison
-###################################################
+######################################################################
 # 2 group comparison + no covariates -> use exact test
 hyper.params.df <- 
     expand_grid(

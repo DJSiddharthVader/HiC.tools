@@ -1,6 +1,6 @@
-################################################################################
+######################################################################
 # Dependencies
-################################################################################
+######################################################################
 library(here)
 # here::i_am('scripts/Delta.Expression.Association.Testing/link.HiFs.to.Genes.R')
 BASE_DIR <- here()
@@ -27,9 +27,9 @@ if (parsed.args$threads > 1){
     plan(sequential)
 }
 
-################################################################################
+######################################################################
 # Combine all HiFs + testing params into neat parsable table
-################################################################################
+######################################################################
 # combine all HiFs across HiF.types keeps things tidy by nesting feature-specific data into a single column
 # will be unnested and saved as individual columns
 all.HiFs.df <- 
@@ -74,9 +74,9 @@ deg.results.df <-
     prep_DESeq2_results_for_associations(force.redo=FALSE)
     # prep_DESeq2_results_for_associations(force.redo=TRUE)
 
-################################################################################
+######################################################################
 # Map HiFs ~ Genes using Gene positions + gene-associated functional loci
-################################################################################
+######################################################################
 # Now join all the input data together via matching relevant params 
 # so now each row represents a specific set of HiF ~ Gene mappings (associations) to 
 # save to an output file and use for downstream statistical testing

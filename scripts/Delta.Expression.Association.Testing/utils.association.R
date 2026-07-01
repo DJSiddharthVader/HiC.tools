@@ -1,11 +1,11 @@
-################################################################################
+######################################################################
 # Dependencies
-################################################################################
+######################################################################
 library(plyranges)
 
-################################################################################
+######################################################################
 # Fixed association analaysis parameter sets
-################################################################################
+######################################################################
 HiF.association.strategies.df <- 
     tribble(
         ~HiF.type,            ~association.strategy,
@@ -20,9 +20,9 @@ HiF.association.strategies.df <-
         'TAD',                'within'
     )
 
-################################################################################
+######################################################################
 # Load Gene info + Differential results
-################################################################################
+######################################################################
 load_gene_annotations <- function(
     gene.types=
         c(
@@ -175,9 +175,9 @@ prep_DESeq2_results_for_associations <- function(force.redo=FALSE){
     mutate(comparison=glue('{Sample.Group.Numerator} vs {Sample.Group.Denominator}'))
 }
 
-################################################################################
+######################################################################
 # Combine all indirect gene-linked functional loci annotations together 
-################################################################################
+######################################################################
 # eQTL data
 get_remote_filepaths_for_eQTLs_of_interest <- function(){
     EQTL_REMOTE_FILEPATHS_FILE %>%
@@ -410,9 +410,9 @@ nest_and_combine_all_functional_loci_dataset <- function(
     )
 }
 
-################################################################################
+######################################################################
 # Map HiFs to associated Genes directly or via linked functional loci 
-################################################################################
+######################################################################
 map_HiF_to_genes_with_associations_within <- function(
     HiFs.df,
     associations.df,
@@ -533,9 +533,6 @@ list_all_gene_association_HiF_mapping_results <- function(){
 }
 
 
-################################################################################
-# Map differential HiFs to associated Genes directly or via linked functional loci 
-################################################################################
 make_between_condition_mapping_results_filepath <- function(
     association.type,
     association.subtype,

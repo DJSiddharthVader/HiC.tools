@@ -1,6 +1,6 @@
-################################################################################
+######################################################################
 # Dependencies
-################################################################################
+######################################################################
 library(here)
 here::i_am('scripts/compartments/make.saddle.data.cmds.R')
 BASE_DIR <- here()
@@ -14,9 +14,9 @@ suppressPackageStartupMessages({
     library(magrittr)
 })
 
-################################################################################
+######################################################################
 # Handle arguments/parameters
-################################################################################
+######################################################################
 parsed.args <- 
     handle_CLI_args(
         args=c('threads', 'force', 'resolutions'),
@@ -42,9 +42,9 @@ hyper.params.df <-
 # parsed.args$force.redo=TRUE
 # parsed.args$force.redo=FALSE
 
-################################################################################
+######################################################################
 # Generate cmds to call TADs with specified params
-################################################################################
+######################################################################
 # First binify the genome and save bin coords to files
 # Now generate commands to run cooltools eigs-cis to calculate + orient PC1 from the contact matrix
 # We can bin the PC1 data to define compartment type + strength (i.e. Weak A, Strong B etc.)
