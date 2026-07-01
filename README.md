@@ -105,6 +105,12 @@ $ tree -L 1 /data/talkowski/Samples/16p_HiC/results/ -P "*_library|mapped_*|*qc"
 
 ## Methods
 
+1. [TADs](./scripts/TADs/README.md)
+1. [Loops](./scripts/loops/README.md)
+1. [Compartments](./scripts/compartments/README.md)
+1. [Differential Contacts](./scripts/DifferentialContacts/README.md)
+1. [Gene ~ Hi-C Association Testing](./scripts/Delta.Expression.Association.Testing/README.md)
+
 ### Running distiller pipeline
 
 Each sample as a `.yml` file (in `./sample.configs`) specifiying the params for `distiller-nf` to run the sample with. We separte each sample into its own file so we can run them in parallel, but the only difference between files are the input fastq files, all pipeline parameters are the same. 
