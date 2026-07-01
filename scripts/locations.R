@@ -16,6 +16,7 @@ GENOME_TRACK_FILES_DIR <- file.path(REF_DIR, 'genome.tracks')
 GENOME_NAME            <- 'hg38'
 GRCH38_DIR             <- file.path(BASE_DIR, 'GRCh38.Reference')
 CHROMOSOME_SIZES_FILE  <- file.path(GRCH38_DIR, 'GRCh38_no_alt_analysis_set_GCA_000001405.15.chrom.sizes')
+RGD_REGIONS_FILE       <- file.path(REF_DIR, 'RGD.Regions.tsv')
 
 ######################################################################
 # Sample QC Results
