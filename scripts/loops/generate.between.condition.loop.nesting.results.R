@@ -2,7 +2,6 @@
 # Depdendencies
 ###################################################
 library(here)
-# here::i_am('scripts/loops/calculate.loop.nesting.levels.R')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     library(purrr)
@@ -27,51 +26,56 @@ plan(multisession, workers=parsed.args$threads)
 options(future.globals.maxSize=3.3 * 1024**3)
 
 ###################################################
-# Load loops data 
+# Compute nesting data for loops stratified by differential status
 ###################################################
-# Load all genomic bins since nesting is first computed binwise and squashed
-all.bins.df <- 
-    list_all_genome_bin_files() %>%
-    mutate(
-        bins.df=
-            pmap(
-                .l=list(genomic.bins.filepath),
-                .f=
-                    function(genomic.bins.filepath) {
-                        genomic.bins.filepath %>% 
-                        read_tsv(
-                            show_col_types=FALSE,
-                            progress=FALSE
-                        ) %>%
-                        dplyr::rename('chr'=chrom)
-                    }
-            )
-    ) %>%
-    select(-c(genomic.bins.filepath))
 # Now load loops stratified by differential status within each comparison e.g
 # compute nesting from loops only detected in NIPBL.DEl when comparing NIPBL.DEL vs NIPBL.WT
 all.between.condition.loop.data.df <- 
-    load_per_condition_loop_data_for_nesting_analysis() %>% 
-    load_between_condition_loop_data_for_nesting_analysis() %>% 
+    # load differential loop results and map stats to loops
+    load_between_condition_loops() %>%
+    mutate(Comparison=glue('{SampleID.Numerator} vs {SampleID.Denominator}')) %>% 
     # change end to be end of last bin, not start, since we are treating loops as segments to calc nesting
     # anchor.right is the bin start, so change it to bin end to capture that bin in each loop
     mutate(anchor.right=anchor.right + resolution) %>% 
-    dplyr::rename(
-        'start'=anchor.left,
-        'end'=anchor.right
+    dplyr::rename('start'=anchor.left, 'end'=anchor.right) %>% 
+    pivot_longer(
+        c(diff.value,  diff.rank, IDR),
+        names_to='feature',
+        values_to='value'
     ) %>% 
+    select(
+        resolution, IDR2D.Params, 
+        Comparison, SampleID.Numerator, SampleID.Denominator,
+        loop.status,
+        FeatureID, chr, start, end,
+        feature, value
+    ) %>%
     nest(
         loops.df=
             c(
                 FeatureID,
                 chr, start, end, 
-                loop.feature, loop.value, 
+                value
             )
+    ) %>% 
+    # Load lists of genomic bins since nesting is first computed binwise and squashed
+    left_join(
+        list_all_genome_bin_files() %>%
+        mutate(
+            bins.df=
+                pmap(
+                    .l=list(genomic.bins.filepath),
+                    .f=
+                        function(genomic.bins.filepath, ...){
+                            genomic.bins.filepath %>% 
+                            read_tsv(show_col_types=FALSE, progress=FALSE) %>%
+                            dplyr::rename('chr'=chrom)
+                        }
+                )
+        ) %>%
+        select(-c(genomic.bins.filepath)),
+        by=join_by(resolution)
     )
-
-###################################################
-# Compute nesting data
-###################################################
 # Use plyranges to map loops to bins and summarize contiguous bins sets into segments
 # bin.10      111111111122222222233333333333444444444455555555556666666666
 # bin 01      123456789012345678901234567890123456789012345678901234567890
@@ -85,74 +89,120 @@ all.between.condition.loop.data.df <-
 # For each set of loops (differnetial or not) compute the nesting structure and save as 
 # table where each row is a genomic segment + nesting level + loop summary stats 
 # each segment is genomic range overlapped by the same set of loops
-compute_all_loop_nesting_results(
-    all.loop.data.df=all.loop.data.df,
-    all.bins.df=all.bins.df,
-    force_redo=parsed.args$force.redo
-    # force_redo=TRUE
-)
-# combine all nesting results into a single file
+all.between.condition.loop.data.df %>% 
+    # set up output filepath for each set of results
+    mutate(
+        results_file=
+            file.path(
+                ALL_IDR2D_NESTING_RESULTS_DIR,
+                glue('resolution_{resolution}'),
+                glue('IDR2D.Params_{IDR2D.Params}'),
+                glue('loop.status_{loop.status}'),
+                glue('feature_{feature}'),
+                glue('{SampleID.Numerator}-{SampleID.Denominator}-binwise.nesting.stats.tsv')
+           )
+    ) %>% 
+    # For each genomic bin count how many loops overlap that bin
+    # and summary stats of loop feature (e.g. pvalue) for those overlappign loops
+    future_pmap(
+        .l=.,
+        .f=check_cached_results,
+        results_fnc=compute_nesting_stats_per_bin,
+        force_redo=parsed.args$force.redo,
+        # force_redo=TRUE,
+        return_data=FALSE,
+        .progress=TRUE
+    )
+# Now squash binwise data into segments and save all results to a single file
 check_cached_results(
-    results_file=ALL_LOOP_NESTING_RESULTS_FILE,
-    results_fnc=load_all_loop_nesting_results,
-    force_redo=parsed.args$force.redo
-    # force_redo=TRUE
+    results_file=ALL_IDR2D_NESTING_RESULTS_FILE,
+    results_fnc=squash_all_binwise_nesting_data_into_segments,
+    results.files.df=load_nesting_results('binwise.nesting.by.reproducibility'),
+    force_redo=parsed.args$force.redo,
+    # force_redo=TRUE,
+    # return_data=FALSE
+    return_data=TRUE
 )
 
 ###################################################
 # calculate segment-wiose correlation of loop nesting between pairs of conditions (loop sets)
 ###################################################
-# compute correlation of nesting structure of bins between all pairs ofconditions
+# First compute all the binwise nesting data for each condition
+# Now get all relevant pairs of conditions with matched binwise nesting data
+# compute correlation of nesting structure of bins between all pairs of conditions
 # correlation is of nesting level per bin, for all sets of adjecent bins with >= 1 loop in either condition
 # so given some pair of nesting structures, we compute correaltion across bins separately 
 # for each contiguous |~~~~| segment, all bins with x are ignored
 # bin.10                11111111|112222222223333333333344444444445|55555|55556666666666|77777
-# bin 01                12345678|901234567890123456789012345678901|23456|78901234567890|12345
 # nesting condtion del: 00000000|111111443333333332221111110000000|00000|00002222222211|00000
+# bin 01                12345678|901234567890123456789012345678901|23456|78901234567890|12345
 # nesting condtion  wt: 00000000|000000444443333332221112222222222|00000|33333322221111|00000
 # segmentid:            xxxxxxxx|            segment 1            |xxxxx|   segment 2  |xxxxx
 # correlation bins:     xxxxxxxx|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|xxxxx|~~~~~~~~~~~~~~|xxxxx
 # so in this example we compute correlation statistics separately for the two segments (i.e. sets of bins)
-nesting.differential.comparisons.df <- 
-    all.loop.data.df %>% 
-    filter(Comparison != 'Per Condition') %>% 
-    {.}
-    # mutate(
-    #     across(
-    #         c(SampleID, Comparison),
-    #         ~ .x %>% str_remove_all('.Merged.Merged') %>% str_remove_all('.iN')
-    #     )
-    # ) %>% 
-        {.}
+# Organize loop data for all pairs of conditions being comparied
+load_nesting_results('binwise.nesting.by.reproducibility') %>% 
+    filter(feature %in% c('diff.value', 'diff.rank')) %>% 
+    filter(loop.status %in% c('IDR < 0.1', 'Irreproducible')) %>% 
+    MAKE_SAMPLE_GROUP_PAIR_TYPE_COLUMNS(info.format='SampleID') %>% 
+    select(!ends_with(c('.Numerator', '.Denominator'))) %>% 
     inner_join(
         .,
         {.},
+        relationship='many-to-many',
         suffix=c('.Numerator', '.Denominator'),
         by=
             join_by(
                 resolution,
                 IDR2D.Params,
+                loop.status,
+                feature,
                 Comparison.Group,
-                Comparison.side,
-                loop.status
             )
     ) %>% 
     filter(Comparison.Numerator != Comparison.Denominator) %>% 
-        {.}
-        select(Comparison, SampleID.Numerator, SampleID.Denominator)
-    compute_all_loop_nesting_correlation_results(
-        # all.loop.data.df=all.loop.data.df,
-        all.loop.data.df=.,
-        all.bins.df=all.bins.df,
-        force_redo=parsed.args$force.redo
-        # force_redo=TRUE
+    # set up output filepath for each set of results
+    mutate(
+        results_file=
+            file.path(
+                ALL_IDR2D_NESTING_DIFFERENCE_DIR,
+                glue('resolution_{resolution}'),
+                glue('IDR2D.Params_{IDR2D.Params}'),
+                glue('loop.status_{loop.status}'),
+                glue('feature_{feature}'),
+                glue('Comparison.Group_{Comparison.Group}'),
+                glue('{Comparison.Numerator}-{Comparison.Denominator}-nesting.difference.stats.tsv')
+            )
+    ) %>% 
+    {
+        if (!parsed.args$force.redo) {
+            filter(., !file.exists(results_file))
+        } else {
+            .
+        }
+    } %>% 
+    arrange(desc(resolution)) %>% 
+    relocate(
+        Comparison.Group, Comparison.Numerator, Comparison.Denominator, 
+        resolution, IDR2D.Params, loop.status, feature
+    ) %>% 
+    filter(feature %in% c('diff.value'), resolution %in% c(25000)) %>% 
+    # future_pmap(
+    pmap(
+        .l=.,
+        .f=check_cached_results,
+        results_fnc=compute_nesting_correlation_results,
+        force_redo=parsed.args$force.redo,
+        # force_redo=TRUE,
+        .progress=TRUE
     )
-# combine correlation results into a single file
-tmp <- 
+# now load all differences results files into a single clean table
 check_cached_results(
-    results_file=ALL_LOOP_NESTING_CORR_RESULTS_FILE,
-    results_fnc=load_all_loop_nesting_correlation_results,
-    # force_redo=parsed.args$force.redo
-    force_redo=TRUE
+    results_file=ALL_IDR2D_NESTING_DIFFERENCE_RESULTS_FILE,
+    results_fnc=load_all_segmentwise_nesting_difference_results,
+    results.files.df=load_nesting_results('nesting.differences.by.reproducibility'),
+    force_redo=parsed.args$force.redo,
+    # force_redo=TRUE,
+    return_data=FALSE
 )
 

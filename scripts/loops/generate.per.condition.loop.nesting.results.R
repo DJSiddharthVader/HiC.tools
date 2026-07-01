@@ -2,7 +2,6 @@
 # Depdendencies
 ###################################################
 library(here)
-# here::i_am('scripts/loops/calculate.loop.nesting.levels.R')
 BASE_DIR <- here()
 suppressPackageStartupMessages({
     library(purrr)
@@ -24,50 +23,59 @@ parsed.args <-
     )
 message(glue('using {parsed.args$threads} core to parallelize'))
 plan(multisession, workers=parsed.args$threads)
-options(future.globals.maxSize=3.3 * 1024**3)
+# options(future.globals.maxSize=2.5 * 1024**3)
+options(future.globals.maxSize=4.5 * 1024**3)
+# options(future.globals.maxSize=7.5 * 1024**3)
 
 ###################################################
-# Load loops data 
+# Compute nesting data for all loops within each condition
 ###################################################
-# Load all genomic bins since nesting is first computed binwise and squashed
-all.bins.df <- 
-    list_all_genome_bin_files() %>%
-    mutate(
-        bins.df=
-            pmap(
-                .l=list(genomic.bins.filepath),
-                .f=
-                    function(genomic.bins.filepath) {
-                        genomic.bins.filepath %>% 
-                        read_tsv(
-                            show_col_types=FALSE,
-                            progress=FALSE
-                        ) %>%
-                        dplyr::rename('chr'=chrom)
-                    }
-            )
-    ) %>%
-    select(-c(genomic.bins.filepath))
-# load all loops called per condition + loop features
+# Load all loops called per condition + loop features
 all.per.condition.loop.data.df <- 
-    load_per_condition_loop_data_for_nesting_analysis() %>% 
+    # get all loops per condition and pivot metrics columns
+    load_per_condition_loops() %>%
+    # clean up columns
+    mutate(log10.qvalue=-log10(qvalue)) %>% 
     mutate(anchor.right=anchor.right + resolution) %>% 
-    dplyr::rename(
-        'start'=anchor.left,
-        'end'=anchor.right
+    dplyr::rename('start'=anchor.left, 'end'=anchor.right) %>% 
+    select(
+        resolution, SampleID, 
+        FeatureID, chr, start, end,
+        enrichment, log10.qvalue
+    ) %>% 
+    # pivot so I can calculate nesting + stats over loop features
+    pivot_longer(
+        # c(count, enrichment, log10.qvalue),
+        c(enrichment, log10.qvalue),
+        names_to='feature',
+        values_to='value'
     ) %>% 
     nest(
         loops.df=
             c(
                 FeatureID,
                 chr, start, end, 
-                loop.feature, loop.value, 
+                value, 
             )
+    ) %>% 
+    # Load lists of genomic bins since nesting is first computed binwise and squashed
+    left_join(
+        list_all_genome_bin_files() %>%
+        mutate(
+            bins.df=
+                pmap(
+                    .l=list(genomic.bins.filepath),
+                    .f=
+                        function(genomic.bins.filepath, ...){
+                            genomic.bins.filepath %>% 
+                            read_tsv(show_col_types=FALSE, progress=FALSE) %>%
+                            dplyr::rename('chr'=chrom)
+                        }
+                )
+        ) %>%
+        select(-c(genomic.bins.filepath)),
+        by=join_by(resolution)
     )
-
-###################################################
-# Compute nesting data for all loops within each condition
-###################################################
 # Use plyranges to map loops to bins and summarize contiguous bins sets into segments
 # bin.10      111111111122222222233333333333444444444455555555556666666666
 # bin 01      123456789012345678901234567890123456789012345678901234567890
@@ -81,36 +89,43 @@ all.per.condition.loop.data.df <-
 # For each set of loops (differnetial or not) compute the nesting structure and save as 
 # table where each row is a genomic segment + nesting level + loop summary stats 
 # each segment is genomic range overlapped by the same set of loops
-compute_all_loop_nesting_results(
-    all.loop.data.df=all.per.condition.loop.data.df,
-    all.bins.df=all.bins.df,
-    force_redo=parsed.args$force.redo
-    # force_redo=TRUE
-)
-# combine all nesting results into a single file
+all.per.condition.loop.data.df %>% 
+    # set up output filepath for each set of results
+    mutate(
+        results_file=
+            file.path(
+                ALL_LOOP_NESTING_RESULTS_DIR ,
+                glue('resolution_{resolution}'),
+                glue('feature_{feature}'),
+                glue('{SampleID}-binwise.nesting.stats.tsv')
+            )
+    ) %>% 
+    # For each genomic bin count how many loops overlap that bin
+    # and summary stats of loop feature (e.g. pvalue) for those overlappign loops
+    future_pmap(
+        .l=.,
+        .f=check_cached_results,
+        results_fnc=compute_nesting_stats_per_bin,
+        force_redo=parsed.args$force.redo,
+        # force_redo=TRUE,
+        return_data=FALSE,
+        .progress=TRUE
+    )
+# Now squash binwise data into segments and save all results to a single file
 check_cached_results(
-    results_file=,
-    results_fnc=load_all_loop_nesting_results,
-    force_redo=parsed.args$force.redo
-    # force_redo=TRUE
+    results_file=ALL_LOOP_NESTING_RESULTS_FILE,
+    results_fnc=squash_all_binwise_nesting_data_into_segments,
+    results.files.df=load_nesting_results('binwise.nesting'),
+    force_redo=parsed.args$force.redo,
+    # force_redo=TRUE,
+    return_data=FALSE
 )
-
+    
 ###################################################
 # calculate segment-wiose correlation of loop nesting between pairs of conditions (loop sets)
 ###################################################
-# get loop data for all pairs of conditions being comparied
-all.loop.condition.comparisons.df <- 
-    all.per.condition.loop.data.df %>% 
-    inner_join(
-        .,
-        {.},
-        suffix=c('.Numerator', '.Denominator'),
-        by=join_by(resolution)
-    ) %>% 
-    inner_join(
-       ALL_SAMPLE_MERGED_MATRIX_COMPARISONS,
-       by=colnames(ALL_SAMPLE_MERGED_MATRIX_COMPARISONS)
-    )
+# First list all files with the binwise results
+# Now get all relevant pairs of conditions with matched binwise nesting data
 # compute correlation of nesting structure of bins between all pairs of conditions
 # correlation is of nesting level per bin, for all sets of adjecent bins with >= 1 loop in either condition
 # so given some pair of nesting structures, we compute correaltion across bins separately 
@@ -122,10 +137,65 @@ all.loop.condition.comparisons.df <-
 # segmentid:            xxxxxxxx|            segment 1            |xxxxx|   segment 2  |xxxxx
 # correlation bins:     xxxxxxxx|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|xxxxx|~~~~~~~~~~~~~~|xxxxx
 # so in this example we compute correlation statistics separately for the two segments (i.e. sets of bins)
-compute_all_loop_nesting_correlation_results(
-    all.loop.data.df=all.loop.condition.comparisons.df,
-    all.bins.df=all.bins.df,
-    force_redo=parsed.args$force.redo
-    # force_redo=TRUE
+binwise.results.files.df <- 
+    load_nesting_results('binwise.nesting') %>% 
+    filter(feature == 'log10.qvalue')
+ALL_SAMPLE_MERGED_MATRIX_COMPARISONS %>% 
+    left_join(
+        binwise.results.files.df,
+        relationship='many-to-many',
+        by=
+            join_by(
+                SampleID.Numerator == SampleID
+            )
+    ) %>% 
+    left_join(
+        binwise.results.files.df,
+        relationship='many-to-many',
+        suffix=c('.Numerator', '.Denominator'),
+        by=
+            join_by(
+                resolution,
+                feature,
+                SampleID.Denominator == SampleID
+            )
+    ) %>% 
+    # set up output filepath for each set of results
+    mutate(
+        results_file=
+            file.path(
+                ALL_LOOP_NESTING_TESTING_DIR,
+                glue('resolution_{resolution}'),
+                glue('feature_{feature}'),
+                glue('{SampleID.Numerator}-{SampleID.Denominator}-nesting.difference.stats.tsv')
+            )
+    ) %>% 
+    {
+        if (!parsed.args$force.redo) {
+            filter(., !file.exists(results_file))
+        } else {
+            .
+        }
+    } %>% 
+    arrange(desc(resolution)) %>% 
+        # {.} -> tmp; tmp
+    # future_pmap(
+    pmap(
+        .l=.,
+        # .f=compute_nesting_correlation_results,
+        .f=check_cached_results,
+        results_fnc=compute_nesting_correlation_results,
+        # force_redo=parsed.args$force.redo,
+        force_redo=TRUE,
+        .progress=TRUE
+    )
+# now load all differences results files into a single clean table
+check_cached_results(
+    results_file=ALL_LOOP_NESTING_DIFFERENCE_RESULTS_FILE,
+    results_fnc=load_all_segmentwise_nesting_difference_results,
+    results.files.df=load_nesting_results('nesting.differences'),
+    # force_redo=parsed.args$force.redo,
+    force_redo=TRUE,
+    return_data=FALSE
 )
 
