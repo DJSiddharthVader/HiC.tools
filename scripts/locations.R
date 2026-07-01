@@ -1,14 +1,14 @@
-######################################################################
+################################################################################
 # Global Stuff
-######################################################################
+################################################################################
 SCRIPT_DIR            <- file.path(BASE_DIR, 'scripts')
 SAMPLE_METADATA_FILE  <- file.path(BASE_DIR, SAMPLE_METADATA_FILENAME) 
 RESULTS_DIR           <- file.path(BASE_DIR, 'results')
 MCOOL_DIR             <- file.path(RESULTS_DIR, 'coolers_library')
 
-######################################################################
+################################################################################
 # Reference files
-######################################################################
+################################################################################
 REF_DIR                <- file.path(BASE_DIR, 'reference.files')
 GENE_ANNOTATIONS_FILE  <- file.path(REF_DIR, 'homo_sapiens_GRCh38_92.gene_annotations.strand.info.txt') 
 GENOME_BINS_FILES_DIR  <- file.path(REF_DIR, 'genome.bins')
@@ -18,88 +18,103 @@ GRCH38_DIR             <- file.path(BASE_DIR, 'GRCh38.Reference')
 CHROMOSOME_SIZES_FILE  <- file.path(GRCH38_DIR, 'GRCh38_no_alt_analysis_set_GCA_000001405.15.chrom.sizes')
 RGD_REGIONS_FILE       <- file.path(REF_DIR, 'RGD.Regions.tsv')
 
-######################################################################
+################################################################################
 # Sample QC Results
-######################################################################
+################################################################################
 SAMPLE_QC_DIR                   <- file.path(RESULTS_DIR, 'sample.QC')
 MARGINAL_COVERAGE_DIR           <- file.path(SAMPLE_QC_DIR, 'coverage')
 DISTANCE_EXPECTED_CONTACTS_DIR  <- file.path(SAMPLE_QC_DIR, 'expected.coverage')
 RESOLTION_COVERAGE_SUMAMRY_FILE <- file.path(SAMPLE_QC_DIR, 'resolution.coverage.summaries.tsv')
 MIN_SAMPLE_RESOLUTION_FILE      <- file.path(SAMPLE_QC_DIR, 'minimum.viable.resolutions.tsv')
 
-######################################################################
+################################################################################
 # HiCRep results
-######################################################################
+################################################################################
 HICREP_DIR          <- file.path(RESULTS_DIR, 'hicrep')
 HICREP_RESULTS_DIR  <- file.path(HICREP_DIR, 'results')
 HICREP_RESULTS_FILE <- file.path(HICREP_DIR, 'all.HiCRep.Scores.tsv')
 
-######################################################################
+################################################################################
 # TAD Annotations
-######################################################################
-TAD_DIR                          <- file.path(RESULTS_DIR, 'TADs')
-TAD_RESULTS_DIR                  <- file.path(TAD_DIR, 'results_TADs')
+################################################################################
+TAD_DIR                             <- file.path(RESULTS_DIR, 'TADs')
+TAD_RESULTS_DIR                     <- file.path(TAD_DIR, 'results_TADs')
 # hiTAD results
-HITAD_TAD_RESULTS_DIR            <- file.path(TAD_RESULTS_DIR, 'TAD.method_hiTAD')
-HITAD_TAD_RESULTS_FILE           <- file.path(TAD_DIR, 'all.hiTAD.TADs.tsv')
-HITAD_SCORE_RESULTS_FILE         <- file.path(TAD_DIR, 'all.hiTAD.ADI.Scores.tsv')
+HITAD_TAD_RESULTS_DIR               <- file.path(TAD_RESULTS_DIR, 'TAD.method_hiTAD')
+HITAD_TAD_RESULTS_FILE              <- file.path(TAD_DIR, 'all.hiTAD.TADs.tsv')
+HITAD_SCORE_RESULTS_FILE            <- file.path(TAD_DIR, 'all.hiTAD.ADI.Scores.tsv')
 # cooltools results
-COOLTOOLS_TAD_RESULTS_DIR        <- file.path(TAD_RESULTS_DIR, 'TAD.method_cooltools')
-COOLTOOLS_TAD_RESULTS_FILE       <- file.path(TAD_DIR, 'all.cooltools.TADs.tsv')
-COOLTOOLS_SCORE_RESULTS_FILE     <- file.path(TAD_DIR, 'all.cooltools.Insulation.Scores.tsv')
+COOLTOOLS_TAD_RESULTS_DIR           <- file.path(TAD_RESULTS_DIR, 'TAD.method_cooltools')
+COOLTOOLS_TAD_RESULTS_FILE          <- file.path(TAD_DIR, 'all.cooltools.TADs.tsv')
+COOLTOOLS_SCORE_RESULTS_FILE        <- file.path(TAD_DIR, 'all.cooltools.Insulation.Scores.tsv')
 # ConsensusTAD results
-CONSENSUSTAD_TAD_RESULTS_DIR     <- file.path(TAD_RESULTS_DIR, 'TAD.method_ConsensusTAD')
-CONSENSUSTAD_TAD_RESULTS_FILE    <- file.path(TAD_DIR, 'all.ConsensusTAD.TADs.tsv')
-CONSENSUSTAD_SCORE_RESULTS_FILE  <- file.path(TAD_DIR, 'all.ConsensusTAD.Consensus.Scores.tsv')
+CONSENSUSTAD_TAD_RESULTS_DIR        <- file.path(TAD_RESULTS_DIR, 'TAD.method_ConsensusTAD')
+CONSENSUSTAD_TAD_RESULTS_FILE       <- file.path(TAD_DIR, 'all.ConsensusTAD.TADs.tsv')
+CONSENSUSTAD_SCORE_RESULTS_FILE     <- file.path(TAD_DIR, 'all.ConsensusTAD.Consensus.Scores.tsv')
 # Joint results
-ALL_TAD_RESULTS_FILE             <- file.path(TAD_DIR, 'all.all.TADs.tsv')
-ALL_TAD_SCORES_FILE              <- file.path(TAD_DIR, 'all.all.TAD.scores.tsv')
-ALL_TAD_BOUNDARIES_FILE          <- file.path(TAD_DIR, 'all.all.TAD.Boundaries.tsv')
-ALL_MOC_FILE                     <- file.path(TAD_DIR, 'all.all.TAD.MoCs.tsv')
-# TAD_BED_FILES_DIR                <- file.path(TAD_DIR, 'BED.files')
+ALL_TAD_RESULTS_FILE                <- file.path(TAD_DIR, 'all.all.TADs.tsv')
+ALL_TAD_SCORES_FILE                 <- file.path(TAD_DIR, 'all.all.TAD.scores.tsv')
+ALL_TAD_BOUNDARIES_FILE             <- file.path(TAD_DIR, 'all.all.TAD.Boundaries.tsv')
+ALL_MOC_FILE                        <- file.path(TAD_DIR, 'all.all.TAD.MoCs.tsv')
+ALL_UPSET_PLOT_DATA_FILE            <- file.path(TAD_DIR, 'all.all.TAD.Boundary.Upset.Data.tsv')
 # TADCompare results
-TADCOMPARE_DIR                   <- file.path(TAD_DIR, 'results_TADCompare')
-TADCOMPARE_RESULTS_FILE          <- file.path(TAD_DIR, 'all.TADCompare.results.tsv')
-TADCOMPARE_COUNTS_RESULTS_FILE   <- file.path(TAD_DIR, 'all.TADCompare.counts.results.tsv')
+TADCOMPARE_DIR                      <- file.path(TAD_DIR, 'results_TADCompare')
+TADCOMPARE_RESULTS_FILE             <- file.path(TAD_DIR, 'all.TADCompare.results.tsv')
+TADCOMPARE_COUNTS_RESULTS_FILE      <- file.path(TAD_DIR, 'all.TADCompare.counts.results.tsv')
+ALL_TADCOMPARE_UPSET_PLOT_DATA_FILE <- file.path(TAD_DIR, 'all.all.TADCompare.Boundary.Upset.Data.tsv')
 
-######################################################################
+################################################################################
 # Loop Annotations
-######################################################################
-LOOPS_DIR                          <- file.path(RESULTS_DIR, 'loops')
-LOOP_RESULTS_DIR                   <- file.path(LOOPS_DIR, 'results_loops')
-ALL_LOOP_RESULTS_FILE              <- file.path(LOOPS_DIR, 'all.loops.tsv')
+################################################################################
+LOOPS_DIR                           <- file.path(RESULTS_DIR, 'loops')
+LOOP_RESULTS_DIR                    <- file.path(LOOPS_DIR, 'results_loops')
+ALL_LOOP_RESULTS_FILE               <- file.path(LOOPS_DIR, 'all.loops.tsv')
+ALL_LOOP_UPSET_PLOT_DATA_FILE       <- file.path(LOOPS_DIR, 'all.loops.Upset.Data.tsv')
 # IDR2D Analysis
-LOOPS_IDR2D_DIR                    <- file.path(LOOPS_DIR, 'results_IDR2D')
-FILTERED_IDR2D_RESULTS_FILE        <- file.path(LOOPS_DIR, 'filtered.IDR2D.results.tsv')
-ALL_IDR2D_COUNTS_RESULTS_FILE      <- file.path(LOOPS_DIR, 'all.IDR2D.counts.tsv')
-# Nesting analysis
-ALL_LOOP_VALENCY_RESULTS_FILE      <- file.path(LOOPS_DIR, 'all.valency.results.tsv')
-ALL_LOOP_NESTING_RESULTS_DIR       <- file.path(LOOPS_DIR, 'results_nesting')
-ALL_LOOP_NESTING_RESULTS_FILE      <- file.path(LOOPS_DIR, 'all.nesting.results.tsv')
-ALL_LOOP_NESTING_CORR_RESULTS_DIR  <- file.path(LOOPS_DIR, 'results_nesting.correlations')
-ALL_LOOP_NESTING_CORR_RESULTS_FILE <- file.path(LOOPS_DIR, 'all.nesting.correlations.tsv')
+LOOPS_IDR2D_DIR                     <- file.path(LOOPS_DIR, 'results_IDR2D')
+FILTERED_IDR2D_RESULTS_FILE         <- file.path(LOOPS_DIR, 'filtered.IDR2D.results.tsv')
+ALL_IDR2D_COUNTS_RESULTS_FILE       <- file.path(LOOPS_DIR, 'all.IDR2D.counts.tsv')
+ALL_IDR2D_UPSET_PLOT_DATA_FILE      <- file.path(LOOPS_DIR, 'all.IDR2D.Upset.Data.tsv')
+# Loop Valency
+ALL_LOOP_VALENCY_RESULTS_FILE       <- file.path(LOOPS_DIR, 'all.valency.results.tsv')
+# Nesting analysis across all loops per condition
+ALL_NESTING_RESULTS_DIR             <- file.path(LOOPS_DIR, 'results_nesting')
+ALL_LOOP_NESTING_RESULTS_DIR        <- file.path(ALL_NESTING_RESULTS_DIR, 'per.condition.nesting')
+ALL_LOOP_NESTING_RESULTS_FILE       <- file.path(LOOPS_DIR, 'all.per.condition.nesting.tsv')
+ALL_LOOP_NESTING_DIFFERENCE_DIR     <- file.path(ALL_NESTING_RESULTS_DIR, 'between.conditions.testing')
+ALL_LOOP_NESTING_DIFFERENCE_RESULTS_FILE  <- file.path(LOOPS_DIR, 'all.between.condition.nesting.stats.tsv')
+# Nesting analysis across loops stratified by differential status
+ALL_IDR2D_NESTING_RESULTS_DIR       <- file.path(ALL_NESTING_RESULTS_DIR, 'nesting.by.reproducibility')
+ALL_IDR2D_NESTING_RESULTS_FILE      <- file.path(LOOPS_DIR, 'differential.loop.nesting.tsv')
+ALL_IDR2D_NESTING_DIFFERENCE_DIR    <- file.path(ALL_NESTING_RESULTS_DIR, 'nesting.by.reproducibility.testing')
+ALL_IDR2D_NESTING_DIFFERENCE_RESULTS_FILE <- file.path(LOOPS_DIR, 'differential.loop.nesting.stats.tsv')
 
-######################################################################
+################################################################################
 # Compartment Annotations
-######################################################################
-COMPARTMENTS_DIR              <- file.path(RESULTS_DIR, 'compartments')
-COMPARTMENTS_RESULTS_DIR      <- file.path(COMPARTMENTS_DIR, 'results_compartments')
-ALL_COMPARTMENTS_RESULTS_FILE <- file.path(COMPARTMENTS_DIR, 'all.cooltools.compartments.tsv')
-COMPARTMENT_SADDLE_FILES_DIR  <- file.path(COMPARTMENTS_DIR, 'results_saddle')
-COMPARTMENT_BED_FILES_DIR     <- file.path(COMPARTMENTS_DIR, 'BED_FILES')
+################################################################################
+COMPARTMENTS_DIR                          <- file.path(RESULTS_DIR, 'compartments')
+COMPARTMENTS_RESULTS_DIR                  <- file.path(COMPARTMENTS_DIR, 'results_compartments')
+ALL_COMPARTMENT_BINWISE_FILE              <- file.path(COMPARTMENTS_DIR, 'all.compartment.bins.tsv')
+ALL_COMPARTMENT_REGIONS_FILE              <- file.path(COMPARTMENTS_DIR, 'all.compartments.tsv')
+ALL_COMPARTMENT_SWITCHES_FILE             <- file.path(COMPARTMENTS_DIR, 'all.compartment.switches.tsv')
+ALL_COMPARTMENT_SWITCHES_AND_CONTEXT_FILE <- file.path(COMPARTMENTS_DIR, 'all.compartment.switches.and.context.tsv')
+ALL_COMPARTMENT_MOCS_FILE                 <- file.path(COMPARTMENTS_DIR, 'all.compartment.MoCs.tsv')
+COMPARTMENT_SADDLE_FILES_DIR              <- file.path(COMPARTMENTS_DIR, 'results_saddle')
+ALL_COMPARTMENT_SEGMENT_TEST_RESULTS_FILE <- file.path(COMPARTMENTS_DIR, 'all.compartment.segment.test.results.tsv')
+ALL_COMPARTMENT_SWITCH_DIFFERENCE_RESULTS_FILE <-  file.path(COMPARTMENTS_DIR, 'all.compartment.switch.comparisons.tsv')
 
-######################################################################
+################################################################################
 # Differential Contact results from multiHiCCompare
-######################################################################
+################################################################################
 DIFFERENTIAL_CONTACTS_DIR             <- file.path(RESULTS_DIR, 'DifferentialContacts')
 DIFFERENTIAL_CONTACTS_DIR             <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'results')
 ALL_MULTIHICCOMPARE_RESULTS_FILE      <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'all.multiHiCCompare.results.tsv')
 MULTIHICCOMPARE_SIG_RESULTS_FILE      <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'all.multiHiCCompare.n.results.tsv')
 FILTERED_MULTIHICCOMPARE_RESULTS_FILE <- file.path(DIFFERENTIAL_CONTACTS_DIR, 'filtered.multiHiCCompare.results.tsv')
 
-######################################################################
+################################################################################
 # Functional Genomic Element (FGE) Data + Results
-######################################################################
+################################################################################
 FGE_RAW_DIR                  <- file.path(REF_DIR, 'raw.FGE.data')
 RAW_TF_SITES_FILE            <- file.path(FGE_RAW_DIR, 'Homo_sapiens_meta_clusters.interval')
 FILTERED_TF_SITES_FILE       <- file.path(FGE_RAW_DIR, 'filtered.Homo_sapiens_meta_clusters.interval.tsv')
@@ -118,9 +133,9 @@ FGE_FISHER_TEST_RESULTS_FILE <- file.path(FGE_DIR, 'all.fisher.test.results.tsv'
 FGE_TTEST_TEST_RESULTS_FILE  <- file.path(FGE_DIR, 'all.ttest.test.results.tsv')
 FGE_CORR_TEST_RESULTS_FILE   <- file.path(FGE_DIR, 'all.corr.test.results.tsv')
 
-######################################################################
+################################################################################
 # Delta Expression Association Testing
-######################################################################
+################################################################################
 # DEG results
 DESEQ2_DATA_DIR             <- file.path(RESULTS_DIR, 'RNASeq', 'DESeq2')
 DESEQ2_RESULTS_FILE         <- file.path(RESULTS_DIR, 'RNASeq', 'all.DESeq2.results.tsv')
@@ -133,7 +148,7 @@ CACHED_EQTLS_DIR            <- file.path(GENE_LOCUS_ASSOCIATIONS_DIR, 'raw.eQTL.
 ALL_RELEVANT_EQTLS_FILE     <- file.path(GENE_LOCUS_ASSOCIATIONS_DIR, 'all.relevant.eQTLs.tsv')
 # Association testing results
 EXPRESSION_ASSOCIATION_DIR              <- file.path(RESULTS_DIR, 'Delta.Expression.Association.Testing')
-ALL_CLEAN_GENE_LOCUS_ASSOCIATIONS_FILE  <- file.path(EXPRESSION_ASSOCIATION_DIR, 'all.cleaned .Gene.Locus.Associations.rds')
+ALL_CLEAN_GENE_LOCUS_ASSOCIATIONS_FILE  <- file.path(EXPRESSION_ASSOCIATION_DIR, 'all.cleaned.Gene.Locus.Associations.rds')
 HIF_GENE_ASSOCIATION_MAPPING_DIR        <- file.path(EXPRESSION_ASSOCIATION_DIR, 'HiF.Gene.associations')
 EXPRESSION_ASSOCIATION_TEST_RESULTS_DIR <- file.path(EXPRESSION_ASSOCIATION_DIR, 'association.test.results')
 
