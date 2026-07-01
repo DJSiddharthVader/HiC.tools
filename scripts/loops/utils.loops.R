@@ -714,193 +714,160 @@ load_all_loop_nesting_results <- function(){
     unnest(nesting.results)
 }
 
+######################################################################
+# Loop Nesting Comparison Analysis 
+######################################################################
+load_binwise_nesting_data <- function(filepath){
+    filepath %>% 
+    read_tsv(show_col_types=FALSE, progress=FALSE) %>% 
     pivot_longer(
+        c(starts_with('stat_'), nesting.lvl),
+        names_to='stat',
+        names_prefix='stat_',
         values_to='value'
     )
 }
 
-###################################################
-# Loop Nesting Correlation Analysis
-###################################################
-compute_permutation_test_between_bin_nestings <- function(
-    segment.nesting.comparison.df,
-    reps=1000,
-    seed=9,
-    ...){
-    set.seed(seed)
-    obs.stat <- 
-        segment.nesting.comparison.df %>%
-        arrange(chr, start, end) %>% 
-        mutate(diff=loop.value.Numerator - loop.value.Denominator) %>% 
-        specify(response=diff) %>% 
-        calculate(stat="mean")
-    null.dist <- 
-        segment.nesting.comparison.df %>%
-        arrange(chr, start, end) %>% 
-        mutate(diff=loop.value.Numerator - loop.value.Denominator) %>% 
-        specify(response=diff) %>% 
-        hypothesize(null="paired independence") %>% 
-        generate(reps=reps, type="permute") %>% 
-        # generate(reps=10000, type="bootstrap") %>% 
-        calculate(stat="mean")
-    bind_cols(
-        null.dist %>% get_pvalue(obs_stat=obs.stat, direction=alternative),
-        null.dist %>% get_ci()
-    ) %>%
-    add_column(
-        statistic=obs.stat$stat,
-        alternative=alternative,
-        test.type='sign.permute',
-        n.permutations=nrow(null.dist)
-    )
-}
-
-compute_segment_wise_summary_stats <- function(
+compute_nesting_summary_stats_per_segment <- function(
     segment.nesting.comparison.df,
     alternative='two.sided',
-    # seed=9,
-    # reps=10000,
     ...){
-    # paste('row.index=1', paste0(colnames(tmp2), "=tmp2$", colnames(tmp2), "[[row.index]]", collapse='; '), 'tmp2 %>% head(row.index) %>% tail(1) %>% t()', sep='; ')
-    segment.nesting.comparison.df %>%
-    arrange(chr, start, end) %>% 
-    # mutate(diff=loop.value.Numerator - loop.value.Denominator) %>% 
-    mutate(FC=loop.value.Numerator / loop.value.Denominator) %>% 
-    summarize(
-        across(
-            .cols=c(FC),
-            .fns=list('mean'=mean, 'var'=var, 'total'=sum),
-            .names="{.fn}.loop.FC"
-        ),
-        n.bins.larger.in.numerator=sum(FC > 1),
-        n.bins=n(),
-        test_AD=
-            ad_test(
-                loop.value.Numerator,
-                loop.value.Denominator,
-            ) %>% 
-            as_tibble_row() %>% 
-            mutate(across(everything(), as.numeric)) %>% 
-            dplyr::rename('statistic'=`Test Stat`, 'p.value'=`P-Value`),
-        test_KS=
-            ks.test(
-                loop.value.Numerator,
-                loop.value.Denominator,
-                alternative=alternative
-            ) %>% tidy(),
-        test_Wilcox=
-            tryCatch( 
-                {
-                    wilcox.test(
-                        loop.value.Numerator,
-                        loop.value.Denominator,
-                        paired=TRUE,
-                        alternative=alternative
-                    ) %>% 
-                    tidy()
-                },
-                error=function(e) { tibble_row() }
-            ),
-        test_Welch=
-            tryCatch( 
-                {
-                    t.test(
-                        loop.value.Numerator,
-                        loop.value.Denominator,
-                        paired=TRUE,
-                        alternative=alternative
-                    ) %>% 
-                    tidy()
-                },
-                error=function(e) { tibble_row() }
-            ),
-        test_Sign=
-            binom.test(
-                x=sum(loop.value.Numerator > loop.value.Denominator),
-                n=n(),
-                alternative=alternative
-            ) %>% tidy(),
-        test_Kendall=
-            cor.test(
-                loop.value.Numerator,
-                loop.value.Denominator,
-                method='kendall',
-                alternative=alternative
-            ) %>% tidy(),
-        test_Spearman=
-            cor.test(
-                loop.value.Numerator,
-                loop.value.Denominator,
-                method='spearman',
-                alternative=alternative
-            ) %>% tidy(),
-        test_Pearson=
-            cor.test(
-                loop.value.Numerator,
-                loop.value.Denominator,
-                method='pearson',
-                alternative=alternative
-            ) %>% tidy()
+    summary.stats <- 
+        segment.nesting.comparison.df %>%
+        arrange(chr, start, end) %>% 
+        mutate(FC=value.Numerator / value.Denominator) %>% 
+        summarize(
+            # n.bins=n(),
+            n.bins.larger.in.numerator=sum(FC > 1, na.rm=TRUE),
+            cosine.dist=  cosine(value.Numerator, value.Denominator)[[1]],
+            corr_pearson= cor(value.Numerator,    value.Denominator, method='pearson'),
+            corr_kendall= cor(value.Numerator,    value.Denominator, method='kendall'),
+            corr_spearman=cor(value.Numerator,    value.Denominator, method='spearman'),
+            across(
+                .cols=c(FC),
+                .fns=
+                    list(
+                        'mean'= partial(mean, na.rm=TRUE),
+                        'max'=  partial(max,  na.rm=TRUE),
+                        'var'=  partial(var,  na.rm=TRUE),
+                        'total'=partial(sum,  na.rm=TRUE)
+                    ),
+                .names="nest.FC_{.fn}"
+            )
+        )
+    test.results <- 
+        segment.nesting.comparison.df %>%
+        arrange(chr, start, end) %>% 
+        summarize(
+            # test_AD=
+            #     ad_test(
+            #         value.Numerator,
+            #         value.Denominator,
+            #     ) %>% 
+            #     as_tibble_row() %>% 
+            #     mutate(across(everything(), as.numeric)) %>% 
+            #     dplyr::rename('statistic'=`Test Stat`, 'p.value'=`P-Value`),
+            test_KS=
+                ks.test(
+                    value.Numerator,
+                    value.Denominator,
+                    alternative=alternative
+                ) %>% tidy(),
+            test_Wilcox=
+                tryCatch( 
+                    {
+                        wilcox.test(
+                            value.Numerator,
+                            value.Denominator,
+                            paired=TRUE,
+                            alternative=alternative
+                        ) %>% 
+                        tidy()
+                    },
+                    error=function(e) { tibble_row() }
+                ),
+            test_Welch=
+                tryCatch( 
+                    {
+                        t.test(
+                            value.Numerator,
+                            value.Denominator,
+                            paired=TRUE,
+                            alternative=alternative
+                        ) %>% 
+                        tidy()
+                    },
+                    error=function(e) { tibble_row() }
+                ),
+            test_Sign=
+                binom.test(
+                    x=sum(value.Numerator > value.Denominator),
+                    n=n(),
+                    alternative=alternative
+                ) %>% tidy(),
+            # test_Kendall=
+            #     cor.test(
+            #         value.Numerator,
+            #         value.Denominator,
+            #         method='kendall',
+            #         alternative=alternative
+            #     ) %>% tidy(),
+            # test_Spearman=
+            #     cor.test(
+            #         value.Numerator,
+            #         value.Denominator,
+            #         method='spearman',
+            #         alternative=alternative
+            #     ) %>% tidy(),
+            test_Pearson=
+                cor.test(
+                    value.Numerator,
+                    value.Denominator,
+                    method='pearson',
+                    alternative=alternative
+                ) %>% tidy()
+        ) %>%
+        pivot_longer(
+            starts_with('test_'),
+            names_to='test.type',
+            names_prefix='test_',
+            values_to='test.results'
+        ) %>% 
+        unnest(test.results) %>%
+        select(test.type, p.value) %>% 
+        pivot_wider(names_from=test.type, names_prefix='p.value_', values_from=p.value)
+    # bind everything together in tidy format
+    bind_cols(
+        summary.stats,
+        test.results
     ) %>%
     pivot_longer(
-        starts_with('test_'),
-        names_to='test.type',
-        names_prefix='test_',
-        values_to='test.results'
+        everything(),
+        names_to='diff.stat',
+        values_to='value'
     ) %>%
-    unnest(test.results) %>%
-    # bind_rows(compute_permutation_test_between_bin_nestings(segment.nesting.comparison.df)) %>% 
-    select(
-        # conf.low, conf.high,
-        test.type,
-        alternative,
-        estimate,
-        statistic,
-        p.value,
-        n.bins
-    )
+    add_column(n.bins=nrow(segment.nesting.comparison.df))
 }
 
 compute_nesting_correlation_results <- function(
-    loops.df.Numerator,
-    loops.df.Denominator,
-    bins.df,
+    filepath.Numerator,
+    filepath.Denominator,
     ...){
-    paste('row.index=1', paste0(colnames(tmp), "=tmp$", colnames(tmp), "[[row.index]]", collapse='; '), 'tmp %>% head(row.index) %>% tail(1) %>% t()', sep='; ')
-    row.index=1; resolution=tmp$resolution[[row.index]]; SampleID=tmp$SampleID[[row.index]]; loop.status=tmp$loop.status[[row.index]]; Comparison.side=tmp$Comparison.side[[row.index]]; Comparison=tmp$Comparison[[row.index]]; IDR2D.Params=tmp$IDR2D.Params[[row.index]]; loops.df=tmp$loops.df[[row.index]]; bins.df=tmp$bins.df[[row.index]]; results_file=tmp$results_file[[row.index]]; tmp %>% head(row.index) %>% tail(1) %>% t()
+    # paste('row.index=8', paste0(colnames(tmp), "=tmp$", colnames(tmp), "[[row.index]]", collapse='; '), 'tmp %>% head(row.index) %>% tail(1) %>% t()', sep='; ')
+    # row.index=8; SampleID.Numerator=tmp$SampleID.Numerator[[row.index]]; SampleID.Denominator=tmp$SampleID.Denominator[[row.index]]; filepath.Numerator=tmp$filepath.Numerator[[row.index]]; resolution=tmp$resolution[[row.index]]; feature=tmp$feature[[row.index]]; filepath.Denominator=tmp$filepath.Denominator[[row.index]]; results_file=tmp$results_file[[row.index]]; tmp %>% head(row.index) %>% tail(1) %>% t()
     # for each bin get nesting stats for numerator + denominator paired together
     comparisons.df <- 
-        # for each genomic bin, compute summary stats over all loops overlapping said bin 
-        compute_nesting_stats_per_bin(
-            loops.df.Numerator,
-            bins.df
-        ) %>% 
-        pivot_longer(
-            c(starts_with('metric_'), nesting.lvl),
-            names_to='loop.feature',
-            values_to='loop.value'
-        ) %>% 
         # join numerator and denominator nesting stats 
         full_join(
-            # for each genomic bin, compute summary stats over all loops overlapping said bin 
-            compute_nesting_stats_per_bin(
-                loops.df.Denominator,
-                bins.df
-            ) %>% 
-            pivot_longer(
-                c(starts_with('metric_'), nesting.lvl),
-                names_to='loop.feature',
-                values_to='loop.value'
-            ),
+            filepath.Numerator   %>% load_binwise_nesting_data(),
+            filepath.Denominator %>% load_binwise_nesting_data(),
             suffix=c('.Numerator', '.Denominator'),
-            by=join_by(chr, start, end, loop.feature)
+            by=join_by(chr, start, end, stat)
         ) %>%
         # set nesting stats to 0 if any bin is only overlapped by loops in either numerator or denominator
-        # filter(grepl(paste('nesting.lvl', 'mean', 'max', 'total', sep='|'), loop.feature)) %>% 
-        filter(grepl(paste('nesting.lvl', 'mean', 'max', 'total', sep='|'), loop.feature)) %>% 
         mutate(
             across(
-                c(loop.value.Numerator, loop.value.Denominator),
+                c(value.Numerator, value.Denominator),
                 ~ ifelse(is.na(.x), 0, .x)
             )
         ) %>% 
@@ -922,10 +889,7 @@ compute_nesting_correlation_results <- function(
         as_granges()
     # now group bins by which contiguous segment they are within for computing summart stats
     comparisons.df %>% 
-    join_overlap_inner_within(
-        segments.df,
-        suffix=c('', '.segment'),
-    ) %>% 
+    join_overlap_inner_within(segments.df) %>% 
     as_tibble() %>%
     dplyr::rename('chr'=seqnames) %>%
     select(-c(strand, width)) %>% 
@@ -933,25 +897,20 @@ compute_nesting_correlation_results <- function(
         segment.nesting.comparison.df=
             c(
                 chr, start, end,
-                loop.value.Numerator, loop.value.Denominator
+                value.Numerator, value.Denominator
             )
     ) %>% 
-        # {.} -> tmp2; tmp2
-        # tmp2 %>%
-        # tmp2 %>% head(5) %>% 
     # compute different/correlation stats per segment
     mutate(
-        nesting.comparison.summary.results=
-            pmap(
-                 .progress=TRUE,
+        segment.stats.df=
+            future_pmap(
                  .l=.,
-                 .f=compute_segment_wise_summary_stats,
-                 # .f=try_computing_summary_stats,
-                 # .progress=FALSE
+                 .f=compute_nesting_summary_stats_per_segment,
+                 .progress=FALSE
             )
     ) %>%
-    unnest(nesting.comparison.summary.results) %>%
     select(-c(segment.nesting.comparison.df)) %>% 
+    unnest(segment.stats.df) %>% 
     separate_wider_delim(
         SegmentID,
         delim='#',
@@ -960,37 +919,28 @@ compute_nesting_correlation_results <- function(
     )
 }
 
-compute_all_loop_nesting_correlation_results <- function(
-    all.loop.data.df,
-    all.bins.df,
-    force_redo=FALSE){
-    all.loop.data.df %>%
-    left_join(
-        all.bins.df,
-        by=join_by(resolution)
-    ) %>% 
+load_all_segmentwise_nesting_difference_results <- function(
+    results.files.df,
+    ...){
+    results.files.df %>% 
     mutate(
-        results_file=
-            file.path(
-                ALL_LOOP_NESTING_CORR_RESULTS_DIR,
-                glue('resolution_{resolution}'),
-                # glue('window.size_{window.size}'),
-                glue('IDR2D.Params_{IDR2D.Params}'),
-                glue('loop.status_{loop.status}'),
-                glue('{Comparison}-loop.nesting.correlation.results.tsv')
+        diff.results=
+            future_pmap(
+                 .l=list(filepath),
+                 .f=read_tsv,
+                 show_col_types=FALSE,
+                 progress=FALSE,
+                 .progress=TRUE
             )
     ) %>% 
-        # {.} -> tmp; tmp
-        # tmp %>% head(1) %>% 
-    future_pmap(
-        .l=.,
-        .f=check_cached_results,
-        force_redo=force_redo,
-        results_fnc=compute_nesting_correlation_results,
-        .progress=TRUE
-    )
-}
-
+    unnest(diff.results) %>% 
+    unite(
+        'feature.stat',
+        sep='_',
+        c(stat, feature)
+    ) %>% 
+    filter(!is.na(value)) %>% 
+    select(-c(filepath))
 list_all_loop_nesting_correlation_results <- function(){
     ALL_LOOP_NESTING_CORR_RESULTS_DIR %>% 
     parse_results_filelist(
