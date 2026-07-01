@@ -1,6 +1,6 @@
-######################################################################
+###################################################
 # Dependencies
-######################################################################
+###################################################
 library(ggplot2)
 library(ggpubr)
 library(ggh4x)
@@ -9,11 +9,12 @@ library(GGally)
 library(scales)
 library(ggpointdensity)
 library(viridis)
+library(ComplexUpset)
 library(furrr)
 
-######################################################################
+###################################################
 # Transform data for plotting
-######################################################################
+###################################################
 calc_pct <- function(
     count.df,
     cols_exclude=c(),
@@ -76,9 +77,49 @@ copy_data_along_inclusive_intervals <- function(
     select(-c(threshold))
 }
 
-######################################################################
+pivot_HiC_Features_for_UpSet <- function(
+    features.df,
+    upset.group.colname,
+    ...){
+    # features.df=diff.boundaries.df; upset.group.colname='Comparison'; boundary.feature.colnames=c('Gap.Score', 'log.p.adj.gw')
+    # pivot so each row is a TAD Boundary detected in >= 1 group and 
+    # include binary columns for each group of whether it is detected in that group
+    features.df %>% 
+    add_column(boundary.detected=TRUE) %>%
+    group_by(across(!all_of(c(upset.group.colname, 'value')))) %>% 
+    pivot_wider(
+        names_from=!!sym(upset.group.colname),
+        names_prefix=glue('{upset.group.colname}_'),
+        values_fill=FALSE,
+        values_from=boundary.detected
+    ) %>% 
+    summarize(
+        across(
+            starts_with(glue('{upset.group.colname}_')),
+            ~ any(.x)
+        ),
+        across(
+            c(value),
+            .fns=list('var'=var, 'mean'=mean, 'total'=sum),
+            .names='stat_{.fn}'
+        )
+    ) %>% 
+    pivot_longer(
+        starts_with('stat_'),
+        names_to='stat',
+        names_prefix='stat_',
+        values_to='value'
+    ) %>% 
+    unite(
+        'feature',
+        sep='_',
+        c(feature, stat)
+    )
+}
+
+###################################################
 # Handling/formatting plots
-######################################################################
+###################################################
 make_ggtheme <- function(...){
     theme(
         panel.grid.major=element_blank(), 
@@ -459,9 +500,9 @@ post_process_plot <- function(
     }
 }
 
-######################################################################
+###################################################
 # Make tabs per plot in Rmd
-######################################################################
+###################################################
 plot_figure_tabs <- function(
     plot.df,
     group.col,
@@ -647,9 +688,10 @@ plot_saving_wrapper <- function(
     plot.fnc(...) %>%
     ggsave(results_file, plot=., width=width, height=height, unit='in')
 }
-######################################################################
+
+###################################################
 # Basic Plots
-######################################################################
+###################################################
 plot_barplot <- function(
     plot.df,
     x.var=NULL,
@@ -844,6 +886,7 @@ plot_histogram <- function(
     fill.var=NULL, 
     alpha=0.7,
     binwidth=0.05,
+    position='stack',
     ...){
     { 
         ggplot(
@@ -854,14 +897,16 @@ plot_histogram <- function(
     {
         if (!is.null(fill.var)) {
             . + aes(fill=.data[[fill.var]])
+            # . + aes(color=.data[[fill.var]])
         } else {
             .
         }
     } %>% 
     {
         . +
+        # geom_freqpoly(
         geom_histogram(
-            position="identity",
+            position=position,
             alpha=alpha,
             binwidth=binwidth
         ) 
@@ -1046,6 +1091,7 @@ plot_lineplot <- function(
     linetype.var=NULL,
     alpha=0.5,
     size=0.5,
+    linewidth=1,
     scales='fixed',
     ...){
     # x.var='start'; x.scale.mode='mb'; y.var='nesting.lvl'; group.var='Sample.Group'; color.var='Genotype'; shape.var='Genotype'; facet.row='Edit';
@@ -1079,7 +1125,7 @@ plot_lineplot <- function(
             .
         }
     } %>% 
-    { . + geom_line() } %>% 
+    { . + geom_line(linewidth=linewidth) } %>% 
     # Handle faceting + scaling + theme options
     post_process_plot(
         scales=scales,
@@ -1146,105 +1192,182 @@ plot_contours <- function(
     )
 }
 
-plot_rect_series <- function(
+plot_HiC_Feature_UpSet <- function(
     plot.df,
-    x.var='',
-    y.var='',
-    width.var='',
-    height.var='',
-    # xmin.var='',
-    # xmax.var='',
-    # ymin.var='',
-    # ymax.var='',
-    color.var=NULL,
+    category.prefix,
     fill.var=NULL,
-    alpha=0.5,
-    scales='fixed',
+    violin.var=NULL,
+    bar.title='Common TAD Boundaries across Conditions',
+    intersection.name='Conditions',
+    set.sizes.name='Detected TAD Boundaries',
+    sort_sets=FALSE,
     ...){
-    {
-        ggplot(
-            plot.df,
-            aes(
-                x=.data[[x.var]],
-                y=.data[[y.var]],
-                width=.data[[width.var]],
-                height=.data[[height.var]]
-                # xmin=.data[[xmin.var]],
-                # xmax=.data[[xmax.var]],
-                # ymin=.data[[ymin.var]],
-                # ymax=.data[[ymax.var]]
-            )
-        )
-    } %>% 
-    {
-        if (!is.null(color.var)) {
-            . + aes(color=.data[[color.var]])
-        } else {
-            .
-        }
-    } %>% 
-    {
+    # make.binary=TRUE; categories.col='Comparison'; fill.var='region';
+    total.interactions <- nrow(plot.df)
+    cols.to.keep <- 
+        plot.df %>% 
+        summarize(across(everything(), ~ sum(!is.na(.x)) > 0)) %>%
+        # summarize(across(everything(), ~ sum(.x) > 0)) %>%
+        pivot_longer(everything(), names_to='colname', values_to='is.not.all.NAs') %>% 
+        mutate(is.group.col=str_detect(colname, category.prefix)) %>%
+        filter((is.group.col & is.not.all.NAs) | !is.group.col) %>% 
+        pull(colname)
+    plot.df <- 
+        plot.df %>% 
+        select(cols.to.keep)
+    # add annotation is specified
+    annotations.list <- 
         if (!is.null(fill.var)) {
-            . + aes(fill=.data[[fill.var]])
+            list(
+                # fill.var=
+                #     (
+                #         ggplot(mapping=aes(fill=.data[[fill.var]])) +
+                #         # ggplot(mapping=aes(fill=region)) +
+                #         geom_bar(stat='count', position='fill') + 
+                #         scale_y_continuous(labels=scales::percent_format()) +
+                #         theme(legend.position='none')
+                #     ),
+                violin.var=
+                    (
+                        ggplot(mapping=aes(y=.data[[violin.var]]))+
+                        geom_violin(alpha=0.5, na.rm=TRUE) +
+                        ylab(violin.var)
+                    )
+            )
         } else {
-            .
+            list()
         }
-    } %>% 
-    {
-        . +
-        geom_rect(alpha=alpha)
-    } %>% 
-    # Handle faceting + scaling + theme options
-    post_process_plot(
-        scales=scales,
-        ...
+    # color bars by fill or not
+    intersection.mapping <- 
+        if (!is.null(fill.var)) {
+            aes(fill=.data[[fill.var]])
+        } else {
+            NULL
+        }
+    # bar plot of total features per condition
+    set_sizes.list <- 
+        if (!is.null(fill.var)) {
+            (
+                upset_set_size(
+                    position='right',
+                    geom=
+                        geom_bar(
+                            aes(fill=.data[[fill.var]]),
+                            width=0.8
+                        )
+                ) +
+                geom_text(aes(label=..count..), hjust=1, stat='count') +
+                ylab(set.sizes.name) +
+                theme(
+                    # legend.position='none',
+                    axis.text.x=element_text(angle=45, hjust=1)
+                )
+            )
+        } else {
+            (
+                upset_set_size(
+                    position='right',
+                    geom=geom_bar(width=0.8)
+                ) +
+                ylab(set.sizes.name) +
+                theme(
+                    # legend.position='none',
+                    axis.text.x=element_text(angle=45, hjust=1)
+                )
+            )
+        }
+    # make main upset plot
+    upset(
+        plot.df,
+        plot.df %>% dplyr::select(starts_with(category.prefix)) %>% colnames(),
+        mode='exclusive_intersection',
+        name=intersection.name,
+        labeller=function(x) str_remove(x, fixed(category.prefix)),
+        guides='over', # moves legends over the set sizes
+        sort_sets=sort_sets,
+        ...,
+        annotations=annotations.list,
+        set_sizes=set_sizes.list,
+        base_annotations=
+            list(
+                bar.title=
+                    intersection_size(
+                        mapping=intersection.mapping,
+                        text=list(angle=45, hjust=0, vjust=-1),
+                        text_colors=
+                            c(
+                                on_background='black',
+                                on_bar='black'
+                            )
+                    ) +
+                    annotate(
+                        geom='text',
+                        x=Inf, y=Inf,
+                        label=paste('Total Features:', total.interactions),
+                        vjust=1, hjust=1
+                    ) + 
+                    ylab(bar.title)
+            )
     )
 }
 
-plot_paired_boxplot <- function(
-    plot.df,
-    x.var='',
-    y.var='',
-    group.var='',
-    line.color.var='',
-    pt.size=1,
+plot_ggpairs <- function(
+    freq.df,
+    group.colname='Sample.Group',
+    value.colname='value',
+    color.colname=NULL,
+    pt.alpha=0.6,
+    text.size=8,
+    linewidth=0.15,
     ...){
-    # x.var='Comparison'; y.var='value'; fill.var='Edit.Numerator'; outliers=TRUE; outlier.size=1;
-    {
-        ggplot(
-            plot.df,
-            aes(
-                x=.data[[x.var]],
-                y=.data[[y.var]],
-                group.var=.data[[x.var]],
-            )
-        )
-    } %>% 
-    { 
-        . + 
-        geom_boxplot(
-            aes(fill=.data[[x.var]]),
-            outliers=FALSE
-        ) +
-        geom_line(
-            aes(color=.data[[line.color.var]])
-        ) +
-        # Add the summary line for the mean
-        geom_jitter(
-            aes(fill=.data[[x.var]]),
-            shape=21,
-            size=pt.size
-        ) +
-        stat_summary(
-            aes(group = 1), # Group all points together for the summary
-            fun = "mean",
-            geom = "line",
-            color = "red",
-            linewidth = 1.2,
-            linetype = "dashed"
-        )
-    } %>% 
-    # Handle faceting + scaling + theme options
-    post_process_plot(legend.position='none', ...)
+    plot.df <- 
+        freq.df %>% 
+        pivot_wider(
+            names_from=!!sym(group.colname),
+            names_prefix='group_',
+            values_from=!!sym(value.colname)
+        ) %>%  
+        unnest(starts_with('group_'))
+    cols.to.keep <- 
+        plot.df %>% 
+        summarize(across(everything(), ~ sum(!is.na(.x)) > 0)) %>%
+        pivot_longer(everything(), names_to='colname', values_to='is.not.all.NAs') %>% 
+        mutate(is.group.col=str_detect(colname, '^group_')) %>%
+        filter((is.group.col & is.not.all.NAs) | !is.group.col) %>% 
+        pull(colname) %>% 
+        c(., color.colname) %>%
+        unique()
+    plot.df <- 
+        plot.df %>% 
+        select(cols.to.keep)
+    cols <- 
+        grep('^group_', colnames(plot.df), value=TRUE)
+    cols.names <- 
+        str_remove(cols, '^group_')
+    mapping <- 
+        if (!is.null(color.colname)) {
+            aes(color=.data[[color.colname]], alpha=pt.alpha)
+        } else {
+            aes(alpha=pt.alpha)
+        }
+    # print(cols.to.keep)
+    # return(plot.df)
+    ggpairs(
+        plot.df,
+        mapping=mapping,
+        # columns=which(colnames(plot.df) %in% cols),
+        columns=cols,
+        columnLabels=cols.names
+    ) +
+    geom_abline(intercept=0, slope= 1, linewidth=linewidth, color='black', linetype='dashed') +
+    geom_abline(intercept=0, slope=-1, linewidth=linewidth, color='black', linetype='dashed') +
+    geom_vline(xintercept=0,           linewidth=linewidth, color='black', linetype='solid') +
+    geom_hline(yintercept=0,           linewidth=linewidth, color='black', linetype='solid') +
+    theme(
+        axis.text.x=element_text(size=text.size),
+        axis.text.y=element_text(size=text.size),
+        strip.text=element_text(size=text.size+1)
+    ) + 
+    make_ggtheme()
 }
 
