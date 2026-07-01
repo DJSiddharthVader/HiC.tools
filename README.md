@@ -1,6 +1,6 @@
-# 16p HiC Analysis
+# Hi-C Tools
 
-Analysis and code of HiC data for 16p samples
+Code for of Hi-C data feature annotation, analysis and differential analysis
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -102,40 +102,6 @@ $ tree -L 1 /data/talkowski/Samples/16p_HiC/results/ -P "*_library|mapped_*|*qc"
         │   └── 16p.NSC.DEL.A3.TR1.hg38.nodups.pairs.gz.px2
         └── .../
 ```
-List of coallated results across annotation types + analyses
-```
-$ tree -L 1 /data/talkowski/Samples/16p_HiC/results/ -I "*_library|mapped_*|*qc"
-results/
-├── RNASeq
-│   ├── all.DESeq2.results.tsv
-│   ├── all.expression.data.tsv
-│   ├── all.TRADE.results.tsv
-│   ├── DESeq2/
-│   └── expression/
-├── sample.QC
-│   ├── coverage/
-│   ├── expected.coverage/
-│   ├── minimum.viable.resolutions.tsv
-│   ├── multiqc.reports/
-│   └── resolution.coverage.summaries.tsv
-├── hicrep
-│   ├── all.hicrep.cmds.txt
-│   ├── all.hicrep.scores.tsv
-│   └── results
-├── weiner.replication
-│   └── plots/
-├── TAD
-├── loops
-├── compartments
-│   ├── all.cooltools.compartments.tsv
-│   └── results_compartments/
-├── multiHiCCompare
-│   ├── all.multiHiCCompare.n.results.tsv
-│   ├── all.multiHiCCompare.results.tsv
-│   └── results/
-└── gghic.plots 
-    └── plots/
-```
 
 ## Methods
 
@@ -186,7 +152,6 @@ Annotations of genomic features, used for association analyses
 ```
 $ tree -L 1 /data/talkowski/Samples/16p_HiC/reference.files/
 reference.files/
-├── raw.FGE.data/           # downloaded functional genomic element annotations used for FGE analysis
 ├── genome.bins/            # coordinates of genomic bins at various resolutions
 └── genome.tracks/          # binwise metrics computed across the genome by cooltools
     └── track.type_genecov/
